@@ -25,7 +25,7 @@ use super::errors::OAuthError;
 use super::types::{
     AuthorizationServerMetadata, OAuthClientInformation, OAuthClientInformationFull,
     OAuthClientMetadata, OAuthDiscoveryState, OAuthServerInfo, OAuthTokens,
-    parse_client_information, parse_oauth_tokens,
+    is_http_url, parse_client_information, parse_oauth_tokens,
 };
 use crate::abort::AbortSignal;
 use crate::auth_provider::{
@@ -435,6 +435,10 @@ pub fn start_authorization(
         Some(metadata) => parse_url(&metadata.authorization_endpoint)?,
         None => join_url(&parse_url(authorization_server_url)?, "/authorize")?,
     };
+    // Callers open this URL with the platform URL handler, which also launches files and custom protocols.
+    if !is_http_url(&url) {
+        return Err(Error::other(format!("Invalid authorization endpoint {url}")));
+    }
     let (verifier, challenge) = pkce();
     let client_id = options
         .client_information
