@@ -1173,8 +1173,14 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     apply_http_proxy_settings(settings_manager.get_global_settings().http_proxy.as_deref());
     configure_http_dispatcher(Some(settings_manager.get_http_idle_timeout_ms()?))?;
 
+    let runtime_diagnostics = runtime.diagnostics();
+    let mut all_diagnostics = startup_settings_diagnostics.clone();
+    all_diagnostics.extend(runtime_diagnostics.iter().cloned());
+    let startup_diagnostics = deduplicate_diagnostics(&all_diagnostics);
+    let has_runtime_errors = runtime_diagnostics.iter().any(|d| d.r#type == AgentSessionRuntimeDiagnosticType::Error);
+
     if parsed.help == Some(true) {
-        report_diagnostics(&startup_settings_diagnostics);
+        report_diagnostics(&startup_diagnostics);
         let extension_flags: Vec<_> = resource_loader
             .get_extensions()
             .extensions
@@ -1186,7 +1192,7 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     }
 
     if let Some(list_models_arg) = &parsed.list_models {
-        report_diagnostics(&startup_settings_diagnostics);
+        report_diagnostics(&startup_diagnostics);
         let search_pattern = match list_models_arg {
             ArgsListModels::String(pattern) => Some(pattern.as_str()),
             ArgsListModels::Bool(_) => None,
@@ -1216,11 +1222,6 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     }
 
     time("resolveModelScope", None);
-    let runtime_diagnostics = runtime.diagnostics();
-    let mut all_diagnostics = startup_settings_diagnostics.clone();
-    all_diagnostics.extend(runtime_diagnostics.iter().cloned());
-    let startup_diagnostics = deduplicate_diagnostics(&all_diagnostics);
-    let has_runtime_errors = runtime_diagnostics.iter().any(|d| d.r#type == AgentSessionRuntimeDiagnosticType::Error);
     if app_mode != AppMode::Interactive || has_runtime_errors {
         report_diagnostics(&startup_diagnostics);
     }

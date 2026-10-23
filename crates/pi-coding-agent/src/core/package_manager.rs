@@ -112,6 +112,18 @@ pub struct ResolvedPaths {
     pub skills: Vec<ResolvedResource>,
     pub prompts: Vec<ResolvedResource>,
     pub themes: Vec<ResolvedResource>,
+    /// Packages skipped because installation failed while resolving resources.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_failures: Option<Vec<PackageInstallFailure>>,
+}
+
+/// A configured package that could not be installed while resolving resources.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageInstallFailure {
+    pub source: String,
+    pub scope: SourceScope,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1631,7 +1643,8 @@ impl DefaultPackageManager {
 
         // Dedupe: project scope wins over global for same package identity
         let package_sources = self.dedupe_packages(all_packages)?;
-        self.resolve_package_sources(&package_sources, &mut accumulator, on_missing)
+        let install_failures = self
+            .resolve_package_sources(&package_sources, &mut accumulator, on_missing)
             .await?;
 
         let global_base_dir = self.agent_dir.clone();
@@ -1710,7 +1723,10 @@ impl DefaultPackageManager {
             );
         }
 
-        Ok(Self::to_resolved_paths(accumulator))
+        Ok(ResolvedPaths {
+            install_failures: Some(install_failures),
+            ..Self::to_resolved_paths(accumulator)
+        })
     }
 
     async fn resolve_extension_sources_impl(
@@ -1747,9 +1763,13 @@ impl DefaultPackageManager {
             .filter(|s| !s.starts_with(BUILTIN_PATH_PREFIX))
             .map(|s| (PackageSource::String(s.clone()), scope))
             .collect();
-        self.resolve_package_sources(&package_sources, &mut accumulator, None)
+        let install_failures = self
+            .resolve_package_sources(&package_sources, &mut accumulator, None)
             .await?;
-        Ok(Self::to_resolved_paths(accumulator))
+        Ok(ResolvedPaths {
+            install_failures: Some(install_failures),
+            ..Self::to_resolved_paths(accumulator)
+        })
     }
 
     fn list_configured_packages_impl(&self) -> Vec<ConfiguredPackage> {
@@ -2105,7 +2125,8 @@ impl DefaultPackageManager {
         sources: &[(PackageSource, SourceScope)],
         accumulator: &mut ResourceAccumulator,
         on_missing: Option<MissingSourceHandler>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Vec<PackageInstallFailure>> {
+        let mut install_failures = Vec::new();
         for (pkg, scope) in sources {
             let scope = *scope;
             let source_str = package_source_string(pkg).to_string();
@@ -2131,32 +2152,22 @@ impl DefaultPackageManager {
                 continue;
             }
 
-            let install_missing = || async {
-                if is_offline_mode_enabled() {
-                    return Ok(false);
-                }
-                let Some(on_missing) = &on_missing else {
-                    self.install_parsed_source(&parsed, resolved_scope).await?;
-                    return Ok(true);
-                };
-                let action = on_missing(resolved_source.clone()).await?;
-                match action {
-                    MissingSourceAction::Skip => Ok(false),
-                    MissingSourceAction::Error => bail!("Missing source: {resolved_source}"),
-                    MissingSourceAction::Install => {
-                        self.install_parsed_source(&parsed, resolved_scope).await?;
-                        Ok::<bool, anyhow::Error>(true)
-                    }
-                }
-            };
-
             match &parsed {
                 ParsedSource::NpmSource(npm) => {
                     let mut installed_path = self.get_npm_install_path(npm, resolved_scope)?;
                     let needs_install = !exists(&installed_path)
                         || !self.installed_npm_matches_configured_version(npm, &installed_path);
                     if needs_install {
-                        if !install_missing().await? {
+                        if !self
+                            .install_missing_source(
+                                &parsed,
+                                resolved_scope,
+                                &resolved_source,
+                                on_missing.as_ref(),
+                                &mut install_failures,
+                            )
+                            .await?
+                        {
                             continue;
                         }
                         installed_path = self.get_npm_install_path(npm, resolved_scope)?;
@@ -2168,7 +2179,16 @@ impl DefaultPackageManager {
                 ParsedSource::GitSource(git) => {
                     let installed_path = self.get_git_install_path(git, resolved_scope)?;
                     if !exists(&installed_path) {
-                        if !install_missing().await? {
+                        if !self
+                            .install_missing_source(
+                                &parsed,
+                                resolved_scope,
+                                &resolved_source,
+                                on_missing.as_ref(),
+                                &mut install_failures,
+                            )
+                            .await?
+                        {
                             continue;
                         }
                     } else if resolved_scope == SourceScope::Temporary
@@ -2184,7 +2204,39 @@ impl DefaultPackageManager {
                 ParsedSource::LocalSource(_) => {}
             }
         }
-        Ok(())
+        Ok(install_failures)
+    }
+
+    /// Only installation failures are recoverable. Caller policy errors still propagate.
+    async fn install_missing_source(
+        &self,
+        parsed: &ParsedSource,
+        scope: SourceScope,
+        source: &str,
+        on_missing: Option<&MissingSourceHandler>,
+        install_failures: &mut Vec<PackageInstallFailure>,
+    ) -> anyhow::Result<bool> {
+        if is_offline_mode_enabled() {
+            return Ok(false);
+        }
+        if let Some(on_missing) = on_missing {
+            match on_missing(source.to_string()).await? {
+                MissingSourceAction::Skip => return Ok(false),
+                MissingSourceAction::Error => bail!("Missing source: {source}"),
+                MissingSourceAction::Install => {}
+            }
+        }
+        match self.install_parsed_source(parsed, scope).await {
+            Ok(()) => Ok(true),
+            Err(error) => {
+                install_failures.push(PackageInstallFailure {
+                    source: source.to_string(),
+                    scope,
+                    message: error.to_string(),
+                });
+                Ok(false)
+            }
+        }
     }
 
     fn find_autoload_delta_base(
@@ -3682,6 +3734,7 @@ impl DefaultPackageManager {
             skills: map_to_resolved(accumulator.skills),
             prompts: map_to_resolved(accumulator.prompts),
             themes: map_to_resolved(accumulator.themes),
+            install_failures: None,
         }
     }
 }
