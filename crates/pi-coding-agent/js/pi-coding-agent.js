@@ -23,7 +23,11 @@ import {
 export { ModelRegistry, SessionManager };
 export {
 	AgentSession,
+	AgentSessionRuntime,
 	createAgentSession,
+	createAgentSessionFromServices,
+	createAgentSessionRuntime,
+	createAgentSessionServices,
 	createCodemodeExtension,
 	createMcpExtension,
 	createExtensionRuntime,
@@ -35,7 +39,10 @@ export {
 	resolveCliModel,
 	resolveModelScopeWithDiagnostics,
 	ModelRuntime,
+	RpcClient,
 	SettingsManager,
+	wrapRegisteredTool,
+	wrapRegisteredTools,
 } from "pi-rs:sdk";
 import {
 	CancellableLoader,
@@ -500,11 +507,9 @@ function unavailableFn(name) {
 	};
 }
 
-export const AgentSessionRuntime = unavailableClass("AgentSessionRuntime");
 export const ExtensionRunner = unavailableClass("ExtensionRunner");
 export const CredentialSynchronizationError = class extends Error {};
 export const InteractiveMode = unavailableClass("InteractiveMode");
-export const RpcClient = unavailableClass("RpcClient");
 export const ArminComponent = unavailableClass("ArminComponent");
 export const ExtensionEditorComponent = unavailableClass("ExtensionEditorComponent");
 export const ExtensionInputComponent = unavailableClass("ExtensionInputComponent");
@@ -521,11 +526,6 @@ export const ThinkingSelectorComponent = unavailableClass("ThinkingSelectorCompo
 export const TreeSelectorComponent = unavailableClass("TreeSelectorComponent");
 export const UserMessageSelectorComponent = unavailableClass("UserMessageSelectorComponent");
 
-export const createAgentSessionFromServices = unavailableFn("createAgentSessionFromServices");
-export const createAgentSessionRuntime = unavailableFn("createAgentSessionRuntime");
-export const createAgentSessionServices = unavailableFn("createAgentSessionServices");
-export const wrapRegisteredTool = unavailableFn("wrapRegisteredTool");
-export const wrapRegisteredTools = unavailableFn("wrapRegisteredTools");
 // TS: core/event-bus.ts (EventEmitter semantics: handlers run in registration order, async errors are logged).
 export function createEventBus() {
 	let listeners = new Map();

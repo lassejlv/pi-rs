@@ -52,7 +52,7 @@ in pi-rs; the reason is given), `[ ]` missing (none).
 ## `@earendil-works/pi-coding-agent`
 
 - [x] `AgentSession`: the class of sessions from `createAgentSession()` (a Rust AgentSession: prompt/steer/followUp/abort, subscribe, state and tool getters, models, compaction, bindExtensions, `agent.beforeToolCall`/`afterToolCall`, ...); not constructible directly
-- [~] `AgentSessionRuntime`: host-only, the session runtime is owned by the host process
+- [x] `AgentSessionRuntime`: JS port over Rust AgentSessions (new/switch/fork/import/dispose)
 - [~] `ArminComponent`: host-only, interactive-mode component bound to host session state (Rust); extensions get UI through ctx.ui
 - [x] `AssistantMessageComponent`: pi's Rust component (constructor arguments and methods as in TS)
 - [x] `BashExecutionComponent`: pi's Rust component (constructor arguments and methods as in TS)
@@ -108,9 +108,9 @@ in pi-rs; the reason is given), `[ ]` missing (none).
 - [x] `convertToPng`
 - [x] `copyToClipboard`
 - [x] `createAgentSession`: builds a Rust AgentSession (subagents); takes the SDK objects above, `customTools` and `modelRegistry`/`modelRuntime`
-- [~] `createAgentSessionFromServices`: host-only, SDK entry point
-- [~] `createAgentSessionRuntime`: host-only, SDK entry point
-- [~] `createAgentSessionServices`: host-only, SDK entry point
+- [x] `createAgentSessionFromServices`
+- [x] `createAgentSessionRuntime`
+- [x] `createAgentSessionServices`: Rust ModelRuntime, SettingsManager and DefaultResourceLoader
 - [x] `createBashTool`
 - [x] `createBashToolDefinition`
 - [x] `createCodemodeExtension`: the Rust built-in factory (as a loader `extensionFactories` entry, or called with an extension's `pi`)

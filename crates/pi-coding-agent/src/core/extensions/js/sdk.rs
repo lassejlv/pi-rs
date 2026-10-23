@@ -23,7 +23,9 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow
         "rt" => runtime_call(bridge, &payload),
         "rl" => loader_call(bridge, &payload),
         "as" => session_call(bridge, &payload),
-        "trust" | "pm" | "sdk.resolveCliModel" | "sdk.createExtensionRuntime" => misc_call(bridge, op, &payload),
+        "trust" | "pm" | "sdk.resolveCliModel" | "sdk.createExtensionRuntime" | "sdk.servicesPaths" | "sdk.extensionTool" => {
+            misc_call(bridge, op, &payload)
+        }
         _ => Err(anyhow::anyhow!("unknown host call {op}")),
     }
 }
@@ -35,12 +37,15 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
         "rt.stream" => runtime_stream(&bridge, &payload),
         "rl.async" => {
             let loader = loader_of(&bridge, &payload)?;
-            loader.reload(None).await?;
+            let options = reload_options(&bridge, &payload["resolveProjectTrust"]);
+            loader.reload(options.as_ref()).await?;
             Ok(Value::Null)
         }
         "as.async" => session_async(&bridge, &payload).await,
         "builtin.ext.run" => run_builtin_extension(&bridge, &payload).await,
-        "pm.async" | "sdk.resolveModelScope" | "sdk.discoverAndLoadExtensions" => misc_async(&bridge, op, &payload).await,
+        "pm.async" | "sdk.resolveModelScope" | "sdk.discoverAndLoadExtensions" | "sdk.finishServices" => {
+            misc_async(&bridge, op, &payload).await
+        }
         _ => Err(anyhow::anyhow!("unknown async host call {op}")),
     }
 }
@@ -858,6 +863,22 @@ fn loader_of(bridge: &Bridge, payload: &Value) -> anyhow::Result<Arc<DefaultReso
         .ok_or_else(|| anyhow::anyhow!("This resource loader is no longer available"))
 }
 
+/// `reload({ resolveProjectTrust })` of a JS-created DefaultResourceLoader.
+fn reload_options(bridge: &Arc<Bridge>, value: &Value) -> Option<crate::core::resource_loader::ResourceLoaderReloadOptions> {
+    let handle = bridge.handle(value)?;
+    let bridge = Arc::downgrade(bridge);
+    let resolve: crate::core::resource_loader::ResolveProjectTrustFn = Arc::new(move |input| {
+        let (bridge, handle) = (bridge.clone(), handle.clone());
+        Box::pin(async move {
+            let bridge = bridge.upgrade().ok_or_else(|| anyhow::anyhow!("extension runtime stopped"))?;
+            let result = extensions_result_to_js(&bridge, &input.extensions_result);
+            let trusted = bridge.glue_call("invokeResolveProjectTrust", vec![handle.to_value(), result]).await?;
+            Ok(trusted.as_bool().unwrap_or(false))
+        })
+    });
+    Some(crate::core::resource_loader::ResourceLoaderReloadOptions { resolve_project_trust: Some(resolve) })
+}
+
 fn loader_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
     let method = str_arg(payload, "m");
     match method.as_str() {
@@ -1025,6 +1046,18 @@ fn session_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> 
             session.refresh_context();
             Value::Null
         }
+        "createReplacedSessionContext" => {
+            json!(bridge.contexts.insert(super::CtxEntry::Replaced(session.create_replaced_session_context())))
+        }
+        "runner.hasHandlers" => json!(session.has_extension_handlers(&s(0))),
+        "runner.createContext" => json!(bridge.contexts.insert(super::CtxEntry::Base(session.extension_runner().create_context()))),
+        "runner.createCommandContext" => {
+            json!(bridge.contexts.insert(super::CtxEntry::Command(session.extension_runner().create_command_context())))
+        }
+        "runner.createToolContext" => {
+            let context = session.extension_runner().create_tool_context(&s(0), bridge.token(&a(1)));
+            json!(bridge.contexts.insert(super::CtxEntry::Tool(context)))
+        }
         "state" => agent_state_to_js(&session.state()),
         "cacheWarmingStatus" => serde_json::to_value(session.cache_warming_status())?,
         "setCacheWarmingMode" => {
@@ -1164,6 +1197,10 @@ async fn session_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<
                 session.follow_up(&s(0), images.as_deref(), super::api::opt(&a(2))?.as_ref()).await?
             };
             serde_json::to_value(disposition)?
+        }
+        "runner.emit" => {
+            let event: crate::core::extensions::types::ExtensionEvent = serde_json::from_value(a(0))?;
+            serde_json::to_value(session.extension_runner().emit(event).await?)?
         }
         "sendCustomMessage" => {
             session.send_custom_message(&serde_json::from_value(a(0))?, super::api::opt(&a(1))?.as_ref()).await?;
@@ -1700,6 +1737,26 @@ fn misc_call(bridge: &Arc<Bridge>, op: &str, payload: &Value) -> anyhow::Result<
             Ok(serde_json::to_value(result)?)
         }
         "sdk.createExtensionRuntime" => Ok(json!(ext_runtime_id(bridge, &crate::core::extensions::loader::create_extension_runtime()))),
+        // `extension.tools.get(name).definition` of a loaded extension: the registered definition.
+        "sdk.extensionTool" => {
+            let extension = bridge
+                .extension_refs
+                .get(payload["ext"].as_u64().unwrap_or_default())
+                .and_then(|weak| weak.upgrade())
+                .ok_or_else(|| anyhow::anyhow!("This extension is no longer loaded"))?;
+            let definition = extension.read().tools.get(&s(0)).map(|tool| tool.definition.clone());
+            Ok(definition.map(|d| super::builtin::tool_definition_to_js(bridge, d)).unwrap_or(Value::Null))
+        }
+        // `createAgentSessionServices`: the resolved cwd and agent dir, and the runtime's files.
+        "sdk.servicesPaths" => {
+            let cwd = crate::utils::paths::resolve_path(&s(0), None, None);
+            let agent_dir = match a(1).as_str() {
+                Some(dir) if !dir.is_empty() => crate::utils::paths::resolve_path(dir, None, None),
+                _ => crate::config::get_agent_dir(),
+            };
+            let file = |name: &str| std::path::Path::new(&agent_dir).join(name).to_string_lossy().into_owned();
+            Ok(json!({ "cwd": cwd, "agentDir": agent_dir, "authPath": file("auth.json"), "modelsPath": file("models.json") }))
+        }
         _ => Err(anyhow::anyhow!("unknown host call {op}")),
     }
 }
@@ -1761,6 +1818,28 @@ async fn misc_async(bridge: &Arc<Bridge>, op: &str, payload: &Value) -> anyhow::
                 "scopedModels": serde_json::to_value(&result.scoped_models)?,
                 "diagnostics": serde_json::to_value(&result.diagnostics)?,
             }))
+        }
+        // The rest of `createAgentSessionServices` once its loader has reloaded: register what the
+        // extensions queued, refresh offline, apply extension flag values.
+        "sdk.finishServices" => {
+            use crate::core::agent_session_services::{apply_extension_flag_values, apply_pending_extension_registrations};
+            let loader = loader_of(bridge, &json!({ "id": payload["loader"] }))?;
+            let runtime = runtime_of(bridge, payload)?;
+            let mut diagnostics = apply_pending_extension_registrations(loader.as_ref(), &runtime);
+            runtime
+                .refresh(Some(pi_ai::models::ModelsRefreshOptions { allow_network: Some(false), ..Default::default() }))
+                .await?;
+            let flags: Option<indexmap::IndexMap<String, crate::core::extensions::types::FlagValue>> = match &payload["flags"] {
+                Value::Array(entries) => Some(
+                    entries
+                        .iter()
+                        .filter_map(|e| Some((e[0].as_str()?.to_string(), serde_json::from_value(e[1].clone()).ok()?)))
+                        .collect(),
+                ),
+                _ => None,
+            };
+            diagnostics.extend(apply_extension_flag_values(loader.as_ref(), flags.as_ref()));
+            Ok(serde_json::to_value(diagnostics)?)
         }
         "sdk.discoverAndLoadExtensions" => {
             let paths: Vec<String> = serde_json::from_value(a(0))?;

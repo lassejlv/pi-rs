@@ -81,7 +81,8 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, rt: &JsRuntime, op: &str, payload: 
         | "tui.markdownTheme" | "renderer.call" | "renderer.result" | "ac" => component::dispatch(bridge, op, payload),
         _ if op.starts_with("builtin.") || op.starts_with("ca") => builtin::dispatch(bridge, op, payload),
         "ai" => provider::dispatch(bridge, op, payload),
-        "settings" | "settings.static" | "rt" | "rl" | "as" | "trust" | "pm" | "sdk.resolveCliModel" | "sdk.createExtensionRuntime" => {
+        "settings" | "settings.static" | "rt" | "rl" | "as" | "trust" | "pm" | "sdk.resolveCliModel" | "sdk.createExtensionRuntime"
+        | "sdk.servicesPaths" | "sdk.extensionTool" => {
             sdk::dispatch(bridge, op, payload)
         }
         _ if op.starts_with("aip.") => native::dispatch(bridge, op, payload),
@@ -123,7 +124,7 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, _rt: JsRuntime, op: Stri
         "builtin.execute" | "ca.localBashExec" | "ca.copyToClipboard" | "ca.image" | "ca.compaction" => builtin::dispatch_async(bridge, &op, payload).await,
         "ai.stream" | "stream.next" => provider::dispatch_async(bridge, &op, payload).await,
         "settings.async" | "rt.async" | "rt.stream" | "rl.async" | "as.async" | "builtin.ext.run" | "pm.async" | "sdk.resolveModelScope"
-        | "sdk.discoverAndLoadExtensions" => {
+        | "sdk.discoverAndLoadExtensions" | "sdk.finishServices" => {
             sdk::dispatch_async(bridge, &op, payload).await
         }
         _ if op.starts_with("aip.") => native::dispatch_async(bridge, &op, payload).await,

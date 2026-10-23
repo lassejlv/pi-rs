@@ -1835,6 +1835,11 @@ export async function invokeLoaderReload(loader) {
 	return null;
 }
 
+/** `resolveProjectTrust` reload option of a DefaultResourceLoader created from JavaScript. */
+export async function invokeResolveProjectTrust(resolve, extensionsResult) {
+	return !!(await resolve({ extensionsResult: globalThis.__piSdk.extensionsResultFromHost(extensionsResult) }));
+}
+
 /** A `session.agent.beforeToolCall` / `afterToolCall` hook set from JavaScript. */
 export async function invokeToolHook(hook, context, contextId, signal) {
 	Object.defineProperty(context, "$hookContext", { value: contextId, enumerable: false });

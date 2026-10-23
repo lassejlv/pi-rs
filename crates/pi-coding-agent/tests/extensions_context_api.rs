@@ -555,3 +555,168 @@ export default function (pi) {
     harness.cleanup();
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn agent_session_runtime_matches_ts() {
+    let source = format!(
+        "{PROBE_PRELUDE}{}",
+        r#"
+import { mkdtempSync, writeFileSync as writeFile } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import {
+    AgentSessionRuntime, createAgentSessionFromServices, createAgentSessionRuntime, createAgentSessionServices,
+    SessionManager, wrapRegisteredTool, wrapRegisteredTools,
+} from "@earendil-works/pi-coding-agent";
+export default function (pi) {
+    pi.on("session_start", async (_event, ctx) => {
+        try { await probe(ctx); } catch (e) { out.fatal = String(e?.stack ?? e); finish(); }
+    });
+}
+async function probe(ctx) {
+    {
+        if (globalThis.probeRan) return;
+        globalThis.probeRan = true;
+        const agentDir = mkdtempSync(join(tmpdir(), "svc-agent-"));
+        const cwd = mkdtempSync(join(tmpdir(), "svc-cwd-"));
+        const log = [];
+        const child = (childPi) => {
+            childPi.registerFlag("verbose-x", { type: "boolean", description: "x" });
+            childPi.registerFlag("name-x", { type: "string", description: "y" });
+            childPi.registerProvider("svc-provider", {
+                baseUrl: "http://127.0.0.1:9/v1", apiKey: "svc-key", api: "openai-completions",
+                models: [{ id: "svc-model", name: "Svc", reasoning: false, input: ["text"],
+                    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 1000, maxTokens: 100 }],
+            });
+            childPi.registerTool({
+                name: "svc_tool", label: "Svc", description: "A child tool", parameters: { type: "object", properties: {} },
+                async execute(toolCallId, _params, _signal, _onUpdate, toolCtx) {
+                    return { content: [{ type: "text", text: [toolCallId, toolCtx.cwd === cwd, typeof toolCtx.ui.notify, typeof toolCtx.modelRegistry.find].join(",") }], details: {} };
+                },
+            });
+            childPi.on("session_start", (e) => { log.push(["start", e.reason, childPi.getFlag("verbose-x") ?? null, childPi.getFlag("name-x") ?? null]); });
+            childPi.on("session_before_switch", (e) => { log.push(["before_switch", e.reason, typeof e.targetSessionFile]); });
+            childPi.on("session_before_fork", (e) => { log.push(["before_fork", e.position]); return e.position === "at" ? { cancel: true } : undefined; });
+            childPi.on("session_shutdown", (e) => { log.push(["shutdown", e.reason]); });
+        };
+        const loaderOptions = { extensionFactories: [child], noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true };
+        const services = await createAgentSessionServices({
+            cwd, agentDir, resourceLoaderOptions: loaderOptions,
+            extensionFlagValues: new Map([["verbose-x", "yes"], ["name-x", true], ["unknown-x", true], ["unknown-y", "v"]]),
+        });
+        await t("services", () => [services.cwd === cwd, services.agentDir === agentDir, Object.keys(services), services.diagnostics]);
+        await t("provider", () => services.modelRuntime.getModel("svc-provider", "svc-model")?.id);
+        await t("loaderExtensions", () => services.resourceLoader.getExtensions().extensions.map((e) => [...e.flags.keys()]));
+        let creates = 0;
+        const createRuntime = async ({ cwd, agentDir, sessionManager, sessionStartEvent }) => {
+            creates++;
+            const services = await createAgentSessionServices({ cwd, agentDir, resourceLoaderOptions: loaderOptions });
+            const result = await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, noTools: "all" });
+            return { ...result, services, diagnostics: services.diagnostics };
+        };
+        const runtime = await createAgentSessionRuntime(createRuntime, { cwd, agentDir, sessionManager: SessionManager.inMemory(cwd) });
+        runtime.setRebindSession(async (session) => { log.push(["rebind", session === runtime.session]); await session.bindExtensions({}); });
+        runtime.setBeforeSessionInvalidate(() => log.push(["invalidate"]));
+        await runtime.session.bindExtensions({});
+        await t("runtime", () => [runtime instanceof AgentSessionRuntime, runtime.cwd === cwd, runtime.diagnostics, runtime.services.cwd === cwd, typeof runtime.modelFallbackMessage]);
+        const first = runtime.session;
+        await t("new", async () => {
+            const r = await runtime.newSession({
+                setup: async (sm) => { log.push(["setup", typeof sm.appendMessage]); sm.appendMessage({ role: "user", content: [{ type: "text", text: "hello there" }], timestamp: 1 }); },
+                withSession: async (rctx) => { log.push(["withSession", typeof rctx.sendUserMessage, typeof rctx.newSession, rctx.cwd === cwd]); },
+            });
+            return [r, runtime.session !== first, creates];
+        });
+        const userEntry = runtime.session.sessionManager.getEntries().find((e) => e.type === "message");
+        await t("forkAt", () => runtime.fork(userEntry.id, { position: "at" }));
+        await t("fork", async () => {
+            const r = await runtime.fork(userEntry.id);
+            return [r, runtime.session.sessionManager.getEntries().length, creates];
+        });
+        await t("forkBad", () => runtime.fork("nope"));
+        await t("import", async () => {
+            try { return await runtime.importFromJsonl(join(cwd, "missing.jsonl")); } catch (e) { return [e.name, e.message.startsWith("File not found: "), e.filePath === join(cwd, "missing.jsonl")]; }
+        });
+        const file = join(cwd, "other.jsonl");
+        writeFile(file, JSON.stringify({ type: "session", version: 3, id: "s-import", timestamp: "2024-01-01T00:00:00.000Z", cwd: join(cwd, "gone") }) + "\n");
+        await t("switchMissingCwd", async () => {
+            try { await runtime.switchSession(file); return "ok"; } catch (e) { return [e.name, e.message.split(cwd).join("<cwd>").split("\n")[0]]; }
+        });
+        await t("wrapped", async () => {
+            const registered = runtime.services.resourceLoader.getExtensions().extensions[0].tools.get("svc_tool");
+            const wrapped = wrapRegisteredTool(registered, runtime.session.extensionRunner);
+            const all = wrapRegisteredTools([registered], runtime.session.extensionRunner);
+            const result = await wrapped.execute("call-1", {}, undefined, undefined);
+            return [Object.keys(registered), Object.keys(wrapped), all.length, result.content[0].text];
+        });
+        await runtime.dispose();
+        await t("log", () => log);
+        finish();
+    }
+}
+"#
+    );
+    let (result, harness, dir) = run_probe(&source).await;
+    let expected: Value = serde_json::from_str(include_str!("fixtures/extensions_agent_session_runtime_ts.json")).unwrap();
+    assert_eq!(result, expected, "{result:#}");
+    harness.cleanup();
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn rpc_client_drives_a_pi_child() {
+    let source = format!(
+        "{PROBE_PRELUDE}const PI_BIN = {};\n{}",
+        serde_json::to_string(env!("CARGO_BIN_EXE_pi")).unwrap(),
+        r#"
+import { mkdtempSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { RpcClient } from "@earendil-works/pi-coding-agent";
+export default function (pi) {
+    pi.on("session_start", async (_event, ctx) => {
+        const agentDir = mkdtempSync(join(tmpdir(), "rpc-agent-"));
+        const client = new RpcClient({
+            cliPath: PI_BIN, cwd: ctx.cwd, args: ["--no-session"],
+            env: { PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1" },
+        });
+        await t("notStarted", () => client.getState());
+        await client.start();
+        await t("again", () => client.start());
+        const events = [];
+        const unsubscribe = client.onEvent((event) => events.push(event.type));
+        await t("state", async () => {
+            const state = await client.getState();
+            return [state.isStreaming, state.messageCount, state.thinkingLevel, typeof state.sessionId];
+        });
+        await t("name", async () => { await client.setSessionName("rpc#1"); return (await client.getState()).sessionName; });
+        await t("bash", async () => {
+            const result = await client.bash("echo rpc-ok");
+            return [result.output.trim(), result.exitCode, result.cancelled];
+        });
+        await t("messages", async () => (await client.getMessages()).map((m) => m.role));
+        await t("models", async () => Array.isArray(await client.getAvailableModels()));
+        await t("commands", async () => Array.isArray(await client.getCommands()));
+        await t("badModel", () => client.setModel("nope", "nope"));
+        unsubscribe();
+        await client.stop();
+        await t("stopped", () => client.getState());
+        finish();
+    });
+}
+"#
+    );
+    let (result, harness, dir) = run_probe(&source).await;
+    assert_eq!(result["notStarted"], json!("THROW Client not started"), "{result:#}");
+    assert_eq!(result["again"], json!("THROW Client already started"), "{result:#}");
+    assert_eq!(result["state"], json!([false, 0, "off", "string"]), "{result:#}");
+    assert_eq!(result["name"], json!("rpc#1"), "{result:#}");
+    assert_eq!(result["bash"], json!(["rpc-ok", 0, false]), "{result:#}");
+    assert_eq!(result["messages"], json!(["bashExecution"]), "{result:#}");
+    assert_eq!(result["models"], json!(true), "{result:#}");
+    assert_eq!(result["commands"], json!(true), "{result:#}");
+    assert_eq!(result["badModel"], json!("THROW Model not found: nope/nope"), "{result:#}");
+    assert_eq!(result["stopped"], json!("THROW Client not started"), "{result:#}");
+    harness.cleanup();
+    let _ = std::fs::remove_dir_all(dir);
+}

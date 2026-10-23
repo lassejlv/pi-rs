@@ -7,6 +7,7 @@ import {
 	describeNativeProvider,
 	describeProviderConfig,
 	describeTool,
+	makeContext,
 	ModelRegistry,
 	rustComponent,
 	SessionManager,
@@ -814,10 +815,25 @@ function describeFactory(factory) {
 // ---------------------------------------------------------------------------
 
 function mapOf(record, value = (v) => v) {
-	return new Map(Object.entries(record ?? {}).map(([k, v]) => [k, value(v)]));
+	return new Map(Object.entries(record ?? {}).map(([k, v]) => [k, value(v, k)]));
 }
 
 /** A `LoadExtensionsResult` from Rust (`extensions_result_to_js`). */
+/** `RegisteredTool` of a loaded extension; `definition` (with `execute`) is fetched when first read. */
+function registeredToolFromHost(tool, name, extensionId) {
+	let definition;
+	return {
+		get definition() {
+			if (definition === undefined) {
+				definition = extensionId === undefined || extensionId === null ? null : toolFromHost(call("sdk.extensionTool", { ext: extensionId, a: [name] }));
+				definition ??= tool.definition;
+			}
+			return definition;
+		},
+		sourceInfo: tool.sourceInfo,
+	};
+}
+
 export function extensionsResultFromHost(result) {
 	const extensions = (result?.extensions ?? []).map((e) => {
 		const extension = {
@@ -825,7 +841,7 @@ export function extensionsResultFromHost(result) {
 			resolvedPath: e.resolvedPath,
 			sourceInfo: e.sourceInfo,
 			handlers: mapOf(e.handlers, (count) => Array.from({ length: count }, () => () => undefined)),
-			tools: mapOf(e.tools),
+			tools: mapOf(e.tools, (tool, name) => registeredToolFromHost(tool, name, e.$extension)),
 			messageRenderers: new Map((e.messageRenderers ?? []).map((name) => [name, () => undefined])),
 			commands: mapOf(e.commands),
 			flags: mapOf(e.flags),
@@ -1033,8 +1049,9 @@ export class DefaultResourceLoader {
 		return u(call("rl", { id: this.#id, m, a }));
 	}
 
-	async reload() {
-		await callAsync("rl.async", { id: this.#id });
+	async reload(options) {
+		const resolveProjectTrust = typeof options?.resolveProjectTrust === "function" ? options.resolveProjectTrust : undefined;
+		await callAsync("rl.async", resolveProjectTrust ? { id: this.#id, resolveProjectTrust } : { id: this.#id });
 	}
 	getExtensions() {
 		return extensionsResultFromHost(this.#call("getExtensions"));
@@ -1103,10 +1120,57 @@ function hookFromHost(value) {
 }
 
 /** TS `AgentSession` over a Rust agent session (`createAgentSession()`). */
+/** `session.extensionRunner`: event dispatch to the session's extensions. */
+class SessionExtensionRunner {
+	#session;
+
+	constructor(session) {
+		this.#session = session;
+	}
+	hasHandlers(eventType) {
+		return !!this.#session.__piCall("runner.hasHandlers", eventType);
+	}
+	async emit(event) {
+		return await this.#session.__piAsync("runner.emit", event);
+	}
+	createContext() {
+		return makeContext(this.#session.__piCall("runner.createContext"), "base");
+	}
+	createCommandContext() {
+		return makeContext(this.#session.__piCall("runner.createCommandContext"), "command");
+	}
+	createToolContext(toolCallId, signal) {
+		return makeContext(this.#session.__piCall("runner.createToolContext", toolCallId, tokenFor(signal) ?? null), "tool");
+	}
+}
+
+/** TS `wrapRegisteredTool(registeredTool, runner)`: an AgentTool running the definition with the runner's tool context. */
+export function wrapRegisteredTool(registeredTool, runner) {
+	const definition = registeredTool.definition;
+	return {
+		name: definition.name,
+		label: definition.label,
+		description: definition.description,
+		parameters: definition.parameters,
+		outputSchema: definition.outputSchema,
+		constrainedSampling: definition.constrainedSampling,
+		prepareArguments: definition.prepareArguments,
+		executionMode: definition.executionMode,
+		execute: (toolCallId, params, signal, onUpdate, ctx) =>
+			definition.execute(toolCallId, params, signal, onUpdate, ctx ?? runner.createToolContext(toolCallId, signal)),
+	};
+}
+
+/** TS `wrapRegisteredTools(registeredTools, runner)`. */
+export function wrapRegisteredTools(registeredTools, runner) {
+	return registeredTools.map((tool) => wrapRegisteredTool(tool, runner));
+}
+
 export class AgentSession {
 	#id;
 	#loader;
 	#agent;
+	#runner;
 
 	constructor(token) {
 		if (!token || typeof token !== "object" || !(SDK_OBJECT in token)) {
@@ -1124,6 +1188,19 @@ export class AgentSession {
 
 	async #async(m, ...a) {
 		return u(await callAsync("as.async", { id: this.#id, m, a: a.map((v) => (v === undefined ? null : v)) }));
+	}
+
+	/** @internal */
+	__piAsync(m, ...a) {
+		return this.#async(m, ...a);
+	}
+
+	get extensionRunner() {
+		this.#runner ??= new SessionExtensionRunner(this);
+		return this.#runner;
+	}
+	createReplacedSessionContext() {
+		return makeContext(this.__piCall("createReplacedSessionContext"), "replaced");
 	}
 
 	get agent() {
@@ -1381,4 +1458,841 @@ export async function createAgentSession(options = {}) {
 	const out = { session, extensionsResult: extensionsResultFromHost(result.extensionsResult) };
 	if (result.modelFallbackMessage !== undefined) out.modelFallbackMessage = result.modelFallbackMessage;
 	return out;
+}
+
+// ---------------------------------------------------------------------------
+// createAgentSessionServices, createAgentSessionFromServices, AgentSessionRuntime
+// ---------------------------------------------------------------------------
+
+/** TS `createAgentSessionServices(options)`: cwd-bound runtime services, no session. */
+export async function createAgentSessionServices(options) {
+	const paths = call("sdk.servicesPaths", { a: [options.cwd, options.agentDir ?? null] });
+	const { cwd, agentDir } = paths;
+	const modelRuntime =
+		options.modelRuntime ??
+		(await ModelRuntime.create({ authPath: paths.authPath, modelsPath: paths.modelsPath, signal: options.modelRuntimeSignal }));
+	const settingsManager = options.settingsManager ?? SettingsManager.create(cwd, agentDir);
+	const resourceLoader = new DefaultResourceLoader({
+		...(options.resourceLoaderOptions ?? {}),
+		cwd,
+		agentDir,
+		settingsManager,
+	});
+	await resourceLoader.reload(options.resourceLoaderReloadOptions);
+	const diagnostics = await callAsync("sdk.finishServices", {
+		loader: resourceLoader.__piLoaderId,
+		runtime: modelRuntime.__piRuntimeId,
+		flags: options.extensionFlagValues ? [...options.extensionFlagValues] : null,
+	});
+	return { cwd, agentDir, modelRuntime, settingsManager, resourceLoader, diagnostics };
+}
+
+/** TS `createAgentSessionFromServices(options)`. */
+export async function createAgentSessionFromServices(options) {
+	return createAgentSession({
+		cwd: options.services.cwd,
+		agentDir: options.services.agentDir,
+		modelRuntime: options.services.modelRuntime,
+		settingsManager: options.services.settingsManager,
+		resourceLoader: options.services.resourceLoader,
+		sessionManager: options.sessionManager,
+		model: options.model,
+		thinkingLevel: options.thinkingLevel,
+		scopedModels: options.scopedModels,
+		tools: options.tools,
+		excludeTools: options.excludeTools,
+		noTools: options.noTools,
+		customTools: options.customTools,
+		sessionStartEvent: options.sessionStartEvent,
+	});
+}
+
+/** Thrown when /import references a JSONL file path that does not exist. */
+export class SessionImportFileNotFoundError extends Error {
+	constructor(filePath) {
+		super(`File not found: ${filePath}`);
+		this.name = "SessionImportFileNotFoundError";
+		this.filePath = filePath;
+	}
+}
+
+class MissingSessionCwdError extends Error {
+	constructor(issue) {
+		const sessionFile = issue.sessionFile ? `\nSession file: ${issue.sessionFile}` : "";
+		super(`Stored session working directory does not exist: ${issue.sessionCwd}${sessionFile}\nCurrent working directory: ${issue.fallbackCwd}`);
+		this.name = "MissingSessionCwdError";
+		this.issue = issue;
+	}
+}
+
+async function assertSessionCwdExists(sessionManager, fallbackCwd) {
+	const sessionFile = sessionManager.getSessionFile();
+	if (!sessionFile) return;
+	const sessionCwd = sessionManager.getCwd();
+	const { existsSync } = await import("node:fs");
+	if (!sessionCwd || existsSync(sessionCwd)) return;
+	throw new MissingSessionCwdError({ sessionFile, sessionCwd, fallbackCwd });
+}
+
+async function emitSessionShutdownEvent(runner, event) {
+	if (runner.hasHandlers("session_shutdown")) {
+		await runner.emit(event);
+		return true;
+	}
+	return false;
+}
+
+function extractUserMessageText(content) {
+	if (typeof content === "string") return content;
+	return content
+		.filter((part) => part.type === "text" && typeof part.text === "string")
+		.map((part) => part.text)
+		.join("");
+}
+
+/** TS `AgentSessionRuntime`: owns the current AgentSession plus its cwd-bound services. */
+export class AgentSessionRuntime {
+	#rebindSession;
+	#beforeSessionInvalidate;
+	#session;
+	#services;
+	#createRuntime;
+	#diagnostics;
+	#modelFallbackMessage;
+
+	constructor(session, services, createRuntime, diagnostics = [], modelFallbackMessage) {
+		this.#session = session;
+		this.#services = services;
+		this.#createRuntime = createRuntime;
+		this.#diagnostics = diagnostics;
+		this.#modelFallbackMessage = modelFallbackMessage;
+	}
+
+	get services() {
+		return this.#services;
+	}
+	get session() {
+		return this.#session;
+	}
+	get cwd() {
+		return this.#services.cwd;
+	}
+	get diagnostics() {
+		return this.#diagnostics;
+	}
+	get modelFallbackMessage() {
+		return this.#modelFallbackMessage;
+	}
+	setRebindSession(rebindSession) {
+		this.#rebindSession = rebindSession;
+	}
+	setBeforeSessionInvalidate(beforeSessionInvalidate) {
+		this.#beforeSessionInvalidate = beforeSessionInvalidate;
+	}
+
+	async #emitBeforeSwitch(reason, targetSessionFile) {
+		const runner = this.session.extensionRunner;
+		if (!runner.hasHandlers("session_before_switch")) return { cancelled: false };
+		const result = await runner.emit({ type: "session_before_switch", reason, targetSessionFile });
+		return { cancelled: result?.cancel === true };
+	}
+
+	async #emitBeforeFork(entryId, options) {
+		const runner = this.session.extensionRunner;
+		if (!runner.hasHandlers("session_before_fork")) return { cancelled: false };
+		const result = await runner.emit({ type: "session_before_fork", entryId, ...options });
+		return { cancelled: result?.cancel === true };
+	}
+
+	async #teardownCurrent(reason, targetSessionFile) {
+		await this.session.abort();
+		await emitSessionShutdownEvent(this.session.extensionRunner, { type: "session_shutdown", reason, targetSessionFile });
+		this.#beforeSessionInvalidate?.();
+		this.session.dispose();
+	}
+
+	#apply(result) {
+		this.#session = result.session;
+		this.#services = result.services;
+		this.#diagnostics = result.diagnostics;
+		this.#modelFallbackMessage = result.modelFallbackMessage;
+	}
+
+	async #finishSessionReplacement(withSession) {
+		if (this.#rebindSession) await this.#rebindSession(this.session);
+		if (withSession) await withSession(this.session.createReplacedSessionContext());
+	}
+
+	async switchSession(sessionPath, options) {
+		const beforeResult = await this.#emitBeforeSwitch("resume", sessionPath);
+		if (beforeResult.cancelled) return beforeResult;
+		const previousSessionFile = this.session.sessionFile;
+		const sessionManager = SessionManager.open(sessionPath, undefined, options?.cwdOverride);
+		await assertSessionCwdExists(sessionManager, this.cwd);
+		await this.#teardownCurrent("resume", sessionManager.getSessionFile());
+		this.#apply(
+			await this.#createRuntime({
+				cwd: sessionManager.getCwd(),
+				agentDir: this.services.agentDir,
+				sessionManager,
+				sessionStartEvent: { type: "session_start", reason: "resume", previousSessionFile },
+				projectTrustContext: options?.projectTrustContextFactory?.(sessionManager.getCwd()),
+			}),
+		);
+		await this.#finishSessionReplacement(options?.withSession);
+		return { cancelled: false };
+	}
+
+	async newSession(options) {
+		const beforeResult = await this.#emitBeforeSwitch("new");
+		if (beforeResult.cancelled) return beforeResult;
+		const previousSessionFile = this.session.sessionFile;
+		const sessionDir = this.session.sessionManager.getSessionDir();
+		const sessionManager = this.session.sessionManager.isPersisted()
+			? SessionManager.create(this.cwd, sessionDir)
+			: SessionManager.inMemory(this.cwd);
+		if (options?.parentSession) sessionManager.newSession({ parentSession: options.parentSession });
+		await this.#teardownCurrent("new", sessionManager.getSessionFile());
+		this.#apply(
+			await this.#createRuntime({
+				cwd: this.cwd,
+				agentDir: this.services.agentDir,
+				sessionManager,
+				sessionStartEvent: { type: "session_start", reason: "new", previousSessionFile },
+			}),
+		);
+		if (options?.setup) {
+			await options.setup(this.session.sessionManager);
+			this.session.refreshContext();
+		}
+		await this.#finishSessionReplacement(options?.withSession);
+		return { cancelled: false };
+	}
+
+	async fork(entryId, options) {
+		const position = options?.position ?? "before";
+		const beforeResult = await this.#emitBeforeFork(entryId, { position });
+		if (beforeResult.cancelled) return { cancelled: true };
+		let targetLeafId;
+		let selectedText;
+		const selectedEntry = this.session.sessionManager.getEntry(entryId);
+		if (!selectedEntry) throw new Error("Invalid entry ID for forking");
+		if (position === "at") {
+			targetLeafId = selectedEntry.id;
+		} else {
+			if (selectedEntry.type !== "message" || selectedEntry.message.role !== "user") {
+				throw new Error("Invalid entry ID for forking");
+			}
+			targetLeafId = selectedEntry.parentId;
+			selectedText = extractUserMessageText(selectedEntry.message.content);
+		}
+
+		const previousSessionFile = this.session.sessionFile;
+		const replace = async (sessionManager, cwd) => {
+			this.#apply(
+				await this.#createRuntime({
+					cwd,
+					agentDir: this.services.agentDir,
+					sessionManager,
+					sessionStartEvent: { type: "session_start", reason: "fork", previousSessionFile },
+				}),
+			);
+			await this.#finishSessionReplacement(options?.withSession);
+			return { cancelled: false, selectedText };
+		};
+		if (this.session.sessionManager.isPersisted()) {
+			const currentSessionFile = this.session.sessionFile;
+			if (!currentSessionFile) throw new Error("Persisted session is missing a session file");
+			const sessionDir = this.session.sessionManager.getSessionDir();
+			if (!targetLeafId) {
+				const sessionManager = SessionManager.create(this.cwd, sessionDir);
+				sessionManager.newSession({ parentSession: currentSessionFile });
+				await this.#teardownCurrent("fork", sessionManager.getSessionFile());
+				return replace(sessionManager, this.cwd);
+			}
+			const { existsSync } = await import("node:fs");
+			if (!existsSync(currentSessionFile)) {
+				throw new Error("This session has not been saved yet. Send a message before cloning or forking it.");
+			}
+			const sessionManager = SessionManager.open(currentSessionFile, sessionDir);
+			const forkedSessionPath = sessionManager.createBranchedSession(targetLeafId);
+			if (!forkedSessionPath) throw new Error("Failed to create forked session");
+			await this.#teardownCurrent("fork", sessionManager.getSessionFile());
+			return replace(sessionManager, sessionManager.getCwd());
+		}
+
+		const sessionManager = this.session.sessionManager;
+		await this.#teardownCurrent("fork", sessionManager.getSessionFile());
+		if (!targetLeafId) sessionManager.newSession({ parentSession: previousSessionFile });
+		else sessionManager.createBranchedSession(targetLeafId);
+		return replace(sessionManager, this.cwd);
+	}
+
+	async importFromJsonl(inputPath, cwdOverride) {
+		const fs = await import("node:fs");
+		const path = await import("node:path");
+		const resolvedPath = call("sdk.servicesPaths", { a: [inputPath, null] }).cwd;
+		if (!fs.existsSync(resolvedPath)) throw new SessionImportFileNotFoundError(resolvedPath);
+		const sessionDir = this.session.sessionManager.getSessionDir();
+		if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+		let destinationPath = path.join(sessionDir, path.basename(resolvedPath));
+		const sourceAlreadyStored = path.resolve(destinationPath) === resolvedPath;
+		if (!sourceAlreadyStored) {
+			const { name, ext } = path.parse(destinationPath);
+			let suffix = 1;
+			while (fs.existsSync(destinationPath)) destinationPath = path.join(sessionDir, `${name}-${suffix++}${ext}`);
+		}
+		const beforeResult = await this.#emitBeforeSwitch("resume", destinationPath);
+		if (beforeResult.cancelled) return beforeResult;
+		const previousSessionFile = this.session.sessionFile;
+		if (!sourceAlreadyStored) fs.copyFileSync(resolvedPath, destinationPath, fs.constants.COPYFILE_EXCL);
+		const sessionManager = SessionManager.open(destinationPath, sessionDir, cwdOverride);
+		await assertSessionCwdExists(sessionManager, this.cwd);
+		await this.#teardownCurrent("resume", sessionManager.getSessionFile());
+		this.#apply(
+			await this.#createRuntime({
+				cwd: sessionManager.getCwd(),
+				agentDir: this.services.agentDir,
+				sessionManager,
+				sessionStartEvent: { type: "session_start", reason: "resume", previousSessionFile },
+			}),
+		);
+		await this.#finishSessionReplacement();
+		return { cancelled: false };
+	}
+
+	async dispose() {
+		await emitSessionShutdownEvent(this.session.extensionRunner, { type: "session_shutdown", reason: "quit" });
+		this.#beforeSessionInvalidate?.();
+		this.session.dispose();
+	}
+}
+
+/** TS `createAgentSessionRuntime(createRuntime, options)`. */
+export async function createAgentSessionRuntime(createRuntime, options) {
+	await assertSessionCwdExists(options.sessionManager, options.cwd);
+	const result = await createRuntime(options);
+	return new AgentSessionRuntime(result.session, result.services, createRuntime, result.diagnostics, result.modelFallbackMessage);
+}
+
+// ---------------------------------------------------------------------------
+// RpcClient (modes/rpc/rpc-client.ts)
+// ---------------------------------------------------------------------------
+
+function serializeJsonLine(value) {
+	return `${JSON.stringify(value)}\n`;
+}
+
+/** TS `attachJsonlLineReader` (modes/rpc/jsonl.ts): strict LF-delimited JSONL lines. */
+function attachJsonlLineReader(stream, decoder, onLine) {
+	let buffer = "";
+	const emitLine = (line) => {
+		onLine(line.endsWith("\r") ? line.slice(0, -1) : line);
+	};
+	const onData = (chunk) => {
+		buffer += typeof chunk === "string" ? chunk : decoder.write(chunk);
+		while (true) {
+			const newlineIndex = buffer.indexOf("\n");
+			if (newlineIndex === -1) return;
+			emitLine(buffer.slice(0, newlineIndex));
+			buffer = buffer.slice(newlineIndex + 1);
+		}
+	};
+	const onEnd = () => {
+		buffer += decoder.end();
+		if (buffer.length > 0) {
+			emitLine(buffer);
+			buffer = "";
+		}
+	};
+	stream.on("data", onData);
+	stream.on("end", onEnd);
+	return () => {
+		stream.off("data", onData);
+		stream.off("end", onEnd);
+	};
+}
+
+/**
+ * TS `RpcClient`: drives a pi agent in `--mode rpc` over JSONL. pi-rs: without `cliPath` it spawns
+ * this pi binary (`process.execPath`); a `.js`/`.ts` cliPath runs under `node` like TS, any other
+ * cliPath is spawned as an executable.
+ */
+export class RpcClient {
+	process = null;
+	stopReadingStdout = null;
+	eventListeners = [];
+	pendingRequests = new Map();
+	requestId = 0;
+	stderr = "";
+	exitError = null;
+	options;
+	constructor(options = {}) {
+		this.options = options;
+	}
+	/**
+	* Start the RPC agent process.
+	*/
+	async start() {
+		if (this.process) {
+			throw new Error("Client already started");
+		}
+		this.exitError = null;
+		const cliPath = this.options.cliPath ?? "dist/cli.js";
+		const args = ["--mode", "rpc"];
+		if (this.options.provider) {
+			args.push("--provider", this.options.provider);
+		}
+		if (this.options.model) {
+			args.push("--model", this.options.model);
+		}
+		if (this.options.args) {
+			args.push(...this.options.args);
+		}
+		const { spawn } = await import("node:child_process");
+		const { StringDecoder } = await import("node:string_decoder");
+		// pi-rs: without a cliPath the agent is this pi binary; a JS entry point runs under node as in TS.
+		const [command, commandArgs] = this.options.cliPath === undefined
+			? [process.execPath, args]
+			: /\.[cm]?[jt]s$/.test(cliPath) ? ["node", [cliPath, ...args]] : [cliPath, args];
+		const childProcess = spawn(command, commandArgs, {
+			cwd: this.options.cwd,
+			env: { ...process.env, ...this.options.env },
+			stdio: ["pipe", "pipe", "pipe"]
+		});
+		this.process = childProcess;
+		childProcess.stderr?.on("data", (data) => {
+			this.stderr += data.toString();
+			process.stderr.write(data);
+		});
+		childProcess.once("exit", (code, signal) => {
+			if (this.process !== childProcess) return;
+			const error = this.createProcessExitError(code, signal);
+			this.exitError = error;
+			this.rejectPendingRequests(error);
+		});
+		childProcess.once("error", (error) => {
+			if (this.process !== childProcess) return;
+			const processError = new Error(`Agent process error: ${error.message}. Stderr: ${this.stderr}`);
+			this.exitError = processError;
+			this.rejectPendingRequests(processError);
+		});
+		childProcess.stdin?.on("error", (error) => {
+			if (this.process !== childProcess) return;
+			const stdinError = this.exitError ?? new Error(`Agent process stdin error: ${error.message}. Stderr: ${this.stderr}`);
+			this.exitError = stdinError;
+			this.rejectPendingRequests(stdinError);
+		});
+		this.stopReadingStdout = attachJsonlLineReader(childProcess.stdout, new StringDecoder("utf8"), (line) => {
+			this.handleLine(line);
+		});
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		if (this.process.exitCode !== null) {
+			const error = this.exitError ?? this.createProcessExitError(this.process.exitCode, this.process.signalCode);
+			this.exitError = error;
+			throw error;
+		}
+	}
+	/**
+	* Stop the RPC agent process.
+	*/
+	async stop() {
+		if (!this.process) return;
+		this.stopReadingStdout?.();
+		this.stopReadingStdout = null;
+		this.process.kill("SIGTERM");
+		await new Promise((resolve) => {
+			const timeout = setTimeout(() => {
+				this.process?.kill("SIGKILL");
+				resolve();
+			}, 1e3);
+			this.process?.on("exit", () => {
+				clearTimeout(timeout);
+				resolve();
+			});
+		});
+		this.process = null;
+		this.pendingRequests.clear();
+	}
+	/**
+	* Subscribe to agent events.
+	*/
+	onEvent(listener) {
+		this.eventListeners.push(listener);
+		return () => {
+			const index = this.eventListeners.indexOf(listener);
+			if (index !== -1) {
+				this.eventListeners.splice(index, 1);
+			}
+		};
+	}
+	/**
+	* Get collected stderr output (useful for debugging).
+	*/
+	getStderr() {
+		return this.stderr;
+	}
+	// =========================================================================
+	// Command Methods
+	// =========================================================================
+	/**
+	* Send a prompt to the agent.
+	* Returns the prompt's disposition after acceptance; use onEvent() to receive streaming events.
+	* If the disposition is "handled", no run started for this prompt, so don't wait for agent_settled.
+	*/
+	async prompt(message, images, streamingBehavior) {
+		const response = await this.send({ type: "prompt", message, images, streamingBehavior });
+		return this.getData(response).disposition;
+	}
+	/**
+	* Queue a steering message to interrupt the agent mid-run.
+	*/
+	async steer(message, images) {
+		const response = await this.send({ type: "steer", message, images });
+		return this.getData(response).disposition;
+	}
+	/**
+	* Queue a follow-up message to be processed after the agent finishes.
+	*/
+	async followUp(message, images) {
+		const response = await this.send({ type: "follow_up", message, images });
+		return this.getData(response).disposition;
+	}
+	/**
+	* Abort current operation.
+	*/
+	async abort() {
+		await this.send({ type: "abort" });
+	}
+	/**
+	* Clear queued steering and follow-up messages, returning their text.
+	*/
+	async clearQueue() {
+		const response = await this.send({ type: "clear_queue" });
+		return this.getData(response);
+	}
+	/**
+	* Start a new session, optionally with parent tracking.
+	* @param parentSession - Optional parent session path for lineage tracking
+	* @returns Object with `cancelled: true` if an extension cancelled the new session
+	*/
+	async newSession(parentSession) {
+		const response = await this.send({ type: "new_session", parentSession });
+		return this.getData(response);
+	}
+	/**
+	* Get current session state.
+	*/
+	async getState() {
+		const response = await this.send({ type: "get_state" });
+		return this.getData(response);
+	}
+	/**
+	* Set model by provider and ID.
+	*/
+	async setModel(provider, modelId) {
+		const response = await this.send({ type: "set_model", provider, modelId });
+		return this.getData(response);
+	}
+	/**
+	* Cycle to next model.
+	*/
+	async cycleModel() {
+		const response = await this.send({ type: "cycle_model" });
+		return this.getData(response);
+	}
+	/**
+	* Get list of available models.
+	*/
+	async getAvailableModels() {
+		const response = await this.send({ type: "get_available_models" });
+		return this.getData(response).models;
+	}
+	/**
+	* Set thinking level.
+	*/
+	async setThinkingLevel(level) {
+		await this.send({ type: "set_thinking_level", level });
+	}
+	/**
+	* Cycle thinking level.
+	*/
+	async cycleThinkingLevel() {
+		const response = await this.send({ type: "cycle_thinking_level" });
+		return this.getData(response);
+	}
+	/**
+	* Get list of available thinking levels for the current model.
+	*/
+	async getAvailableThinkingLevels() {
+		const response = await this.send({ type: "get_available_thinking_levels" });
+		return this.getData(response).levels;
+	}
+	/**
+	* Set steering mode.
+	*/
+	async setSteeringMode(mode) {
+		await this.send({ type: "set_steering_mode", mode });
+	}
+	/**
+	* Set follow-up mode.
+	*/
+	async setFollowUpMode(mode) {
+		await this.send({ type: "set_follow_up_mode", mode });
+	}
+	/**
+	* Compact session context.
+	*/
+	async compact(customInstructions) {
+		const response = await this.send({ type: "compact", customInstructions });
+		return this.getData(response);
+	}
+	/**
+	* Set auto-compaction enabled/disabled.
+	*/
+	async setAutoCompaction(enabled) {
+		await this.send({ type: "set_auto_compaction", enabled });
+	}
+	/**
+	* Set auto-retry enabled/disabled.
+	*/
+	async setAutoRetry(enabled) {
+		await this.send({ type: "set_auto_retry", enabled });
+	}
+	/**
+	* Abort in-progress retry.
+	*/
+	async abortRetry() {
+		await this.send({ type: "abort_retry" });
+	}
+	/**
+	* Execute a bash command.
+	*/
+	async bash(command) {
+		const response = await this.send({ type: "bash", command });
+		return this.getData(response);
+	}
+	/**
+	* Abort running bash command.
+	*/
+	async abortBash() {
+		await this.send({ type: "abort_bash" });
+	}
+	/**
+	* Get session statistics.
+	*/
+	async getSessionStats() {
+		const response = await this.send({ type: "get_session_stats" });
+		return this.getData(response);
+	}
+	/**
+	* Export session to HTML.
+	*/
+	async exportHtml(outputPath) {
+		const response = await this.send({ type: "export_html", outputPath });
+		return this.getData(response);
+	}
+	/**
+	* Switch to a different session file.
+	* @returns Object with `cancelled: true` if an extension cancelled the switch
+	*/
+	async switchSession(sessionPath) {
+		const response = await this.send({ type: "switch_session", sessionPath });
+		return this.getData(response);
+	}
+	/**
+	* Fork from a specific message.
+	* @returns Object with `text` (the message text) and `cancelled` (if extension cancelled)
+	*/
+	async fork(entryId) {
+		const response = await this.send({ type: "fork", entryId });
+		return this.getData(response);
+	}
+	/**
+	* Clone the current active branch into a new session.
+	* @returns Object with `cancelled: true` if an extension cancelled the clone
+	*/
+	async clone() {
+		const response = await this.send({ type: "clone" });
+		return this.getData(response);
+	}
+	/**
+	* Get messages available for forking.
+	*/
+	async getForkMessages() {
+		const response = await this.send({ type: "get_fork_messages" });
+		return this.getData(response).messages;
+	}
+	/**
+	* Get session entries in append order, optionally only those after the `since` entry id.
+	*/
+	async getEntries(since) {
+		const response = await this.send({ type: "get_entries", since });
+		return this.getData(response);
+	}
+	/**
+	* Get the session entry tree.
+	*/
+	async getTree() {
+		const response = await this.send({ type: "get_tree" });
+		return this.getData(response);
+	}
+	/**
+	* Get text of last assistant message.
+	*/
+	async getLastAssistantText() {
+		const response = await this.send({ type: "get_last_assistant_text" });
+		return this.getData(response).text;
+	}
+	/**
+	* Set the session display name.
+	*/
+	async setSessionName(name) {
+		await this.send({ type: "set_session_name", name });
+	}
+	/**
+	* Get all messages in the session.
+	*/
+	async getMessages() {
+		const response = await this.send({ type: "get_messages" });
+		return this.getData(response).messages;
+	}
+	/**
+	* Get available commands (extension commands, prompt templates, skills).
+	*/
+	async getCommands() {
+		const response = await this.send({ type: "get_commands" });
+		return this.getData(response).commands;
+	}
+	// =========================================================================
+	// Helpers
+	// =========================================================================
+	/**
+	* Wait for agent to become idle (no streaming).
+	* Resolves when agent_settled event is received.
+	*/
+	waitForIdle(timeout = 6e4) {
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				unsubscribe();
+				reject(new Error(`Timeout waiting for agent to become idle. Stderr: ${this.stderr}`));
+			}, timeout);
+			const unsubscribe = this.onEvent((event) => {
+				if (event.type === "agent_settled") {
+					clearTimeout(timer);
+					unsubscribe();
+					resolve();
+				}
+			});
+		});
+	}
+	/**
+	* Collect events until agent becomes idle.
+	*/
+	collectEvents(timeout = 6e4) {
+		return new Promise((resolve, reject) => {
+			const events = [];
+			const timer = setTimeout(() => {
+				unsubscribe();
+				reject(new Error(`Timeout collecting events. Stderr: ${this.stderr}`));
+			}, timeout);
+			const unsubscribe = this.onEvent((event) => {
+				events.push(event);
+				if (event.type === "agent_settled") {
+					clearTimeout(timer);
+					unsubscribe();
+					resolve(events);
+				}
+			});
+		});
+	}
+	/**
+	* Send prompt and wait for completion, returning all events.
+	*/
+	async promptAndWait(message, images, timeout = 6e4) {
+		const eventsPromise = this.collectEvents(timeout);
+		await this.prompt(message, images);
+		return eventsPromise;
+	}
+	// =========================================================================
+	// Internal
+	// =========================================================================
+	handleLine(line) {
+		try {
+			const data = JSON.parse(line);
+			if (data.type === "response" && data.id && this.pendingRequests.has(data.id)) {
+				const pending = this.pendingRequests.get(data.id);
+				this.pendingRequests.delete(data.id);
+				pending.resolve(data);
+				return;
+			}
+			for (const listener of [...this.eventListeners]) {
+				listener(data);
+			}
+		} catch {
+		}
+	}
+	createProcessExitError(code, signal) {
+		return new Error(`Agent process exited (code=${code} signal=${signal}). Stderr: ${this.stderr}`);
+	}
+	rejectPendingRequests(error) {
+		for (const pending of this.pendingRequests.values()) {
+			pending.reject(error);
+		}
+		this.pendingRequests.clear();
+	}
+	async send(command) {
+		const childProcess = this.process;
+		const stdin = childProcess?.stdin;
+		if (!childProcess || !stdin) {
+			throw new Error("Client not started");
+		}
+		if (this.exitError) {
+			throw this.exitError;
+		}
+		if (childProcess.exitCode !== null) {
+			const error = this.createProcessExitError(childProcess.exitCode, childProcess.signalCode);
+			this.exitError = error;
+			throw error;
+		}
+		if (stdin.destroyed || !stdin.writable) {
+			const error = new Error(`Agent process stdin is not writable. Stderr: ${this.stderr}`);
+			this.exitError = error;
+			throw error;
+		}
+		const id = `req_${++this.requestId}`;
+		const fullCommand = { ...command, id };
+		return new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				this.pendingRequests.delete(id);
+				reject(new Error(`Timeout waiting for response to ${command.type}. Stderr: ${this.stderr}`));
+			}, 3e4);
+			this.pendingRequests.set(id, {
+				resolve: (response) => {
+					clearTimeout(timeout);
+					resolve(response);
+				},
+				reject: (error) => {
+					clearTimeout(timeout);
+					reject(error);
+				}
+			});
+			try {
+				stdin.write(serializeJsonLine(fullCommand));
+			} catch (error) {
+				const writeError = error instanceof Error ? error : new Error(String(error));
+				const pending = this.pendingRequests.get(id);
+				this.pendingRequests.delete(id);
+				pending?.reject(writeError);
+			}
+		});
+	}
+	getData(response) {
+		if (!response.success) {
+			const errorResponse = response;
+			throw new Error(errorResponse.error);
+		}
+		const successResponse = response;
+		return successResponse.data;
+	}
 }

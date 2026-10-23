@@ -67,7 +67,7 @@ fn url_hash(url: &url::Url) -> String {
     }
 }
 
-mod hosted {
+pub(crate) mod hosted {
     //! Port of the `hosted-git-info` `fromUrl` parser.
 
     use super::{decode_uri_component, last_index_of_before, url_hash};

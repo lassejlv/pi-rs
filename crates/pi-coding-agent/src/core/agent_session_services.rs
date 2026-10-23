@@ -138,7 +138,7 @@ pub struct AgentSessionServices {
     pub diagnostics: Vec<AgentSessionRuntimeDiagnostic>,
 }
 
-fn apply_extension_flag_values(
+pub(crate) fn apply_extension_flag_values(
     resource_loader: &dyn ResourceLoader,
     extension_flag_values: Option<&IndexMap<String, FlagValue>>,
 ) -> Vec<AgentSessionRuntimeDiagnostic> {
@@ -206,6 +206,39 @@ fn registration_error(extension_path: &str, error: &anyhow::Error) -> AgentSessi
     }
 }
 
+/// Register the providers and virtual models extensions queued while loading (TS
+/// `createAgentSessionServices`), returning one diagnostic per failed registration.
+pub(crate) fn apply_pending_extension_registrations(
+    resource_loader: &dyn ResourceLoader,
+    model_runtime: &ModelRuntime,
+) -> Vec<AgentSessionRuntimeDiagnostic> {
+    let mut diagnostics = Vec::new();
+    let extensions_result = resource_loader.get_extensions();
+    let runtime = &extensions_result.runtime;
+    let pending = std::mem::take(&mut *runtime.pending_provider_registrations.lock());
+    for registration in pending {
+        if let Err(error) = model_runtime.register_provider(
+            &registration.name,
+            &provider_config_input(&registration.config),
+        ) {
+            diagnostics.push(registration_error(&registration.extension_path, &error));
+        }
+    }
+    let pending = std::mem::take(&mut *runtime.pending_native_provider_registrations.lock());
+    for registration in pending {
+        if let Err(error) = model_runtime.register_native_provider(registration.provider) {
+            diagnostics.push(registration_error(&registration.extension_path, &error));
+        }
+    }
+    let pending = std::mem::take(&mut *runtime.pending_virtual_model_registrations.lock());
+    for registration in pending {
+        if let Err(error) = model_runtime.register_virtual_model(&registration.definition) {
+            diagnostics.push(registration_error(&registration.extension_path, &error));
+        }
+    }
+    diagnostics
+}
+
 /// Create cwd-bound runtime services.
 ///
 /// Returns services plus diagnostics. It does not create an AgentSession.
@@ -244,30 +277,7 @@ pub async fn create_agent_session_services(
         .reload(options.resource_loader_reload_options.as_ref())
         .await?;
 
-    let mut diagnostics = Vec::new();
-    let extensions_result = resource_loader.get_extensions();
-    let runtime = &extensions_result.runtime;
-    let pending = std::mem::take(&mut *runtime.pending_provider_registrations.lock());
-    for registration in pending {
-        if let Err(error) = model_runtime.register_provider(
-            &registration.name,
-            &provider_config_input(&registration.config),
-        ) {
-            diagnostics.push(registration_error(&registration.extension_path, &error));
-        }
-    }
-    let pending = std::mem::take(&mut *runtime.pending_native_provider_registrations.lock());
-    for registration in pending {
-        if let Err(error) = model_runtime.register_native_provider(registration.provider) {
-            diagnostics.push(registration_error(&registration.extension_path, &error));
-        }
-    }
-    let pending = std::mem::take(&mut *runtime.pending_virtual_model_registrations.lock());
-    for registration in pending {
-        if let Err(error) = model_runtime.register_virtual_model(&registration.definition) {
-            diagnostics.push(registration_error(&registration.extension_path, &error));
-        }
-    }
+    let mut diagnostics = apply_pending_extension_registrations(resource_loader.as_ref(), &model_runtime);
     model_runtime
         .refresh(Some(ModelsRefreshOptions {
             allow_network: Some(false),
