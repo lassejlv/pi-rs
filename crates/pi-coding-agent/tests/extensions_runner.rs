@@ -1484,3 +1484,36 @@ async fn before_provider_headers_isolates_throwing_handlers() {
     assert_eq!(errors[0].event, "before_provider_headers");
     assert!(errors[0].error.contains("header handler boom"));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn markdown_transformer_receives_persisted_identity_and_undefined_live_metadata() {
+    let dir = ExtDir::new();
+    dir.write(
+        "markdown-context.ts",
+        r#"export default function(pi) {
+            pi.registerMarkdownTransformer((markdown, context) =>
+                JSON.stringify({
+                    markdown,
+                    messageType: context.messageType,
+                    isStreaming: context.isStreaming,
+                    availableWidth: context.availableWidth,
+                    messageId: context.messageId,
+                    timestamp: context.timestamp,
+                    live: context.messageId === undefined && context.timestamp === undefined
+                }));
+        }"#,
+    );
+    let result = dir.discover().await;
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+    let runner = dir.runner(&result).await;
+    let transformers = runner.get_markdown_transformers();
+    for metadata in [json!({}), json!({"messageId": "entry-abc", "timestamp": "2025-01-15T10:30:00.000Z"})] {
+        let mut wire = json!({"messageType": "assistant-thinking", "isStreaming": false, "availableWidth": 78});
+        wire.as_object_mut().unwrap().extend(metadata.as_object().unwrap().clone());
+        let context: MarkdownTransformContext = serde_json::from_value(wire.clone()).unwrap();
+        let actual: Value = serde_json::from_str(&transformers[0]("reasoning", &context)).unwrap();
+        wire["markdown"] = json!("reasoning");
+        wire["live"] = json!(metadata.get("messageId").is_none());
+        assert_eq!(actual, wire);
+    }
+}

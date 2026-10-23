@@ -2552,12 +2552,18 @@ pub enum MarkdownMessageType {
     AssistantThinking,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkdownTransformContext {
     pub message_type: MarkdownMessageType,
     pub is_streaming: bool,
     pub available_width: usize,
+    /// Persisted session-entry id; absent for live messages or live rendering.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
+    /// Persisted session-entry ISO timestamp; absent for live messages or live rendering.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<String>,
 }
 
 pub type MarkdownTransformer = Arc<dyn Fn(&str, &MarkdownTransformContext) -> String + Send + Sync>;

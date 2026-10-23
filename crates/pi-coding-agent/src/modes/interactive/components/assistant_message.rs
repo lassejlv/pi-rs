@@ -39,6 +39,8 @@ struct Inner {
     content_container: Arc<Container>,
     markdown_theme: MarkdownTheme,
     markdown_transformers: Vec<MarkdownTransformer>,
+    message_id: Option<String>,
+    timestamp: Option<String>,
     st: Mutex<State>,
 }
 
@@ -66,6 +68,8 @@ impl AssistantMessageComponent {
         hidden_thinking_label: Option<&str>,
         output_pad: Option<i64>,
         markdown_transformers: Option<&[MarkdownTransformer]>,
+        message_id: Option<&str>,
+        timestamp: Option<&str>,
     ) -> Self {
         let content_container = Arc::new(Container::new());
         let container = Container::new();
@@ -76,6 +80,8 @@ impl AssistantMessageComponent {
             content_container,
             markdown_theme: markdown_theme.cloned().unwrap_or_else(get_markdown_theme),
             markdown_transformers: markdown_transformers.map(<[_]>::to_vec).unwrap_or_default(),
+            message_id: message_id.map(str::to_owned),
+            timestamp: timestamp.map(str::to_owned),
             st: Mutex::new(State {
                 hide_thinking_block: hide_thinking_block.unwrap_or(false),
                 hidden_thinking_label: hidden_thinking_label.unwrap_or("Thinking...").to_string(),
@@ -178,6 +184,8 @@ impl Inner {
                                 CreateMarkdownTransformMessageType::Assistant,
                                 is_streaming,
                                 &self.markdown_transformers,
+                                self.message_id.as_deref(),
+                                self.timestamp.as_deref(),
                             )),
                             ..Default::default()
                         }),
@@ -230,6 +238,8 @@ impl Inner {
                                     CreateMarkdownTransformMessageType::AssistantThinking,
                                     is_streaming,
                                     &self.markdown_transformers,
+                                    self.message_id.as_deref(),
+                                    self.timestamp.as_deref(),
                                 )),
                                 ..Default::default()
                             }),
