@@ -364,6 +364,24 @@ impl Renderer<'_> {
                 lines.extend(self.render_table(token, width, next_token_type, style_context));
             }
             T::Blockquote => {
+                // A border needs two columns plus at least one content column. Once that
+                // no longer fits, pass children through without rewrapping or adding borders;
+                // otherwise each extra nesting level multiplies the number of output lines.
+                if width < 3 {
+                    // Traverse borderless quotes iteratively so extra nesting does not
+                    // consume renderer stack frames either.
+                    let mut pending = vec![(token, next_token_type)];
+                    while let Some((child, next)) = pending.pop() {
+                        if child.kind == T::Blockquote {
+                            for (i, qt) in child.tokens.iter().enumerate().rev() {
+                                pending.push((qt, child.tokens.get(i + 1).map(|t| t.kind)));
+                            }
+                        } else {
+                            lines.extend(self.render_token(child, width, next, style_context));
+                        }
+                    }
+                    return lines;
+                }
                 let theme = self.theme.clone();
                 let quote_style: StyleFn = Arc::new(move |t: &str| (theme.quote)(&(theme.italic)(t)));
                 let quote_prefix = style_prefix_of(&*quote_style);
@@ -373,7 +391,7 @@ impl Renderer<'_> {
                     }
                     quote_style(&line.replace("\x1b[0m", &format!("\x1b[0m{quote_prefix}")))
                 };
-                let quote_content_width = width.saturating_sub(2).max(1);
+                let quote_content_width = width - 2;
                 let ctx = InlineStyleContext { apply_text: ApplyText::Identity, style_prefix: quote_prefix.clone() };
                 let mut rendered: Vec<String> = Vec::new();
                 for (i, qt) in token.tokens.iter().enumerate() {
@@ -977,6 +995,31 @@ mod tests {
     use std::sync::{OnceLock, Weak};
 
     use super::*;
+
+    #[test]
+    fn deeply_nested_blockquote_tokens_render_without_output_growth() {
+        // Exercise the renderer directly: the recursive lexer can exhaust the small
+        // test-thread stack before reaching the renderer at this depth.
+        let mut token = Token::new(T::Text, "x");
+        token.text = "x".to_string();
+        for _ in 0..200 {
+            let mut quote = Token::new(T::Blockquote, "");
+            quote.tokens.push(token);
+            token = quote;
+        }
+        let theme = MarkdownTheme::plain();
+        let options = MarkdownOptions::default();
+        let mut prefix = None;
+        let mut renderer = Renderer {
+            theme: &theme,
+            options: &options,
+            default_text_style: None,
+            default_style_prefix: &mut prefix,
+        };
+        for width in [1, 2, 3, 4, 80] {
+            assert_eq!(renderer.render_token(&token, width, None, None), [format!("{}x", "│ ".repeat((width - 1) / 2))]);
+        }
+    }
 
     /// Callbacks (extension code) may call back into the component they render for.
     #[test]

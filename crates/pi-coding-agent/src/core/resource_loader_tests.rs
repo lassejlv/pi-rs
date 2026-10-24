@@ -924,3 +924,126 @@ async fn collision_diagnostics_report_the_package_skill_as_loser_when_the_user_s
         .expect("collision diagnostic");
     assert!(collision["collision"]["loserPath"].as_str().unwrap().contains("fake-package"), "{collision}");
 }
+
+#[tokio::test]
+async fn package_install_failure_warns_for_each_scope_and_keeps_loading() {
+    // Serialize with package-manager tests that toggle PI_OFFLINE.
+    let _guard = crate::core::package_manager::TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    for scope in [
+        SourceScope::User,
+        SourceScope::Project,
+        SourceScope::Temporary,
+    ] {
+        let dirs = Dirs::new();
+        let settings = SettingsManager::in_memory_json(
+            serde_json::json!({
+                "npmCommand": [node_join(&[&dirs.temp_dir, "missing-npm"])],
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+            None,
+        );
+        let source = "npm:broken-package";
+        match scope {
+            SourceScope::User => {
+                settings.set_packages(&[serde_json::from_value(serde_json::json!(source)).unwrap()])
+            }
+            SourceScope::Project => settings
+                .set_project_packages(&[serde_json::from_value(serde_json::json!(source)).unwrap()])
+                .unwrap(),
+            SourceScope::Temporary => {}
+        }
+        write(
+            &node_join(&[&dirs.agent_dir, "prompts", "healthy.md"]),
+            "Healthy local prompt",
+        );
+        let loader = DefaultResourceLoader::new(&DefaultResourceLoaderOptions {
+            settings_manager: Some(settings),
+            additional_extension_paths: (scope == SourceScope::Temporary)
+                .then(|| vec![source.to_string()]),
+            ..dirs.options()
+        });
+        for _ in 0..2 {
+            loader.reload(None).await.unwrap();
+            let extensions = loader.get_extensions();
+            assert!(extensions.errors.is_empty());
+            let warnings = extensions.warnings.unwrap();
+            assert_eq!(warnings.len(), 1);
+            assert_eq!(warnings[0].path, source);
+            assert!(warnings[0].warning.starts_with("failed to install ("));
+            let hint = match scope {
+                SourceScope::User => {
+                    "Run \"pi remove npm:broken-package\" to remove it from settings.json."
+                }
+                SourceScope::Project => {
+                    "Run \"pi remove npm:broken-package --local\" to remove it from settings.json."
+                }
+                SourceScope::Temporary => "Check the source and try again.",
+            };
+            assert!(
+                warnings[0].warning.ends_with(hint),
+                "{}",
+                warnings[0].warning
+            );
+            assert!(
+                loader
+                    .get_prompts()
+                    .prompts
+                    .iter()
+                    .any(|prompt| prompt.name == "healthy")
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn package_install_failure_warns_once_across_project_trust_passes() {
+    let _guard = crate::core::package_manager::TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    let dirs = Dirs::new();
+    let settings = SettingsManager::in_memory_json(
+        serde_json::json!({
+            "npmCommand": [node_join(&[&dirs.temp_dir, "missing-npm"])],
+            "packages": ["npm:broken-package"],
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+        None,
+    );
+    let loader = DefaultResourceLoader::new(&DefaultResourceLoaderOptions {
+        settings_manager: Some(settings),
+        ..dirs.options()
+    });
+    loader
+        .reload(Some(&ResourceLoaderReloadOptions {
+            resolve_project_trust: Some(Arc::new(|input| {
+                Box::pin(async move {
+                    let warnings = input.extensions_result.warnings.unwrap();
+                    assert_eq!(warnings.len(), 1);
+                    assert_eq!(warnings[0].path, "npm:broken-package");
+                    Ok(true)
+                })
+            })),
+        }))
+        .await
+        .unwrap();
+    assert_eq!(loader.get_extensions().warnings.unwrap().len(), 1);
+}
+
+#[test]
+fn package_install_failure_warning_has_upstream_format() {
+    let failure = PackageInstallFailure {
+        source: "npm:broken-package".to_string(),
+        scope: SourceScope::Project,
+        message: "registry unavailable".to_string(),
+    };
+    assert_eq!(
+        format_package_install_warning(&failure),
+        "Extension package \"npm:broken-package\": failed to install (registry unavailable). Run \"pi remove npm:broken-package --local\" to remove it from settings.json."
+    );
+}

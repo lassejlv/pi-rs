@@ -1,6 +1,6 @@
 //! Port of `packages/coding-agent/src/core/resource-loader.ts`.
 
-use crate::config::CONFIG_DIR_NAME;
+use crate::config::{APP_NAME, CONFIG_DIR_NAME};
 use crate::core::event_bus::{EventBus, create_event_bus};
 use crate::core::extensions::loader::{
     clear_extension_cache, create_extension_runtime, load_extension_from_factory,
@@ -12,7 +12,7 @@ use crate::core::extensions::types::{
 };
 use crate::core::footer_data_provider::find_git_paths;
 use crate::core::package_manager::{
-    DefaultPackageManager, PackageManager, PackageManagerOptions,
+    DefaultPackageManager, PackageInstallFailure, PackageManager, PackageManagerOptions,
     PackageManagerResolveExtensionSourcesOptions, PathMetadata, ResolvedResource,
 };
 use crate::core::prompt_templates::{
@@ -144,6 +144,38 @@ fn collect_extension_package_warnings(
         });
     }
     Ok(warnings)
+}
+
+fn describe_package_install_failure(failure: &PackageInstallFailure) -> String {
+    let hint = if failure.scope == SourceScope::Temporary {
+        "Check the source and try again.".to_string()
+    } else {
+        let local = if failure.scope == SourceScope::Project {
+            " --local"
+        } else {
+            ""
+        };
+        format!("Run \"{APP_NAME} remove {}{local}\" to remove it from settings.json.", failure.source)
+    };
+    format!("failed to install ({}). {hint}", failure.message)
+}
+
+/// Startup warning for a package that could not be installed.
+pub fn format_package_install_warning(failure: &PackageInstallFailure) -> String {
+    format!("Extension package \"{}\": {}", failure.source, describe_package_install_failure(failure))
+}
+
+fn collect_package_install_warnings(
+    failures: [&[PackageInstallFailure]; 2],
+) -> Vec<ExtensionLoadWarning> {
+    failures
+        .into_iter()
+        .flatten()
+        .map(|failure| ExtensionLoadWarning {
+            path: failure.source.clone(),
+            warning: describe_package_install_failure(failure),
+        })
+        .collect()
 }
 
 fn merge_extension_warnings(result: &mut LoadExtensionsResult, warnings: Vec<ExtensionLoadWarning>) {
@@ -796,7 +828,14 @@ impl DefaultResourceLoader {
         let mut extensions_result = self
             .load_final_extension_set(&extension_paths, pre_trust_extensions)
             .await?;
-        merge_extension_warnings(&mut extensions_result, package_warnings);
+        let install_warnings = collect_package_install_warnings([
+            resolved_paths.install_failures.as_deref().unwrap_or_default(),
+            cli_extension_paths.install_failures.as_deref().unwrap_or_default(),
+        ]);
+        merge_extension_warnings(
+            &mut extensions_result,
+            install_warnings.into_iter().chain(package_warnings).collect(),
+        );
         for p in &self.additional_extension_paths {
             if is_local_path(p) {
                 let resolved = self.resolve_resource_path(p);
@@ -1019,7 +1058,14 @@ impl DefaultResourceLoader {
             None,
         )
         .await?;
-        merge_extension_warnings(&mut extensions_result, package_warnings);
+        let install_warnings = collect_package_install_warnings([
+            resolved_paths.install_failures.as_deref().unwrap_or_default(),
+            cli_extension_paths.install_failures.as_deref().unwrap_or_default(),
+        ]);
+        merge_extension_warnings(
+            &mut extensions_result,
+            install_warnings.into_iter().chain(package_warnings).collect(),
+        );
         if !include_inline_factories {
             return Ok(extensions_result);
         }

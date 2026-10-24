@@ -281,11 +281,16 @@ fn optional_strings(value: Option<&Value>, name: &str) -> Result<Option<Vec<Stri
     }
 }
 
+/// Only HTTP(S) URLs are safe for server-supplied OAuth metadata and the platform URL handler.
+pub fn is_http_url(url: &Url) -> bool {
+    matches!(url.scheme(), "http" | "https")
+}
+
 fn safe_url(value: Option<&Value>, name: &str) -> Result<String> {
     let text = required_string(value, name)?;
     // URL parsing errors are reported as plain errors here; discovery reserves `TypeError` for network failures.
     let url = Url::parse(&text).map_err(|_| invalid(name))?;
-    if ["javascript", "data", "vbscript"].contains(&url.scheme()) {
+    if !is_http_url(&url) {
         return Err(invalid(name));
     }
     Ok(text)

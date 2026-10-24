@@ -5,6 +5,31 @@ use std::path::Path;
 use pi_jsrt::{JsRuntime, RuntimeOptions};
 use serde_json::json;
 
+/// Zod memoizes shape getters by replacing them with data properties during the read.
+#[tokio::test]
+async fn self_replacing_getter_does_not_poison_property_cache() {
+    let rt = JsRuntime::new(RuntimeOptions::default()).unwrap();
+    let value = rt
+        .eval(
+            r#"(() => {
+        const def = { shape: { a: 1 } };
+        const original = def.shape;
+        Object.defineProperty(def, 'shape', { get() {
+            const value = { ...original };
+            Object.defineProperty(def, 'shape', { value });
+            return value;
+        }});
+        const read = () => def.shape;
+        const results = [];
+        for (let i = 0; i < 10; i++) results.push(read().a);
+        return results;
+    })()"#,
+        )
+        .await
+        .unwrap();
+    assert_eq!(value, json!([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]));
+}
+
 fn write(root: &Path, rel: &str, content: &str) {
     let p = root.join(rel);
     std::fs::create_dir_all(p.parent().unwrap()).unwrap();

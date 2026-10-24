@@ -84,7 +84,11 @@ fn recv_with_fds(sock: RawFd, buf: &mut [u8]) -> std::io::Result<(usize, Vec<Own
         let mut control = vec![0u8; space];
         msg.msg_control = control.as_mut_ptr().cast();
         msg.msg_controllen = space as _;
-        let n = libc::recvmsg(sock, &mut msg, libc::MSG_CMSG_CLOEXEC);
+        #[cfg(any(target_os = "linux", target_os = "android"))]
+        let flags = libc::MSG_CMSG_CLOEXEC;
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        let flags = 0;
+        let n = libc::recvmsg(sock, &mut msg, flags);
         if n < 0 {
             return Err(std::io::Error::last_os_error());
         }
@@ -96,7 +100,12 @@ fn recv_with_fds(sock: RawFd, buf: &mut [u8]) -> std::io::Result<(usize, Vec<Own
                 let len = (*cmsg).cmsg_len as usize - libc::CMSG_LEN(0) as usize;
                 for i in 0..len / std::mem::size_of::<RawFd>() {
                     let fd = std::ptr::read_unaligned(data.cast::<RawFd>().add(i));
-                    fds.push(OwnedFd::from_raw_fd(fd));
+                    let fd = OwnedFd::from_raw_fd(fd);
+                    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+                    if libc::fcntl(fd.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC) == -1 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+                    fds.push(fd);
                 }
             }
             cmsg = libc::CMSG_NXTHDR(&msg, cmsg);

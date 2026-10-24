@@ -67,11 +67,20 @@ pub(crate) fn new_component(bridge: &Arc<Bridge>, kind: &str, payload: &Value) -
                 a(3).as_str(),
                 pad(&a(4)),
                 Some(&transformers),
+                a(6).as_str(),
+                a(7).as_str(),
             ))
         }
         "userMessage" => {
             let transformers = markdown_transformers(bridge, &a(3));
-            Arc::new(UserMessageComponent::new(&str_arg(&json!({ "t": a(0) }), "t"), theme(1).as_ref(), pad(&a(2)), Some(&transformers)))
+            Arc::new(UserMessageComponent::new(
+                &str_arg(&json!({ "t": a(0) }), "t"),
+                theme(1).as_ref(),
+                pad(&a(2)),
+                Some(&transformers),
+                a(4).as_str(),
+                a(5).as_str(),
+            ))
         }
         "toolExecution" => {
             let options: Option<ToolExecutionOptions> = opt(&a(3))?;
