@@ -9,6 +9,7 @@ license.workspace = true
 pi-jsrt.workspace = true
 boa_engine.workspace = true
 pi-json.workspace = true
+pi-embed.workspace = true
 pi-chord.workspace = true
 pi-ai.workspace = true
 pi-telemetry.workspace = true

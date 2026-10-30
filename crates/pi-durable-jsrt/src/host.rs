@@ -107,7 +107,7 @@ pub fn specifier_for(path: &str) -> Option<String> {
 pub fn modules(include_vitest: bool) -> Vec<(String, &'static str)> {
     table::MODULES
         .iter()
-        .filter_map(|(path, src)| specifier_for(path).map(|spec| (spec, *src)))
+        .filter_map(|(path, src)| specifier_for(path).map(|spec| (spec, src.get())))
         .filter(|(spec, _)| include_vitest || spec != "vitest")
         .collect()
 }

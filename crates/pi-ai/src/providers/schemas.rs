@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use serde_json::{Map, Value};
 
 static SCHEMAS: Lazy<Map<String, Value>> = Lazy::new(|| {
-    serde_json::from_str(include_str!("../../data/schemas.json")).expect("valid embedded schemas")
+    serde_json::from_str(&pi_embed::include_str!("../../data/schemas.json").decompress()).expect("valid embedded schemas")
 });
 
 /// A schema by its TypeScript export name, e.g. `"ProviderCompatSchema"`.

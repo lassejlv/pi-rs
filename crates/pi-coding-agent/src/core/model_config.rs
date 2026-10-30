@@ -25,10 +25,10 @@ use crate::utils::paths::normalize_path;
 use crate::utils::text::strip_bom;
 
 /// The generated models.json JSON Schema artifact.
-pub const MODELS_SCHEMA_ARTIFACT: &str = include_str!("schemas/models.schema.json");
+pub const MODELS_SCHEMA_ARTIFACT: pi_embed::Embedded = pi_embed::include_str!("schemas/models.schema.json");
 
 pub static MODELS_CONFIG_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
-    serde_json::from_str(MODELS_SCHEMA_ARTIFACT).expect("valid embedded models schema")
+    serde_json::from_str(MODELS_SCHEMA_ARTIFACT.get()).expect("valid embedded models schema")
 });
 
 /// Replace `$ref`s into the root `$defs` with the referenced schema (siblings win).

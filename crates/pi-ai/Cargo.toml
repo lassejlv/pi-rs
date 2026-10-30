@@ -32,6 +32,7 @@ rsa = { workspace = true }
 crc32fast = { workspace = true }
 sha1 = { workspace = true }
 ruzstd = { workspace = true }
+pi-embed.workspace = true
 # std::time clocks on native; the JavaScript clock on wasm32, where std::time panics.
 web-time = "1.1"
 

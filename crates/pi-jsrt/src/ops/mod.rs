@@ -34,26 +34,26 @@ pub(crate) mod ws;
 pub(crate) mod zlib;
 
 /// Glue scripts installed in every runtime.
-const WEB_GLUE: &[(&str, &str)] = &[
-    ("prelude.js", include_str!("../../js/prelude.js")),
-    ("inspect.js", include_str!("../../js/inspect.js")),
-    ("web/encoding.js", include_str!("../../js/web/encoding.js")),
-    ("web/url.js", include_str!("../../js/web/url.js")),
-    ("web/events.js", include_str!("../../js/web/events.js")),
-    ("web/globals.js", include_str!("../../js/web/globals.js")),
+const WEB_GLUE: &[(&str, pi_embed::Embedded)] = &[
+    ("prelude.js", pi_embed::include_str!("../../js/prelude.js")),
+    ("inspect.js", pi_embed::include_str!("../../js/inspect.js")),
+    ("web/encoding.js", pi_embed::include_str!("../../js/web/encoding.js")),
+    ("web/url.js", pi_embed::include_str!("../../js/web/url.js")),
+    ("web/events.js", pi_embed::include_str!("../../js/web/events.js")),
+    ("web/globals.js", pi_embed::include_str!("../../js/web/globals.js")),
 ];
 
 /// Glue scripts installed eagerly when Node compatibility is enabled.
-const NODE_GLUE: &[(&str, &str)] = &[
-    ("node/events.js", include_str!("../../js/node/events.js")),
-    ("node/buffer.js", include_str!("../../js/node/buffer.js")),
-    ("node/process.js", include_str!("../../js/node/process.js")),
+const NODE_GLUE: &[(&str, pi_embed::Embedded)] = &[
+    ("node/events.js", pi_embed::include_str!("../../js/node/events.js")),
+    ("node/buffer.js", pi_embed::include_str!("../../js/node/buffer.js")),
+    ("node/process.js", pi_embed::include_str!("../../js/node/process.js")),
 ];
 
 /// A glue file compiled on first use: the builtins and globals it provides.
 struct LazyGlue {
     file: &'static str,
-    src: &'static str,
+    src: pi_embed::Embedded,
     builtins: &'static [&'static str],
     globals: &'static [&'static str],
 }
@@ -62,55 +62,55 @@ struct LazyGlue {
 const LAZY_GLUE: &[LazyGlue] = &[
     LazyGlue {
         file: "node/path.js",
-        src: include_str!("../../js/node/path.js"),
+        src: pi_embed::include_str!("../../js/node/path.js"),
         builtins: &["path", "path/posix", "path/win32"],
         globals: &[],
     },
     LazyGlue {
         file: "node/util.js",
-        src: include_str!("../../js/node/util.js"),
+        src: pi_embed::include_str!("../../js/node/util.js"),
         builtins: &["util", "util/types"],
         globals: &[],
     },
     LazyGlue {
         file: "node/stream.js",
-        src: include_str!("../../js/node/stream.js"),
+        src: pi_embed::include_str!("../../js/node/stream.js"),
         builtins: &["stream", "stream/promises", "stream/web"],
         globals: &[],
     },
     LazyGlue {
         file: "node/fs.js",
-        src: include_str!("../../js/node/fs.js"),
+        src: pi_embed::include_str!("../../js/node/fs.js"),
         builtins: &["fs", "fs/promises"],
         globals: &[],
     },
     LazyGlue {
         file: "node/os.js",
-        src: include_str!("../../js/node/os.js"),
+        src: pi_embed::include_str!("../../js/node/os.js"),
         builtins: &["os"],
         globals: &[],
     },
     LazyGlue {
         file: "node/child_process.js",
-        src: include_str!("../../js/node/child_process.js"),
+        src: pi_embed::include_str!("../../js/node/child_process.js"),
         builtins: &["child_process"],
         globals: &[],
     },
     LazyGlue {
         file: "node/crypto.js",
-        src: include_str!("../../js/node/crypto.js"),
+        src: pi_embed::include_str!("../../js/node/crypto.js"),
         builtins: &["crypto"],
         globals: &[],
     },
     LazyGlue {
         file: "node/webcrypto.js",
-        src: include_str!("../../js/node/webcrypto.js"),
+        src: pi_embed::include_str!("../../js/node/webcrypto.js"),
         builtins: &[],
         globals: &["CryptoKey"],
     },
     LazyGlue {
         file: "node/misc.js",
-        src: include_str!("../../js/node/misc.js"),
+        src: pi_embed::include_str!("../../js/node/misc.js"),
         builtins: &[
             "url",
             "querystring",
@@ -132,13 +132,13 @@ const LAZY_GLUE: &[LazyGlue] = &[
     },
     LazyGlue {
         file: "node/worker_threads.js",
-        src: include_str!("../../js/node/worker_threads.js"),
+        src: pi_embed::include_str!("../../js/node/worker_threads.js"),
         builtins: &["worker_threads"],
         globals: &[],
     },
     LazyGlue {
         file: "node/perf_hooks.js",
-        src: include_str!("../../js/node/perf_hooks.js"),
+        src: pi_embed::include_str!("../../js/node/perf_hooks.js"),
         builtins: &["perf_hooks"],
         globals: &[
             "performance",
@@ -153,103 +153,103 @@ const LAZY_GLUE: &[LazyGlue] = &[
     },
     LazyGlue {
         file: "node/diagnostics_channel.js",
-        src: include_str!("../../js/node/diagnostics_channel.js"),
+        src: pi_embed::include_str!("../../js/node/diagnostics_channel.js"),
         builtins: &["diagnostics_channel"],
         globals: &[],
     },
     LazyGlue {
         file: "node/cluster.js",
-        src: include_str!("../../js/node/cluster.js"),
+        src: pi_embed::include_str!("../../js/node/cluster.js"),
         builtins: &["cluster"],
         globals: &[],
     },
     LazyGlue {
         file: "node/dgram.js",
-        src: include_str!("../../js/node/dgram.js"),
+        src: pi_embed::include_str!("../../js/node/dgram.js"),
         builtins: &["dgram"],
         globals: &[],
     },
     LazyGlue {
         file: "node/http2.js",
-        src: include_str!("../../js/node/http2.js"),
+        src: pi_embed::include_str!("../../js/node/http2.js"),
         builtins: &["http2"],
         globals: &[],
     },
     LazyGlue {
         file: "node/vm.js",
-        src: include_str!("../../js/node/vm.js"),
+        src: pi_embed::include_str!("../../js/node/vm.js"),
         builtins: &["vm"],
         globals: &[],
     },
     LazyGlue {
         file: "node/sqlite.js",
-        src: include_str!("../../js/node/sqlite.js"),
+        src: pi_embed::include_str!("../../js/node/sqlite.js"),
         builtins: &["sqlite"],
         globals: &[],
     },
     LazyGlue {
         file: "node/v8.js",
-        src: include_str!("../../js/node/v8.js"),
+        src: pi_embed::include_str!("../../js/node/v8.js"),
         builtins: &["v8"],
         globals: &[],
     },
     LazyGlue {
         file: "node/zlib.js",
-        src: include_str!("../../js/node/zlib.js"),
+        src: pi_embed::include_str!("../../js/node/zlib.js"),
         builtins: &["zlib"],
         globals: &[],
     },
     LazyGlue {
         file: "node/net.js",
-        src: include_str!("../../js/node/net.js"),
+        src: pi_embed::include_str!("../../js/node/net.js"),
         builtins: &["net"],
         globals: &[],
     },
     LazyGlue {
         file: "node/dns.js",
-        src: include_str!("../../js/node/dns.js"),
+        src: pi_embed::include_str!("../../js/node/dns.js"),
         builtins: &["dns", "dns/promises"],
         globals: &[],
     },
     LazyGlue {
         file: "node/tls.js",
-        src: include_str!("../../js/node/tls.js"),
+        src: pi_embed::include_str!("../../js/node/tls.js"),
         builtins: &["tls", "_tls_wrap", "_tls_common"],
         globals: &[],
     },
     LazyGlue {
         file: "node/http.js",
-        src: include_str!("../../js/node/http.js"),
+        src: pi_embed::include_str!("../../js/node/http.js"),
         builtins: &["http", "https"],
         globals: &[],
     },
     LazyGlue {
         file: "web/messaging.js",
-        src: include_str!("../../js/web/messaging.js"),
+        src: pi_embed::include_str!("../../js/web/messaging.js"),
         builtins: &[],
         globals: &["MessageEvent", "MessagePort", "MessageChannel", "BroadcastChannel", "Navigator", "navigator"],
     },
     LazyGlue {
         file: "web/websocket.js",
-        src: include_str!("../../js/web/websocket.js"),
+        src: pi_embed::include_str!("../../js/web/websocket.js"),
         builtins: &[],
         globals: &["WebSocket"],
     },
     LazyGlue {
         file: "web/compression.js",
-        src: include_str!("../../js/web/compression.js"),
+        src: pi_embed::include_str!("../../js/web/compression.js"),
         builtins: &[],
         globals: &["CompressionStream", "DecompressionStream"],
     },
     LazyGlue {
         file: "web/wasm.js",
-        src: include_str!("../../js/web/wasm.js"),
+        src: pi_embed::include_str!("../../js/web/wasm.js"),
         builtins: &[],
         globals: &["WebAssembly"],
     },
     LazyGlue {
         file: "web/fetch.js",
-        src: include_str!("../../js/web/fetch.js"),
+        src: pi_embed::include_str!("../../js/web/fetch.js"),
         builtins: &[],
         globals: &[
             "fetch",
@@ -287,7 +287,7 @@ fn op_load_glue(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     let ops = st.ops.borrow().clone().ok_or_else(|| engine::type_error("ops missing"))?;
     let internal = engine::internal(ctx);
     let t = std::time::Instant::now();
-    run_glue(ctx, glue.file, glue.src, &ops, &internal)?;
+    run_glue(ctx, glue.file, glue.src.get(), &ops, &internal)?;
     trace_glue(glue.file, t);
     Ok(JsValue::undefined())
 }
@@ -394,7 +394,7 @@ pub(crate) fn bootstrap(ctx: &mut Context) -> JsResult<()> {
     let glue = WEB_GLUE.iter().chain(if node { NODE_GLUE } else { &[] });
     for (name, src) in glue {
         let t = std::time::Instant::now();
-        run_glue(ctx, name, src, &ops, &internal)?;
+        run_glue(ctx, name, src.get(), &ops, &internal)?;
         engine::run_microtasks(ctx);
         trace_glue(name, t);
     }

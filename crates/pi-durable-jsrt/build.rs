@@ -1,4 +1,4 @@
-//! Embed every file under `js/` as a module source table (`MODULES` in `$OUT_DIR/modules.rs`), so
+//! Embed every file under `js/`, compressed, as a module source table (`MODULES` in `$OUT_DIR/modules.rs`), so
 //! a glue module is added by creating its file: no shared table to edit.
 
 use std::path::{Path, PathBuf};
@@ -30,11 +30,11 @@ fn main() {
     let mut files = Vec::new();
     collect(&root, &root, &mut files);
     let mut src = String::from(
-        "/// `(path under js/, source)` of every embedded glue file.\npub(crate) static MODULES: &[(&str, &str)] = &[\n",
+        "/// `(path under js/, source)` of every embedded glue file.\npub(crate) static MODULES: &[(&str, pi_embed::Embedded)] = &[\n",
     );
     for (rel, path) in files {
         src.push_str(&format!(
-            "    ({rel:?}, include_str!({:?})),\n",
+            "    ({rel:?}, pi_embed::include_str!({:?})),\n",
             path.display().to_string()
         ));
     }

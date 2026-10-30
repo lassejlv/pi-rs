@@ -39,6 +39,7 @@ unicode-segmentation.workspace = true
 regex.workspace = true
 crc32fast.workspace = true
 ruzstd.workspace = true
+pi-embed.workspace = true
 # `__internal-api`: zlib's z_stream API (deflateParams with a strategy), not just the safe wrapper.
 zlib-rs = { version = "=0.6.8", features = ["__internal-api"] }
 brotli = "9"

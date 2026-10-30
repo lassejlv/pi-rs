@@ -12,7 +12,7 @@ use std::sync::LazyLock;
 pub use crate::core::key_id_schema::KEYBINDING_VALUE_SCHEMA;
 
 /// The published `keybindings.schema.json` artifact of the TS package.
-pub const KEYBINDINGS_SCHEMA_ARTIFACT: &str = include_str!("schemas/keybindings.schema.json");
+pub const KEYBINDINGS_SCHEMA_ARTIFACT: pi_embed::Embedded = pi_embed::include_str!("schemas/keybindings.schema.json");
 
 pub static KEYBINDINGS_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
     let mut properties = Map::new();
@@ -40,7 +40,7 @@ mod tests {
     fn matches_the_generated_artifact() {
         assert_eq!(
             *KEYBINDINGS_SCHEMA,
-            strip_generated_schema(KEYBINDINGS_SCHEMA_ARTIFACT)
+            strip_generated_schema(KEYBINDINGS_SCHEMA_ARTIFACT.get())
         );
     }
 }

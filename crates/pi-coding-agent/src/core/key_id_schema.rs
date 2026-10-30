@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 
 static KEYBINDING_VALUE_DEF: LazyLock<Value> = LazyLock::new(|| {
     let artifact: Value =
-        serde_json::from_str(KEYBINDINGS_SCHEMA_ARTIFACT).expect("valid keybindings schema");
+        serde_json::from_str(KEYBINDINGS_SCHEMA_ARTIFACT.get()).expect("valid keybindings schema");
     artifact["$defs"]["KeybindingValue"].clone()
 });
 

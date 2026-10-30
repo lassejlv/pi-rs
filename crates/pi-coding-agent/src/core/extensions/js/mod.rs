@@ -37,28 +37,29 @@ use crate::core::extensions::runner::ExtensionErrorWithStack;
 use crate::core::extensions::types::*;
 
 pub use component::{JsComponent, JsEditorComponent};
+use pi_embed::Embedded;
 
-const BRIDGE_JS: &str = include_str!("../../../../js/bridge.js");
+const BRIDGE_JS: Embedded = pi_embed::include_str!("../../../../js/bridge.js");
 /// The real `typebox` 1.3.27 (`scripts/vendor-typebox.mjs`): entry points and shared chunks.
-const TYPEBOX_MODULES: &[(&str, &str)] = &[
-    ("typebox", include_str!("../../../../js/vendor/typebox/index.js")),
-    ("typebox/value", include_str!("../../../../js/vendor/typebox/value.js")),
-    ("typebox/compile", include_str!("../../../../js/vendor/typebox/compile.js")),
-    ("pi-rs:typebox/chunk-1", include_str!("../../../../js/vendor/typebox/chunk-1.js")),
-    ("pi-rs:typebox/chunk-2", include_str!("../../../../js/vendor/typebox/chunk-2.js")),
+const TYPEBOX_MODULES: &[(&str, Embedded)] = &[
+    ("typebox", pi_embed::include_str!("../../../../js/vendor/typebox/index.js")),
+    ("typebox/value", pi_embed::include_str!("../../../../js/vendor/typebox/value.js")),
+    ("typebox/compile", pi_embed::include_str!("../../../../js/vendor/typebox/compile.js")),
+    ("pi-rs:typebox/chunk-1", pi_embed::include_str!("../../../../js/vendor/typebox/chunk-1.js")),
+    ("pi-rs:typebox/chunk-2", pi_embed::include_str!("../../../../js/vendor/typebox/chunk-2.js")),
 ];
 /// The real `marked` 18.0.11 (`scripts/vendor-marked.mjs`), re-exported by pi-tui as `Marked`.
-const MARKED_JS: &str = include_str!("../../../../js/vendor/marked.js");
-const PI_TUI_JS: &str = include_str!("../../../../js/pi-tui.js");
-const PI_AI_JS: &str = include_str!("../../../../js/pi-ai.js");
-const PI_AI_CORE_JS: &str = include_str!("../../../../js/pi-ai/core.js");
-const PI_AI_FAUX_JS: &str = include_str!("../../../../js/pi-ai/faux.js");
-const PI_AI_RUST_JS: &str = include_str!("../../../../js/pi-ai/rust.js");
-const PI_AI_MODELS_JS: &str = include_str!("../../../../js/pi-ai-models.js");
-const PI_AI_PROVIDERS_ALL_JS: &str = include_str!("../../../../js/pi-ai-providers-all.js");
-const PI_AGENT_CORE_JS: &str = include_str!("../../../../js/pi-agent-core.js");
-const PI_CODING_AGENT_JS: &str = include_str!("../../../../js/pi-coding-agent.js");
-const PI_SDK_JS: &str = include_str!("../../../../js/pi-sdk.js");
+const MARKED_JS: Embedded = pi_embed::include_str!("../../../../js/vendor/marked.js");
+const PI_TUI_JS: Embedded = pi_embed::include_str!("../../../../js/pi-tui.js");
+const PI_AI_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai.js");
+const PI_AI_CORE_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/core.js");
+const PI_AI_FAUX_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/faux.js");
+const PI_AI_RUST_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/rust.js");
+const PI_AI_MODELS_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai-models.js");
+const PI_AI_PROVIDERS_ALL_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai-providers-all.js");
+const PI_AGENT_CORE_JS: Embedded = pi_embed::include_str!("../../../../js/pi-agent-core.js");
+const PI_CODING_AGENT_JS: Embedded = pi_embed::include_str!("../../../../js/pi-coding-agent.js");
+const PI_SDK_JS: Embedded = pi_embed::include_str!("../../../../js/pi-sdk.js");
 
 /// Specifier of the internal bridge module.
 const BRIDGE_SPECIFIER: &str = "pi-rs:bridge";
@@ -440,26 +441,26 @@ impl JsExtensionHost {
     /// Start a new JS runtime with pi's virtual modules.
     pub async fn new(cwd: &str) -> anyhow::Result<JsExtensionHost> {
         let mut virtual_modules = HashMap::new();
-        virtual_modules.insert(BRIDGE_SPECIFIER.to_string(), VirtualModule::EsmJs(BRIDGE_JS.to_string()));
-        virtual_modules.insert("pi-rs:marked".to_string(), VirtualModule::EsmJs(MARKED_JS.to_string()));
+        virtual_modules.insert(BRIDGE_SPECIFIER.to_string(), VirtualModule::EsmJs(BRIDGE_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:marked".to_string(), VirtualModule::EsmJs(MARKED_JS.get().to_string()));
         for (specifier, source) in TYPEBOX_MODULES {
-            virtual_modules.insert(specifier.to_string(), VirtualModule::EsmJs(source.to_string()));
+            virtual_modules.insert(specifier.to_string(), VirtualModule::EsmJs(source.get().to_string()));
         }
-        virtual_modules.insert("@earendil-works/pi-tui".to_string(), VirtualModule::EsmJs(PI_TUI_JS.to_string()));
-        virtual_modules.insert("@earendil-works/pi-ai".to_string(), VirtualModule::EsmJs(PI_AI_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-core".to_string(), VirtualModule::EsmJs(PI_AI_CORE_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-faux".to_string(), VirtualModule::EsmJs(PI_AI_FAUX_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-rust".to_string(), VirtualModule::EsmJs(PI_AI_RUST_JS.to_string()));
-        virtual_modules.insert("pi-rs:sdk".to_string(), VirtualModule::EsmJs(PI_SDK_JS.to_string()));
-        virtual_modules.insert("@earendil-works/pi-ai/models".to_string(), VirtualModule::EsmJs(PI_AI_MODELS_JS.to_string()));
+        virtual_modules.insert("@earendil-works/pi-tui".to_string(), VirtualModule::EsmJs(PI_TUI_JS.get().to_string()));
+        virtual_modules.insert("@earendil-works/pi-ai".to_string(), VirtualModule::EsmJs(PI_AI_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-core".to_string(), VirtualModule::EsmJs(PI_AI_CORE_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-faux".to_string(), VirtualModule::EsmJs(PI_AI_FAUX_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-rust".to_string(), VirtualModule::EsmJs(PI_AI_RUST_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:sdk".to_string(), VirtualModule::EsmJs(PI_SDK_JS.get().to_string()));
+        virtual_modules.insert("@earendil-works/pi-ai/models".to_string(), VirtualModule::EsmJs(PI_AI_MODELS_JS.get().to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-ai/providers/all".to_string(), VirtualModule::EsmJs(PI_AI_PROVIDERS_ALL_JS.to_string()));
+            .insert("@earendil-works/pi-ai/providers/all".to_string(), VirtualModule::EsmJs(PI_AI_PROVIDERS_ALL_JS.get().to_string()));
         // Types only (OAuth declaration compatibility entry point).
         virtual_modules.insert("@earendil-works/pi-ai/oauth".to_string(), VirtualModule::EsmJs("export {};".to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-agent-core".to_string(), VirtualModule::EsmJs(PI_AGENT_CORE_JS.to_string()));
+            .insert("@earendil-works/pi-agent-core".to_string(), VirtualModule::EsmJs(PI_AGENT_CORE_JS.get().to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-coding-agent".to_string(), VirtualModule::EsmJs(PI_CODING_AGENT_JS.to_string()));
+            .insert("@earendil-works/pi-coding-agent".to_string(), VirtualModule::EsmJs(PI_CODING_AGENT_JS.get().to_string()));
         let mut aliases = HashMap::new();
         for (from, to) in [
             ("@sinclair/typebox", "typebox"),
