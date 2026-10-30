@@ -834,8 +834,8 @@ async fn mid_conversation_effort_reconstructs_historical_markers() {
     let first_len = first["messages"].as_array().unwrap().len();
     assert_eq!(second["messages"].as_array().unwrap()[..first_len], first["messages"].as_array().unwrap()[..]);
     assert_eq!(second["messages"].as_array().unwrap().last().unwrap(), &marker("high"));
-    assert_eq!(first["output_config"], json!({"effort": "high"}));
-    assert_eq!(second["output_config"], json!({"effort": "high"}));
+    assert_eq!(first["output_config"], json!({"effort": "low"}));
+    assert_eq!(second["output_config"], json!({"effort": "low"}));
     assert_eq!(
         second["thinking"],
         json!({"type": "adaptive", "display": "summarized", "block_binding": {"prefix_mismatch_behavior": "drop_block"}})
@@ -848,6 +848,7 @@ async fn mid_conversation_effort_preserves_native_efforts() {
     let model = managed_model("anthropic");
     for effort in ["low", "medium", "high", "xhigh", "max"] {
         let (payload, message) = capture_effort(&model, vec![u("one", 1)], json!({"effort": effort})).await;
+        assert_eq!(payload["output_config"], json!({"effort": "low"}), "{effort}");
         assert_eq!(effort_messages(&payload), vec![marker(effort)]);
         assert_eq!(message.provider_thinking_level.as_deref(), Some(effort));
     }
@@ -857,6 +858,7 @@ async fn mid_conversation_effort_preserves_native_efforts() {
 async fn mid_conversation_effort_defaults_to_high() {
     let (payload, message) = capture_effort(&managed_model("anthropic"), vec![u("one", 1)], json!({})).await;
     assert_eq!(payload["messages"].as_array().unwrap().last().unwrap(), &marker("high"));
+    assert_eq!(payload["output_config"], json!({"effort": "low"}));
     assert_eq!(payload["thinking"]["block_binding"]["prefix_mismatch_behavior"], "drop_block");
     assert_eq!(message.provider_thinking_level.as_deref(), Some("high"));
 }

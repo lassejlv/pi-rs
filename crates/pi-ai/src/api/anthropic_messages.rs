@@ -724,7 +724,9 @@ fn build_params(
             "thinking".into(),
             json!({ "type": "adaptive", "display": display, "block_binding": { "prefix_mismatch_behavior": "drop_block" } }),
         );
-        params.insert("output_config".into(), json!({ "effort": "high" }));
+        // Effort markers set the level for every reply. Keep the cached top-level effort
+        // fixed at low because organizations can cap effort and reject higher levels.
+        params.insert("output_config".into(), json!({ "effort": "low" }));
     } else if model.reasoning && anthropic.thinking_enabled == Some(true) {
         if model_compat.force_adaptive_thinking == Some(true) {
             params.insert("thinking".into(), json!({ "type": "adaptive", "display": display }));
