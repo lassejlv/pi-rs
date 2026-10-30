@@ -82,13 +82,13 @@ pub struct RuntimeOptions {
     pub aliases: HashMap<String, String>,
     /// Name of the JS thread.
     pub thread_name: String,
-    /// Native stack size of the JS thread in bytes.
+    /// Native stack size of the JS thread in bytes. JS may use three quarters of it; deeper
+    /// recursion throws `RangeError: Maximum call stack size exceeded`.
     pub thread_stack_size: usize,
-    /// Maximum JS call recursion depth.
-    pub recursion_limit: usize,
-    /// Maximum VM stack size (values).
-    pub stack_size_limit: usize,
-    /// Optional loop iteration limit (per loop) to stop runaway scripts.
+    /// Optional limit to stop runaway scripts: roughly the loop iterations one synchronous run
+    /// (a task, timer or callback with its promise jobs) may take before QuickJS interrupts it
+    /// with an error no `try` can catch. Counted in interrupt polls, about every 10,000
+    /// operations.
     pub loop_iteration_limit: Option<u64>,
     /// `process.execArgv`.
     pub exec_argv: Vec<String>,
@@ -130,8 +130,6 @@ impl Default for RuntimeOptions {
             aliases: HashMap::new(),
             thread_name: "pi-jsrt".to_string(),
             thread_stack_size: 64 * 1024 * 1024,
-            recursion_limit: 4096,
-            stack_size_limit: 1024 * 1024,
             loop_iteration_limit: None,
             exec_argv: Vec::new(),
             esm_cjs_globals: true,
@@ -517,7 +515,7 @@ impl JsRuntime {
         around_blocking_wait(|| park_on(rx)).map_err(|_| Error::Terminated)?
     }
 
-    /// Run `f` on the JS thread with direct access to the Boa [`Context`].
+    /// Run `f` on the JS thread with direct access to the QuickJS [`Context`] (see [`crate::js`]).
     ///
     /// This is the escape hatch for building host objects; see [`crate::ctx`] for helpers.
     pub async fn with_context<R, F>(&self, f: F) -> Result<R>

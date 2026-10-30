@@ -250,7 +250,7 @@ internal.hidden(globalThis, "structuredClone", structuredClone);
 }
 
 // ---------------------------------------------------------------------------
-// Number/Date locale formatting and a minimal Intl (Boa is built without ICU)
+// Number/Date locale formatting and a minimal Intl (QuickJS has no Intl)
 // ---------------------------------------------------------------------------
 
 function groupDigits(intPart, sep = ",") {

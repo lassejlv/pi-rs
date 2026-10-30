@@ -307,7 +307,7 @@ fn lazy_tables(ctx: &mut Context) -> JsResult<(JsValue, JsValue)> {
 }
 
 /// `ops.arrayBufferTransfer(buffer, newLength, maxByteLength)`: `ArrayBuffer.prototype.transfer`
-/// (Boa has it only behind its `experimental` feature): moves the bytes to a new buffer and
+/// (for realms without it): moves the bytes to a new buffer and
 /// detaches the old one.
 fn op_array_buffer_transfer(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let obj = args.get_or_undefined(0).as_object().ok_or_else(|| engine::type_error("Method ArrayBuffer.prototype.transfer called on incompatible receiver"))?;

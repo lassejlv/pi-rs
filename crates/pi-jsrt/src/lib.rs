@@ -1,16 +1,18 @@
-//! # pi-jsrt — an embedded, pure-Rust JavaScript runtime
+//! # pi-jsrt — an embedded JavaScript runtime
 //!
-//! `pi-jsrt` runs JavaScript and TypeScript for pi extensions and code mode without
-//! Node.js. It is built on:
+//! `pi-jsrt` runs JavaScript and TypeScript for pi extensions without Node.js. It is built on:
 //!
-//! - [Boa](https://boajs.dev) (`boa_engine`) as the ECMAScript engine,
+//! - [QuickJS](https://github.com/quickjs-ng/quickjs) (QuickJS-ng through
+//!   [rquickjs](https://github.com/DelSkayn/rquickjs), with a small patch, see
+//!   `vendor/rquickjs-sys/PATCH.md`) as the ECMAScript engine, reached through the
+//!   [`js`] embedding API (the `pi-quickjs` crate),
 //! - [oxc](https://oxc.rs) to strip TypeScript (types, `enum`, `namespace`,
 //!   parameter properties) and to detect ES module syntax,
 //! - tokio + reqwest for async host work (fs, child processes, `fetch`).
 //!
 //! ## Threading model
 //!
-//! Boa's `Context` is `!Send`, so every runtime owns a dedicated OS thread that runs
+//! QuickJS values are bound to their runtime's thread, so every runtime owns a dedicated OS thread that runs
 //! the context, its promise job queue and a timer queue (`setTimeout`,
 //! `setInterval`, `setImmediate`, `queueMicrotask`). [`JsRuntime`] is a cheap,
 //! `Send + Sync + Clone` handle that talks to that thread with messages; the thread
@@ -96,17 +98,15 @@
 //!
 //! ## Limitations
 //!
-//! See `PORTING-STATUS.md`: no `Intl` beyond a small shim, no interruption of
-//! synchronous infinite loops (use [`RuntimeOptions::loop_iteration_limit`]), no HTTP/2,
-//! `worker_threads.Worker` or DNS record queries beyond A/AAAA, and `AsyncLocalStorage` does not
-//! propagate across `await`.
+//! See `PORTING-STATUS.md`: no `Intl` beyond a small shim; synchronous infinite loops run until
+//! [`RuntimeOptions::loop_iteration_limit`] (when set) stops them; no DNS record queries beyond
+//! A/AAAA.
 
 #![warn(missing_docs)]
 
 pub mod convert;
 pub mod ctx;
 mod engine;
-pub mod js;
 mod error;
 mod loader;
 pub mod node;
@@ -115,6 +115,8 @@ mod runtime;
 pub mod transpile;
 
 pub use error::{Error, JsException, Result};
+/// The QuickJS embedding API the runtime is built on (see [`JsRuntime::with_context`]).
+pub use pi_quickjs as js;
 pub use runtime::{
     in_host_call, set_blocking_wait_hook, BlockingWaitHook, ExitHandler, JsCallback, JsHandle, JsObjectHandle, JsRuntime,
     OutputSink, RuntimeOptions, UncaughtHandler, VirtualModule,

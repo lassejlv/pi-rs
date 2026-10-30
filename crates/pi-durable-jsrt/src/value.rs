@@ -1,4 +1,4 @@
-//! Values crossing the embedded host boundary, converted directly between Boa [`JsValue`]s and
+//! Values crossing the embedded host boundary, converted directly between QuickJS [`JsValue`]s and
 //! [`HostValue`]s without `serde_json` (whose strings cannot hold lone UTF-16 surrogates).
 //!
 //! JS → host:
@@ -22,8 +22,8 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use boa_engine::object::builtins::{JsArray, JsUint8Array};
-use boa_engine::{Context, JsObject, JsResult, JsString, JsValue};
+use pi_jsrt::js::{JsArray, JsUint8Array};
+use pi_jsrt::js::{Context, JsObject, JsResult, JsString, JsValue};
 use pi_json::strict::{self, JsonString};
 use pi_jsrt::JsHandle;
 
@@ -81,24 +81,16 @@ impl std::fmt::Debug for NativeRef {
 /// Object data of a [`NativeRef`]'s JS object.
 struct NativeData(NativeRef);
 
-impl boa_engine::gc::Finalize for NativeData {}
-// SAFETY: holds no GC-managed values.
-unsafe impl boa_engine::gc::Trace for NativeData {
-    boa_engine::gc::empty_trace!();
-}
-impl boa_engine::JsData for NativeData {}
+impl pi_jsrt::js::JsData for NativeData {}
 
 /// Object data of `__piDurable.ref(value)`: forces `value` across as a handle.
 pub(crate) struct RefData(pub(crate) JsValue);
 
-impl boa_engine::gc::Finalize for RefData {}
-// SAFETY: the wrapped value is the only GC-managed field and it is traced.
-unsafe impl boa_engine::gc::Trace for RefData {
-    boa_engine::gc::custom_trace!(this, mark, {
-        mark(&this.0);
-    });
+impl pi_jsrt::js::JsData for RefData {
+    fn trace(&self, tracer: &pi_jsrt::js::Tracer) {
+        tracer.mark(&self.0);
+    }
 }
-impl boa_engine::JsData for RefData {}
 
 impl HostValue {
     /// A string value from Rust text.
@@ -314,7 +306,7 @@ fn number_to_json(n: f64) -> Option<serde_json::Number> {
 
 /// A JS string's UTF-16 code units.
 pub fn js_string_units(s: &JsString) -> JsonString {
-    JsonString::from_utf16(s.to_vec())
+    JsonString::from_utf16(s.to_utf16())
 }
 
 /// A JS string from UTF-16 code units.
@@ -392,7 +384,7 @@ fn convert_in(
         return bytes
             .to_vec(ctx)
             .map(HostValue::Bytes)
-            .map_err(|e| HostError::from_boa(ctx, e));
+            .map_err(|e| HostError::from_error(ctx, e));
     }
     let array = obj.is_array();
     if !array && !is_plain(&obj, ctx) {
@@ -419,12 +411,12 @@ fn convert_array(
     stack: &mut Vec<JsObject>,
 ) -> HostResult<HostValue> {
     let len = obj
-        .get(boa_engine::js_string!("length"), ctx)
+        .get(pi_jsrt::js::js_string!("length"), ctx)
         .and_then(|v| v.to_length(ctx))
-        .map_err(|e| HostError::from_boa(ctx, e))?;
+        .map_err(|e| HostError::from_error(ctx, e))?;
     let mut out = Vec::with_capacity(len as usize);
     for i in 0..len {
-        let item = obj.get(i, ctx).map_err(|e| HostError::from_boa(ctx, e))?;
+        let item = obj.get(i, ctx).map_err(|e| HostError::from_error(ctx, e))?;
         out.push(convert_in(ctx, &item, stack)?);
     }
     Ok(HostValue::Array(out))
@@ -441,28 +433,28 @@ fn convert_object(
         .constructors()
         .object()
         .constructor()
-        .get(boa_engine::js_string!("keys"), ctx)
+        .get(pi_jsrt::js::js_string!("keys"), ctx)
         .and_then(|keys| {
             let keys = keys.as_callable().ok_or_else(|| {
-                boa_engine::JsNativeError::typ().with_message("Object.keys is missing")
+                pi_jsrt::js::JsNativeError::typ().with_message("Object.keys is missing")
             })?;
             keys.call(&JsValue::undefined(), &[obj.clone().into()], ctx)
         })
-        .map_err(|e| HostError::from_boa(ctx, e))?;
+        .map_err(|e| HostError::from_error(ctx, e))?;
     let keys = keys
         .as_object()
         .ok_or_else(|| type_error("Object.keys did not return an array"))?;
     let len = keys
-        .get(boa_engine::js_string!("length"), ctx)
+        .get(pi_jsrt::js::js_string!("length"), ctx)
         .and_then(|v| v.to_length(ctx))
-        .map_err(|e| HostError::from_boa(ctx, e))?;
+        .map_err(|e| HostError::from_error(ctx, e))?;
     let mut out = Vec::with_capacity(len as usize);
     for i in 0..len {
-        let key = keys.get(i, ctx).map_err(|e| HostError::from_boa(ctx, e))?;
+        let key = keys.get(i, ctx).map_err(|e| HostError::from_error(ctx, e))?;
         let Some(key) = key.as_string() else { continue };
         let v = obj
             .get(key.clone(), ctx)
-            .map_err(|e| HostError::from_boa(ctx, e))?;
+            .map_err(|e| HostError::from_error(ctx, e))?;
         out.push((js_string_units(&key), convert_in(ctx, &v, stack)?));
     }
     Ok(HostValue::Object(out))
@@ -493,7 +485,7 @@ pub fn to_js(ctx: &mut Context, value: &HostValue) -> JsResult<JsValue> {
         }
         HostValue::Bytes(bytes) => JsUint8Array::from_iter(bytes.iter().copied(), ctx)?.into(),
         HostValue::Handle(h) => pi_jsrt::ctx::handle_value(ctx, h).ok_or_else(|| {
-            boa_engine::JsNativeError::typ().with_message(format!("invalid JS handle {}", h.id()))
+            pi_jsrt::js::JsNativeError::typ().with_message(format!("invalid JS handle {}", h.id()))
         })?,
         HostValue::Native(n) => JsObject::from_proto_and_data(None, NativeData(n.clone())).into(),
     })

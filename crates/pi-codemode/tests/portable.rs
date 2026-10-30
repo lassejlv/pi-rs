@@ -140,7 +140,8 @@ async fn output_flush_threshold_counts_utf16_characters() {
     remote.all_served().await;
 }
 
-/// Boa has no heap limit; the memory cap applies to `ArrayBuffer` allocations.
+/// The memory cap is QuickJS's heap limit: an allocation past it throws QuickJS's
+/// `InternalError: out of memory`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn caps_the_interrupt_budget_and_memory_at_the_remotes_limits() {
     let remote = RecordingRemote {
@@ -160,7 +161,7 @@ async fn caps_the_interrupt_budget_and_memory_at_the_remotes_limits() {
         json!({ "ok": false, "error": { "kind": "timeout", "message": "Execution exceeded its interrupt budget of 1000" } }),
     );
     let memory = run(&sandbox, "try { new ArrayBuffer(16 * 1024 * 1024); return 'allocated'; } catch (error) { return error.name; }").await;
-    assert_matches(&memory, json!({ "ok": true, "value": "RangeError" }));
+    assert_matches(&memory, json!({ "ok": true, "value": "InternalError" }));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

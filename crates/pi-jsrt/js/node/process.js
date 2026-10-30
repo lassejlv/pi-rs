@@ -227,7 +227,7 @@ Object.assign(process, {
   // No `napi`/`openssl` entries: native addons cannot load, and the crypto is not OpenSSL.
   version: "v22.19.0",
   versions: {
-    node: "22.19.0", pi_jsrt: config.version, boa: "0.22.0", v8: "0.0", uv: "1.51.0", modules: "127",
+    node: "22.19.0", pi_jsrt: config.version, quickjs: "0.16.2", v8: "0.0", uv: "1.51.0", modules: "127",
     zlib: "1.3.1", brotli: "1.1.0", unicode: "16.0",
   },
   release: { name: "node", lts: "Jod" },

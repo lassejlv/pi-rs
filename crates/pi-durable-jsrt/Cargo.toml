@@ -7,7 +7,6 @@ license.workspace = true
 
 [dependencies]
 pi-jsrt.workspace = true
-rquickjs.workspace = true
 pi-json.workspace = true
 pi-embed.workspace = true
 pi-chord.workspace = true

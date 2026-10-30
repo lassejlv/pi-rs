@@ -119,8 +119,9 @@ async fn run(dir: &Path, source: &str) -> Value {
 }
 
 /// `@anthropic-ai/sdk` (streaming with `messages.stream` and `create({ stream: true })`) and
-/// `openai` (streamed chat completions). Exercises the vendored boa_ast fix (computed class
-/// method keys) and `FinalizationRegistry` cleanup jobs not blocking the job queue.
+/// `openai` (streamed chat completions). Exercises computed class method keys (which broke the
+/// previous engine's scope analysis) and `FinalizationRegistry` cleanup jobs not blocking the job
+/// queue.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn llm_sdks_stream_from_a_mock_server() {
     let Some(dir) = npm_dir() else { return };
@@ -157,7 +158,7 @@ export default {{ deltas, text: final.content[0].text, stop: final.stop_reason, 
 }
 
 /// execa (child processes through Node streams), glob (fs walking), node-fetch (ES module with a
-/// trailing `export { ... }` list, which needs the vendored boa_parser fix).
+/// trailing `export { ... }` list, which the previous engine's parser rejected).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn node_tooling_packages() {
     let Some(dir) = npm_dir() else { return };

@@ -31,6 +31,14 @@ reach it.
 
 Regression coverage: `crates/pi-jsrt/tests/process.rs::process_env_tz_sets_the_runtime_timezone`.
 
+## Clock hook (`JS_SetDateNowFunc`)
+
+`Date.now()` and `new Date()` read the system clock. Code mode's deterministic VM gives scripts a
+virtual clock (the time of the result being processed), so `date_now` asks the runtime's hook
+first.
+
+Regression coverage: `crates/pi-codemode/tests/sandbox.rs` (deterministic replays).
+
 ## Replaceable global object (`JS_SetGlobalObject`)
 
 `node:vm` contextified objects need a realm whose global object is a Proxy (see

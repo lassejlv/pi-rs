@@ -9,20 +9,20 @@
 //! # Memory shared with JS (zero copy)
 //!
 //! JS needs `memory.buffer` to be an `ArrayBuffer` that aliases wasm linear memory (emscripten
-//! and undici write request bytes into it and read results out of it). Boa's ArrayBuffer owns an
-//! `AlignedVec<u8>`; wasmi can run a memory on a caller-provided static buffer. So each memory is
-//! one allocation reserved up to its maximum size (4 GiB when unbounded; virtual memory, only
-//! touched pages are committed; wasmi zeroes the live part): the JS ArrayBuffer owns it with
-//! `len` = the current size
-//! and wasmi gets the whole reservation as its static buffer. When wasm grows the memory the
-//! next `memory.buffer` read detaches the old ArrayBuffer (as V8 does) and wraps the same
+//! and undici write request bytes into it and read results out of it). wasmi can run a memory on a
+//! caller-provided static buffer, and a QuickJS ArrayBuffer can view external memory. So each
+//! memory is one allocation reserved up to its maximum size (4 GiB when unbounded; virtual memory,
+//! only touched pages are committed; wasmi zeroes the live part), owned by this module until the
+//! runtime shuts down: wasmi gets the whole reservation as its static buffer, and the JS
+//! ArrayBuffer is an external view of it with `len` = the current size. When wasm grows the memory
+//! the next `memory.buffer` read detaches the old ArrayBuffer (as V8 does) and views the same
 //! allocation, with the new length, in a new one. Memories a module defines itself are turned
 //! into imports by rewriting the module's import/memory sections, so they get the same backing.
 //! Current buffers are rooted in this module's state for the store's lifetime.
 //!
-//! Caveat: transferring a memory's buffer from JS (`ArrayBuffer.prototype.transfer`) moves the
-//! allocation out from under wasm; Node forbids that with a detach key, Boa has no public API for
-//! one. Shared memories are backed by plain ArrayBuffers.
+//! Caveat: Node forbids transferring a memory's buffer from JS (`ArrayBuffer.prototype.transfer`)
+//! with a detach key; here a transfer detaches the view, and the next `memory.buffer` read fails.
+//! Shared memories are backed by plain ArrayBuffers.
 //!
 //! # Calls
 //!

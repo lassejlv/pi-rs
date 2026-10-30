@@ -22,8 +22,9 @@ const WEBP: &str = "UklGRgAAAABXRUJQ";
 
 #[test]
 fn embedded_sources_parse_as_javascript() {
-    let mut context = boa_engine::Context::default();
-    let parsed = boa_engine::Script::parse(boa_engine::Source::from_bytes(PRELUDE_SOURCE.as_bytes()), None, &mut context);
+    let engine = pi_quickjs::Engine::new(pi_quickjs::EngineOptions::default()).unwrap();
+    let flags = (pi_quickjs::rquickjs::qjs::JS_EVAL_TYPE_GLOBAL | pi_quickjs::rquickjs::qjs::JS_EVAL_FLAG_COMPILE_ONLY) as i32;
+    let parsed = engine.context().eval_with_flags(PRELUDE_SOURCE.as_bytes(), "codemode-prelude.js", flags).map(drop);
     assert!(parsed.is_ok());
 }
 
@@ -180,8 +181,7 @@ async fn rejects_invalid_text_and_image_arguments(backend: Backend) {
     assert!(result.ok(), "{:?}", result.error());
     assert!(result.output.is_empty());
     let errors: Vec<String> = serde_json::from_value(result.value().unwrap().clone()).unwrap();
-    // The engine's own message: QuickJS and V8 say "circular", and so does the patched Boa
-    // ("Converting circular structure to JSON", vendor/boa_engine/PATCH.md).
+    // The engine's own message: QuickJS and V8 say "circular".
     assert!(errors[0].starts_with("TypeError: ") && errors[0].contains("circular"), "{}", errors[0]);
     let mut expected = vec![
         "TypeError: image expects a non-empty image URL string, an object with image_url, or an image block { type: \"image\", data, mimeType }".to_string(),
@@ -638,8 +638,8 @@ async fn terminates_a_synchronous_infinite_loop_on_timeout(backend: Backend) {
     assert!(started.elapsed() < Duration::from_secs(5));
 }
 
-/// Boa discards errors raised in an async function that resumed after an await; the instrumented
-/// loop still stops the script and the VM reports why.
+/// A loop in an async function that resumed after an await: the instrumented loop stops the
+/// script and the VM reports why.
 async fn terminates_a_loop_after_an_await_on_timeout(backend: Backend) {
     let sandbox = create_sandbox(backend, vec![echo()]);
     let started = Instant::now();
@@ -775,8 +775,7 @@ async fn runs_executions_in_parallel_without_sharing_state(backend: Backend) {
     assert_eq!(values, vec![json!("a"), json!("b"), json!("undefined")]);
 }
 
-/// QuickJS throws a catchable `RangeError`; Boa's recursion limit ends the script, which reports
-/// the same error.
+/// QuickJS throws a catchable `RangeError`.
 async fn ends_deep_recursion_with_a_range_error(backend: Backend) {
     let sandbox = create_sandbox(backend, vec![]);
     let result = run(
@@ -788,7 +787,7 @@ async fn ends_deep_recursion_with_a_range_error(backend: Backend) {
     "#,
     )
     .await;
-    // Catchable, as in QuickJS (vendor/boa_engine/PATCH.md).
+    // Catchable, as in QuickJS.
     assert_matches(&result, json!({ "ok": true, "value": ["RangeError", true] }));
     // Uncaught, it ends the script as a script error.
     let uncaught = run(&sandbox, "function dive() { dive(); } dive();").await;

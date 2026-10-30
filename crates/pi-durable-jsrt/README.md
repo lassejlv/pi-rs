@@ -1,7 +1,7 @@
 # pi-durable-jsrt
 
 Serves `@earendil-works/pi-durable` and `@earendil-works/chord` to pi extensions as embedded
-modules inside [pi-jsrt](../pi-jsrt), the Boa-based JavaScript runtime pi extensions run on.
+modules inside [pi-jsrt](../pi-jsrt), the QuickJS-based JavaScript runtime pi extensions run on.
 It's thin JS glue (`js/`) over the native `pi-durable` and `pi-chord` crates, no `node_modules`,
 no N-API, no wasm. The import names match the TypeScript packages exactly, so an extension
 written against `@earendil-works/pi-durable` runs unchanged, in process, on the native port.

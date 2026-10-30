@@ -7,7 +7,7 @@ description = "Sandboxed JavaScript execution where the only capability is calli
 
 [dependencies]
 jiff.workspace = true
-rquickjs.workspace = true
+pi-quickjs.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_ast.workspace = true

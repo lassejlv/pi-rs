@@ -618,8 +618,8 @@ impl JsExtensionHost {
         let rt = self.bridge.rt.clone();
         // jiti `moduleCache: false`: every import of an extension evaluates it again.
         rt.clear_module_cache().await.map_err(js_error)?;
-        // Imported as a top-level module rather than through `import()` from the glue module:
-        // Boa caches dynamic imports per referrer and would reject the re-evaluated module.
+        // Imported as a top-level module rather than through `import()` from the glue module, so
+        // the cleared cache gives the re-evaluated module a fresh name.
         let namespace = rt.import(path).await.map_err(js_error)?;
         let marker = self.bridge.glue_call("factoryFromModule", vec![namespace.to_value()]).await?;
         let Some(factory) = self.bridge.handle(&marker) else {

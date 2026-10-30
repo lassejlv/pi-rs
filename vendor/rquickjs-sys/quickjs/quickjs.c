@@ -392,6 +392,9 @@ struct JSRuntime {
     /* pi-jsrt: local timezone offset (JS_SetTimezoneOffsetFunc) */
     JSTimezoneOffsetFunc *tz_offset;
     void *tz_offset_opaque;
+    /* pi-jsrt: current time of `Date` (JS_SetDateNowFunc) */
+    JSDateNowFunc *date_now;
+    void *date_now_opaque;
     // for smuggling the parent promise from js_promise_then
     // to js_promise_constructor
     JSValueLink *parent_promise;
@@ -57749,8 +57752,17 @@ static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
     return js_new_string8_len(ctx, buf, pos);
 }
 
-/* OS dependent: return the UTC time in ms since 1970. */
-static int64_t date_now(void) {
+void JS_SetDateNowFunc(JSRuntime *rt, JSDateNowFunc *func, void *opaque)
+{
+    rt->date_now = func;
+    rt->date_now_opaque = opaque;
+}
+
+/* OS dependent: return the UTC time in ms since 1970 (pi-jsrt: or the runtime's clock). */
+static int64_t date_now(JSContext *ctx) {
+    JSRuntime *rt = ctx->rt;
+    if (rt->date_now)
+        return rt->date_now(rt->date_now_opaque);
     return js__gettimeofday_us() / 1000;
 }
 
@@ -57768,7 +57780,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
     }
     n = argc;
     if (n == 0) {
-        val = date_now();
+        val = date_now(ctx);
     } else if (n == 1) {
         JSValue v, dv;
         if (JS_VALUE_GET_TAG(argv[0]) == JS_TAG_OBJECT) {
@@ -58312,7 +58324,7 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
     // now()
-    return js_int64(date_now());
+    return js_int64(date_now(ctx));
 }
 
 static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,

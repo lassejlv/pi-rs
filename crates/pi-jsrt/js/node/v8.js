@@ -1,7 +1,7 @@
 // node:v8 — V8's value serialization format (wire format version 15, byte-compatible with
 // Node 22's v8.serialize/deserialize and Serializer/Deserializer), used by structured clone
-// across threads (worker_threads), `serialization: 'advanced'` IPC and `v8.serialize`; plus heap
-// statistics and snapshots of the Boa heap (ops/heap.rs).
+// across threads (worker_threads), `serialization: 'advanced'` IPC and `v8.serialize`; plus
+// placeholder heap statistics.
 
 const Buffer = internal.Buffer;
 const kLatestVersion = 15;

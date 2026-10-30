@@ -5,9 +5,9 @@
 //! do. Port of `@earendil-works/pi-codemode`.
 //!
 //! Scripts use `tools`, `ALL_TOOLS`, `text`, `image`, `exit`, `store`, and `load`, and may start
-//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is [Boa](https://boajs.dev),
-//! the engine behind `pi-jsrt`, run directly on a dedicated thread per execution with nothing but
-//! ECMAScript built-ins, `performance.now()`, and the codemode prelude.
+//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is QuickJS (QuickJS-ng through
+//! rquickjs, the engine behind `pi-jsrt`), run directly on a dedicated thread per execution with
+//! nothing but ECMAScript built-ins, `performance.now()`, and the codemode prelude.
 //!
 //! ```no_run
 //! # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,9 +33,8 @@
 //! # Ok(()) }
 //! ```
 //!
-//! Differences from the TS package (QuickJS in wasm) are listed in `PORTING-STATUS.md`. Boa cannot
-//! be interrupted from outside, so the script's loops are instrumented to poll the interrupt flag
-//! and count the interrupt budget; and there is no heap limit.
+//! Differences from the TS package (QuickJS in wasm) are listed in `PORTING-STATUS.md`. The
+//! script's loops are instrumented to count the interrupt budget the same way on every run.
 
 pub mod abort;
 pub mod declarations;

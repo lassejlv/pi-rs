@@ -1,0 +1,11 @@
+[package]
+name = "pi-quickjs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A small embedding API over QuickJS (rquickjs): refcounted values, objects, functions and errors bound to the engine's thread"
+
+[dependencies]
+rquickjs.workspace = true
+serde_json.workspace = true
+tracing.workspace = true

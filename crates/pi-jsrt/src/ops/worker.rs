@@ -372,8 +372,6 @@ fn op_worker_start(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult
         aliases: parent.aliases.read().clone(),
         thread_name: format!("pi-jsrt-worker-{thread_id}"),
         thread_stack_size: parent.options.thread_stack_size,
-        recursion_limit: parent.options.recursion_limit,
-        stack_size_limit: parent.options.stack_size_limit,
         loop_iteration_limit: parent.options.loop_iteration_limit,
         node_exec: parent.options.node_exec.clone(),
         esm_cjs_globals: parent.options.esm_cjs_globals,

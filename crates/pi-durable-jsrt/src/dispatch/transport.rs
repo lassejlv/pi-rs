@@ -77,7 +77,7 @@ impl Queue {
                 return;
             }
             if let Some(f) = pi_jsrt::ctx::handle_value(ctx, &pump).and_then(|f| f.as_callable())
-                && let Err(e) = f.call(&boa_engine::JsValue::undefined(), &[], ctx)
+                && let Err(e) = f.call(&pi_jsrt::js::JsValue::undefined(), &[], ctx)
             {
                 let text = e
                     .into_opaque(ctx)

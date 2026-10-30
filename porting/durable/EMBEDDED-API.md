@@ -9,7 +9,7 @@ Build with your own target dir: `CARGO_TARGET_DIR=<worktree>/target-<you> cargo 
 | --- | --- |
 | `src/lib.rs` | re-exports: `install`, `HostOptions`, `DurableHost`, `Dispatch`, `Methods`, `Args`, `Call`, `HostValue`, `NativeRef`, `HostError`, `ErrorClass`, `HostResult`, `call_sync`, `call_async`, `from_js`, `to_js`, `strict_from_js`, `strict_to_js`, `modules`, `virtual_modules`, `specifier_for`, `hoist_vitest_mocks`, `BRIDGE`, `GLOBAL` |
 | `src/host.rs` | `install`, the `__piDurable` global, method registry, module table, JS call helpers |
-| `src/value.rs` | `HostValue` ⇄ Boa `JsValue` and ⇄ `pi_json::strict::Value` |
+| `src/value.rs` | `HostValue` ⇄ QuickJS `JsValue` and ⇄ `pi_json::strict::Value` |
 | `src/errors.rs` | `ErrorClass` table, `HostError` |
 | `src/hoist.rs` | vitest `vi.mock` / `vi.hoisted` hoisting transform (runner only) |
 | `src/dispatch/mod.rs` | `defaults()`: the method groups installed by default — **add one line per group here** |
@@ -112,7 +112,7 @@ directly rather than through the in-process stock Hub (`dispatch/transport.rs`):
 same pi-durable functions as `examples/env_stock_bridge.rs`/`support/builtin_bridge.rs` (shared
 error-code strings live in pi-durable: `FileErrorCode`/`ExecutionErrorCode::{as_str, from_name}`),
 and the Hub's strict-JSON frames with base64 bytes would cost a serialization and a pump round
-trip per file operation where Boa is already the bottleneck. A JS `ExecutionEnv` reaches native
+trip per file operation where the JS engine is already the bottleneck. A JS `ExecutionEnv` reaches native
 code as `dispatch::env::js_env(&describeEnv(env))` (`pi-durable:internal/env/port`).
 
 ## 5. Values (`HostValue`)
@@ -144,7 +144,7 @@ Strict JSON (the durable payload type):
   non-finite numbers;
 - `value.to_strict_omitting_undefined()` — `JSON.stringify` semantics (members dropped, array
   items become `null`; a top-level `undefined` still fails).
-- Direct: `strict_from_js(ctx, &JsValue)`, `strict_to_js(ctx, &strict::Value)`; and `from_js(ctx, &JsValue)`, `to_js(ctx, &HostValue)` for code running with a Boa `Context`.
+- Direct: `strict_from_js(ctx, &JsValue)`, `strict_to_js(ctx, &strict::Value)`; and `from_js(ctx, &JsValue)`, `to_js(ctx, &HostValue)` for code running with a `pi_jsrt::js::Context`.
 
 Native state: `HostValue::native(Mutex::new(state))` returns an opaque JS object that keeps the
 state alive until it is garbage collected; take it back with `args.native::<Mutex<State>>(i)`.
@@ -162,7 +162,7 @@ HostError::typed(ErrorClass::Error, json_string)          // UTF-16 message
     .with_cause(other_host_error)                         // error.cause
 HostError::type_error("…")
 e.class() -> Option<ErrorClass>; e.name(); e.message() -> &JsonString
-HostError::from_js(ctx, &thrown) / HostError::from_boa(ctx, js_error) / e.to_js(ctx) / e.to_boa(ctx)
+HostError::from_js(ctx, &thrown) / HostError::from_error(ctx, js_error) / e.to_js(ctx) / e.to_error(ctx)
 ```
 
 - `HostError::Typed` is rebuilt in JS by `__piDurable.makeError` (bridge.js) as an instance of the
@@ -335,7 +335,7 @@ CARGO_TARGET_DIR=… cargo run -p pi-durable-jsrt --example embedded_stock -- <p
 {
   "reference": "5e63241…", "test": "packages/chord/test/output.test.ts", "sha256": "…",
   "selection": "complete file without name filter",
-  "runtime": "pi-jsrt (Boa) with pi-durable-jsrt embedded modules and the vitest shim",
+  "runtime": "pi-jsrt (QuickJS) with pi-durable-jsrt embedded modules and the vitest shim",
   "success": true,
   "modes": [{
     "retention": null, "passed": 21, "failed": 0, "skipped": 0, "total": 21,

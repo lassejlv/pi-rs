@@ -373,11 +373,8 @@ pub(crate) fn emit_async_hook(ctx: &mut Context, kind: &str, id: f64, ty: &str, 
 // Timers
 // ---------------------------------------------------------------------------
 
-type NativeTimer = Box<dyn FnOnce(&mut Context)>;
-
 pub(crate) enum TimerCallback {
     Js(JsFunction, AsyncCtx),
-    Native(Option<NativeTimer>),
 }
 
 /// Where a timer is queued: the real clock, or the fake clock of [`FakeClock`] (microseconds).
@@ -523,10 +520,8 @@ impl Timers {
         let mut entry = self.entries.remove(&id)?;
         match entry.interval {
             Some(interval) => {
-                let cb = match &entry.callback {
-                    TimerCallback::Js(f, a) => Some(Due::Js((f.clone(), a.clone(), false))),
-                    TimerCallback::Native(_) => None,
-                };
+                let TimerCallback::Js(f, a) = &entry.callback;
+                let cb = Some(Due::Js((f.clone(), a.clone(), false)));
                 self.seq += 1;
                 let next = (now_us.saturating_add(micros(interval)), self.seq);
                 if let Some(clock) = self.fake.as_mut() {
@@ -536,10 +531,10 @@ impl Timers {
                 self.entries.insert(id, entry);
                 cb
             }
-            None => match entry.callback {
-                TimerCallback::Js(f, a) => Some(Due::Js((f, a, true))),
-                TimerCallback::Native(mut f) => f.take().map(Due::Native),
-            },
+            None => {
+                let TimerCallback::Js(f, a) = entry.callback;
+                Some(Due::Js((f, a, true)))
+            }
         }
     }
 }
@@ -558,10 +553,8 @@ fn run_due_timers(ctx: &mut Context) {
             let Some(mut entry) = timers.entries.remove(&id) else { continue };
             match entry.interval {
                 Some(interval) => {
-                    let cb = match &entry.callback {
-                        TimerCallback::Js(f, a) => Some((f.clone(), a.clone(), false)),
-                        TimerCallback::Native(_) => None,
-                    };
+                    let TimerCallback::Js(f, a) = &entry.callback;
+                    let cb = Some((f.clone(), a.clone(), false));
                     timers.seq += 1;
                     let next = (now + interval, timers.seq);
                     entry.key = TimerKey::Real(next);
@@ -569,10 +562,10 @@ fn run_due_timers(ctx: &mut Context) {
                     timers.entries.insert(id, entry);
                     cb.map(Due::Js)
                 }
-                None => match entry.callback {
-                    TimerCallback::Js(f, a) => Some(Due::Js((f, a, true))),
-                    TimerCallback::Native(mut f) => f.take().map(Due::Native),
-                },
+                None => {
+                    let TimerCallback::Js(f, a) = entry.callback;
+                    Some(Due::Js((f, a, true)))
+                }
             }
         };
         with_budget(ctx, |ctx| {
@@ -606,7 +599,6 @@ fn fire(ctx: &mut Context, due: Due) {
             }
             st.swap_async_ctx(previous);
         }
-        Due::Native(f) => f(ctx),
     }
 }
 
@@ -756,7 +748,6 @@ pub(crate) fn install_controls(ctx: &mut Context) -> JsResult<()> {
 
 enum Due {
     Js((JsFunction, AsyncCtx, bool)),
-    Native(Box<dyn FnOnce(&mut Context)>),
 }
 
 // ---------------------------------------------------------------------------
@@ -1248,7 +1239,6 @@ pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<R
     TIMEZONE.with(|t| t.borrow_mut().take());
     drop(st);
     drop(loader);
-    drop(ctx);
     drop(engine);
 }
 

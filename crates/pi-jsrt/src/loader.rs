@@ -572,12 +572,12 @@ impl Loader {
         let raw = ctx.as_raw();
         let m = unsafe { qjs::JS_NewCModule(raw, cname.as_ptr(), Some(synthetic_init)) };
         if m.is_null() {
-            return Err(crate::js::take_exception(raw));
+            return Err(crate::js::take_exception(&Context::from_raw(raw)));
         }
         for export in &names {
             let c = CString::new(export.as_str()).unwrap_or_default();
             if unsafe { qjs::JS_AddModuleExport(raw, m, c.as_ptr()) } < 0 {
-                return Err(crate::js::take_exception(raw));
+                return Err(crate::js::take_exception(&Context::from_raw(raw)));
             }
         }
         self.synthetic.borrow_mut().insert(name.to_string(), Synthetic { value, default, names });
@@ -913,11 +913,11 @@ unsafe extern "C" fn normalize_hook(raw: *mut qjs::JSContext, base: *const c_cha
             unsafe { qjs::js_strdup(raw, c.as_ptr()) }
         }
         Ok(Err(e)) => {
-            crate::js::throw(raw, e);
+            crate::js::throw_error(&Context::from_raw(raw), e);
             std::ptr::null_mut()
         }
         Err(_) => {
-            crate::js::throw(raw, engine::type_error(format!("panic while resolving '{spec}'")));
+            crate::js::throw_error(&Context::from_raw(raw), engine::type_error(format!("panic while resolving '{spec}'")));
             std::ptr::null_mut()
         }
     }
@@ -935,11 +935,11 @@ unsafe extern "C" fn loader_hook(raw: *mut qjs::JSContext, name: *const c_char, 
     match r {
         Ok(Ok(m)) => m,
         Ok(Err(e)) => {
-            crate::js::throw(raw, e);
+            crate::js::throw_error(&Context::from_raw(raw), e);
             std::ptr::null_mut()
         }
         Err(_) => {
-            crate::js::throw(raw, engine::type_error(format!("panic while loading '{name}'")));
+            crate::js::throw_error(&Context::from_raw(raw), engine::type_error(format!("panic while loading '{name}'")));
             std::ptr::null_mut()
         }
     }
@@ -971,7 +971,7 @@ unsafe extern "C" fn synthetic_init(raw: *mut qjs::JSContext, m: *mut qjs::JSMod
             };
             let c = CString::new(export.as_str()).unwrap_or_default();
             if unsafe { qjs::JS_SetModuleExport(raw, m, c.as_ptr(), v.into_raw()) } < 0 {
-                return Err(crate::js::take_exception(raw));
+                return Err(crate::js::take_exception(&Context::from_raw(raw)));
             }
         }
         Ok(())
@@ -979,7 +979,7 @@ unsafe extern "C" fn synthetic_init(raw: *mut qjs::JSContext, m: *mut qjs::JSMod
     match r {
         Ok(Ok(())) => 0,
         Ok(Err(e)) => {
-            crate::js::throw(raw, e);
+            crate::js::throw_error(&Context::from_raw(raw), e);
             -1
         }
         Err(_) => -1,
@@ -1025,7 +1025,7 @@ fn init_import_meta(ctx: &mut Context, import_meta: &JsObject, name: &str) {
 fn load_by_name(ctx: &mut Context, name: &str) -> JsResult<JsPromise> {
     let c = CString::new(name).map_err(|_| engine::type_error("invalid module name"))?;
     let raw = ctx.as_raw();
-    let v = crate::js::check(raw, unsafe { qjs::JS_LoadModule(raw, c"".as_ptr(), c.as_ptr()) })?;
+    let v = crate::js::check_value(&Context::from_raw(raw), unsafe { qjs::JS_LoadModule(raw, c"".as_ptr(), c.as_ptr()) })?;
     v.as_promise().ok_or_else(|| engine::type_error("JS_LoadModule did not return a promise"))
 }
 

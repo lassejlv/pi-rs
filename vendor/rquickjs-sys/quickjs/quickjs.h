@@ -1187,6 +1187,9 @@ JS_EXTERN void JS_SetJobContextHooks(JSRuntime *rt, JSJobContextCaptureFunc *cap
    `time_ms` (ms since the epoch). */
 typedef int JSTimezoneOffsetFunc(int64_t time_ms, void *opaque);
 JS_EXTERN void JS_SetTimezoneOffsetFunc(JSRuntime *rt, JSTimezoneOffsetFunc *func, void *opaque);
+/* pi-jsrt patch: the current time of `Date` (`Date.now()`, `new Date()`) in ms since the epoch. */
+typedef int64_t JSDateNowFunc(void *opaque);
+JS_EXTERN void JS_SetDateNowFunc(JSRuntime *rt, JSDateNowFunc *func, void *opaque);
 /* pi-jsrt patch: replace the global object of `ctx` (e.g. with a Proxy, for node:vm). */
 JS_EXTERN void JS_SetGlobalObject(JSContext *ctx, JSValueConst obj);
 

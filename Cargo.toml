@@ -20,6 +20,7 @@ pi-tui = { path = "crates/pi-tui" }
 pi-mcp = { path = "crates/pi-mcp" }
 pi-codemode = { path = "crates/pi-codemode" }
 pi-jsrt = { path = "crates/pi-jsrt" }
+pi-quickjs = { path = "crates/pi-quickjs" }
 pi-telemetry = { path = "crates/pi-telemetry" }
 pi-json = { path = "crates/pi-json" }
 pi-embed = { path = "crates/pi-embed" }

@@ -25,6 +25,4 @@ web-sys = { version = "=0.3.106", features = ["console"] }
 
 # Same vendored engine as the pi-rs workspace.
 [patch.crates-io]
-boa_engine = { path = "../../../../vendor/boa_engine" }
-boa_ast = { path = "../../../../vendor/boa_ast" }
-boa_parser = { path = "../../../../vendor/boa_parser" }
+rquickjs-sys = { path = "../../../../vendor/rquickjs-sys" }

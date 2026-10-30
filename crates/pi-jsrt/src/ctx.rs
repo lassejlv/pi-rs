@@ -1,6 +1,6 @@
 //! Helpers for code running on the JS thread via [`crate::JsRuntime::with_context`].
 //!
-//! These let embedders build host objects directly with Boa while still
+//! These let embedders build host objects directly with the QuickJS API ([`crate::js`]) while still
 //! interoperating with handles and JSON conversion.
 
 use std::future::Future;
@@ -49,7 +49,7 @@ pub fn run_jobs(ctx: &mut Context) {
     crate::engine::run_microtasks(ctx);
 }
 
-/// Run `f` as the body of a synchronous host function implemented directly with Boa. While it
+/// Run `f` as the body of a synchronous host function implemented directly with [`crate::js`]. While it
 /// runs, blocking calls into the runtime from this thread ([`crate::JsHandle::call_blocking`],
 /// [`crate::JsRuntime::with_context_blocking`], [`with_current`]) run re-entrantly on `ctx`
 /// instead of failing with [`crate::Error::Deadlock`]. `f` must reach the context only through

@@ -43,7 +43,7 @@ profile.release.strip=false`.
 | `crates/pi-codemode` | `packages/codemode` | Sandboxed JavaScript execution for code mode |
 | `crates/pi-telemetry` | `packages/telemetry` | Telemetry contracts |
 | `crates/pi-json` | (new) | `JSON.parse` with V8's error messages and `JSON.stringify` with JavaScript formatting, shared by the crates above |
-| `crates/pi-jsrt` | (new) | Embedded JavaScript runtime for extensions: Boa engine, oxc TypeScript stripping, ES module loader, Node API shims (`fs`, `path`, `child_process`, `events`, streams, `fetch`, ...) |
+| `crates/pi-jsrt` | (new) | Embedded JavaScript runtime for extensions: QuickJS engine (rquickjs), oxc TypeScript stripping, ES module loader, Node API shims (`fs`, `path`, `child_process`, `events`, streams, `fetch`, ...) |
 | `crates/pi-coding-agent` | `packages/coding-agent` | The `pi` binary and library: sessions, tools, settings, resources, packages, interactive/print/JSON/RPC modes, built-in extensions |
 | `crates/pi-chord` | `packages/chord` (subset) | JSON revisions, invocation context, cancellation, watches and SQLite contracts used by durable storage |
 | `crates/pi-durable` | `packages/durable` | Durable sessions, transactions, documents, tasks, scheduler, Harness and storage (memory, JSONL, SQLite, IndexedDB, Cloudflare) |
@@ -95,10 +95,10 @@ that remain are listed below.
 
 Behavior that still differs from TypeScript pi, and why:
 
-- **JavaScript engine.** Extensions run on Boa (`pi-jsrt`) and code mode scripts on Boa instead of
-  V8/QuickJS: stack trace text, engine error messages and performance differ, a few language
-  features (decorators) are missing, and code mode's memory limit is not enforced (Boa has no heap
-  limit). Node API coverage of `pi-jsrt` is tracked in `PORTING-STATUS.md`. A reload of the
+- **JavaScript engine.** Extensions run on QuickJS (QuickJS-ng through rquickjs, `pi-jsrt`)
+  instead of V8, and code mode scripts on QuickJS as in TypeScript pi: stack trace text, engine
+  error messages and performance differ, `Intl` is a small shim, and a few language features
+  (decorators) are missing. Node API coverage of `pi-jsrt` is tracked in `PORTING-STATUS.md`. A reload of the
   extensions starts a new runtime, so `globalThis` does not carry values across `/reload` as
   Node's single global object does.
 - **Strings.** Rust strings cannot hold unpaired UTF-16 surrogates; where JavaScript would keep one
@@ -145,8 +145,9 @@ Behavior that still differs from TypeScript pi, and why:
 
 pi extensions are TypeScript or JavaScript modules, and the port loads them unchanged:
 
-- `.ts`/`.js`/`.mjs` extensions run inside `pi-jsrt`, an embedded [Boa](https://boajs.dev) engine
-  on a dedicated thread. TypeScript is stripped with [oxc](https://oxc.rs) when loaded.
+- `.ts`/`.js`/`.mjs` extensions run inside `pi-jsrt`, an embedded
+  [QuickJS](https://github.com/quickjs-ng/quickjs) engine (through
+  [rquickjs](https://github.com/DelSkayn/rquickjs)) on a dedicated thread. TypeScript is stripped with [oxc](https://oxc.rs) when loaded.
 - Imports of `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`,
   `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`, `typebox` (the real library, vendored)
   and `node:*` built-ins resolve to modules provided by the runtime, backed by the Rust

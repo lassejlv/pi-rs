@@ -1,5 +1,5 @@
 //! `CodemodeSandbox.start` of `@earendil-works/pi-codemode` (`js/pi-codemode/index.js`) over
-//! `pi_codemode::CodemodeSandbox::start_json_utf16`: the VM is Boa on its own thread; its
+//! `pi_codemode::CodemodeSandbox::start_json_utf16`: the VM is QuickJS on its own thread; its
 //! `onStarted`/`onCall`/`onIdle` callbacks reach JS in VM order through one queue per run, and
 //! the run's result settles only after every callback queued before it was delivered.
 

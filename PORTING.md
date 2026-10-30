@@ -27,7 +27,7 @@ Never copy TypeScript into this repository.
 | `packages/tui`                  | `crates/pi-tui`             | Terminal UI framework and components |
 | `packages/mcp`                  | `crates/pi-mcp`             | MCP client, transports, OAuth |
 | `packages/codemode`             | `crates/pi-codemode`        | Code mode runtime (JS scripts calling tools) |
-| (new)                           | `crates/pi-jsrt`            | Embedded pure-Rust JavaScript runtime (Boa + oxc TS stripping, ESM loader, Node API shims). Used by extensions and codemode. |
+| (new)                           | `crates/pi-jsrt`            | Embedded JavaScript runtime (QuickJS via rquickjs + oxc TS stripping, ESM loader, Node API shims). Used by extensions and codemode. |
 | `packages/coding-agent`         | `crates/pi-coding-agent`    | The `pi` binary (`src/main.rs`) and library |
 
 Module layout mirrors the TS file layout: `src/core/session-manager.ts` becomes
@@ -63,7 +63,7 @@ pi extensions are TypeScript modules. The Rust port keeps that contract:
   UI context, session control) is defined as Rust types in
   `pi-coding-agent::core::extensions`. Built-in extensions (`src/extensions/*`: mcp,
   codemode, tool-search, llama) are Rust implementations against that API.
-- User extensions (`.ts`/`.js`) run inside `pi-jsrt`, an embedded Boa engine on a
+- User extensions (`.ts`/`.js`) run inside `pi-jsrt`, an embedded QuickJS engine on a
   dedicated thread. TypeScript is stripped with oxc. Imports of
   `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, `@earendil-works/pi-ai`,
   `@earendil-works/pi-agent-core`, `typebox` and `node:*` builtins resolve to modules

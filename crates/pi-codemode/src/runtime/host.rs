@@ -1,10 +1,9 @@
-//! The default sandbox: each execution gets its own thread and Boa VM.
+//! The default sandbox: each execution gets its own thread and QuickJS VM.
 //!
 //! A fresh thread per run keeps termination simple: a runaway script cannot poison a later run.
-//! Stopping sets an interrupt flag that the VM polls at every bridge call, loop iteration, and
-//! promise job, and does not wait for the thread: a long-running built-in (or a loop in code the
-//! script generated with `eval`) keeps its thread busy until it returns or hits Boa's loop
-//! iteration limit. Hosts that limit concurrency can track actual thread lifetime with
+//! Stopping sets an interrupt flag that the VM polls at every bridge call, loop iteration, promise
+//! job and in QuickJS's interrupt handler, and does not wait for the thread: a long-running
+//! built-in keeps its thread busy until it returns. Hosts that limit concurrency can track actual thread lifetime with
 //! `on_worker_started` and `acquire_worker`.
 
 use std::sync::Arc;

@@ -1,4 +1,4 @@
-// node:vm — contexts are Boa realms (src/ops/vm.rs). A contextified object is the realm's view
+// node:vm — contexts are QuickJS realms (src/ops/vm.rs). A contextified object is the realm's view
 // of globals: names resolve on it first, then on the realm's builtins; assignments and
 // declarations go to it, as with V8's global proxy interceptors.
 

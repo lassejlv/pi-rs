@@ -51,7 +51,7 @@ const PACKAGES: &[Package] = &[
         setup_files: &[],
         retention_modes: false,
     },
-    // The QuickJS-wasm sandbox cannot run in Boa: `@earendil-works/pi-codemode` is embedded too
+    // The QuickJS-wasm sandbox needs wasm and Node workers: `@earendil-works/pi-codemode` is embedded too
     // (`js/pi-codemode/`, over the native `pi-codemode` crate). Both modes, like its stock gate.
     Package {
         dir: "packages/codemode",
@@ -666,7 +666,7 @@ fn main() {
         "test": args.suite,
         "sha256": format!("{:x}", Sha256::digest(&before)),
         "selection": "complete file without name filter",
-        "runtime": "pi-jsrt (Boa) with pi-durable-jsrt embedded modules and the vitest shim",
+        "runtime": "pi-jsrt (QuickJS) with pi-durable-jsrt embedded modules and the vitest shim",
         "success": ok,
         "sourceAliases": {
             "packages": SOURCE_PACKAGES,

@@ -1,13 +1,14 @@
 //! Loop instrumentation.
 //!
-//! Boa cannot interrupt a script from outside, and an error it raises for a runtime limit inside an
-//! async function that already awaited is discarded by the engine. So the script's loops call a
-//! native tick function on every iteration: the tick counts the execution's interrupt budget and
-//! polls the host's interrupt flag (deadline, abort, a script that already reported its result),
-//! and records why it stopped the script, so the VM can report it even when the engine discards the
-//! error. The call is inserted without adding line breaks, so line numbers in stack traces are
-//! unchanged. Code produced at run time (`eval`, `Function`) is not instrumented; Boa's per-call
-//! loop iteration limit bounds it.
+//! The script's loops call a native tick function on every iteration: the tick counts the
+//! execution's interrupt budget, which must count the same iterations on every run for
+//! deterministic replays (QuickJS's interrupt handler runs every so many operations, which depends
+//! on the engine's internals), and polls the host's interrupt flag (deadline, abort, a script that
+//! already reported its result). It records why it stopped the script, so the VM can report it
+//! even when an async function swallows the error. The call is inserted without adding line
+//! breaks, so line numbers in stack traces are unchanged. Code produced at run time (`eval`,
+//! `Function`) is not instrumented; QuickJS's interrupt handler bounds it with the loop iteration
+//! limit and stops it when the host interrupts.
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{DoWhileStatement, ForInStatement, ForOfStatement, ForStatement, Statement, WhileStatement};

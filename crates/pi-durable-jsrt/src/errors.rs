@@ -32,7 +32,7 @@
 
 use std::sync::Arc;
 
-use boa_engine::{Context, JsError, JsObject, JsValue, js_string};
+use pi_jsrt::js::{Context, JsError, JsObject, JsValue, js_string};
 use pi_json::strict::JsonString;
 use pi_jsrt::JsHandle;
 
@@ -248,8 +248,8 @@ impl HostError {
         }
     }
 
-    /// Wrap a Boa error (a thrown value or an engine error such as a runtime limit).
-    pub fn from_boa(ctx: &mut Context, error: JsError) -> HostError {
+    /// Wrap a JS error (a thrown value or a native error not yet thrown).
+    pub fn from_error(ctx: &mut Context, error: JsError) -> HostError {
         match error.into_opaque(ctx) {
             Ok(value) => HostError::from_js(ctx, &value),
             Err(e) => HostError::new(ErrorClass::Error, e.to_string()),
@@ -265,7 +265,7 @@ impl HostError {
     }
 
     /// The [`JsError`] throwing [`HostError::to_js`].
-    pub fn to_boa(&self, ctx: &mut Context) -> JsError {
+    pub fn to_error(&self, ctx: &mut Context) -> JsError {
         JsError::from_opaque(self.to_js(ctx))
     }
 }
@@ -304,7 +304,7 @@ fn typed_to_js(ctx: &mut Context, t: &TypedError) -> JsValue {
     for (k, v) in &t.props {
         if let Ok(v) = value::to_js(ctx, v) {
             let _ =
-                props.create_data_property_or_throw(boa_engine::JsString::from(k.as_str()), v, ctx);
+                props.create_data_property_or_throw(pi_jsrt::js::JsString::from(k.as_str()), v, ctx);
         }
     }
     let message: JsValue = value::units_js_string(&t.message).into();
@@ -318,7 +318,7 @@ fn typed_to_js(ctx: &mut Context, t: &TypedError) -> JsValue {
         .and_then(|f| f.as_callable());
     if let Some(factory) = factory {
         let args = [
-            boa_engine::JsString::from(t.class.name()).into(),
+            pi_jsrt::js::JsString::from(t.class.name()).into(),
             message.clone(),
             props.clone().into(),
             cause.clone().unwrap_or_default(),
@@ -330,16 +330,16 @@ fn typed_to_js(ctx: &mut Context, t: &TypedError) -> JsValue {
     }
     // The bridge is not loaded: a builtin error carrying the name and props.
     let native = match t.class {
-        ErrorClass::TypeError => boa_engine::JsNativeError::typ(),
-        ErrorClass::RangeError => boa_engine::JsNativeError::range(),
-        _ => boa_engine::JsNativeError::error(),
+        ErrorClass::TypeError => pi_jsrt::js::JsNativeError::typ(),
+        ErrorClass::RangeError => pi_jsrt::js::JsNativeError::range(),
+        _ => pi_jsrt::js::JsNativeError::error(),
     }
     .with_message(t.message.to_string_lossy());
     let value = JsError::from(native).into_opaque(ctx).unwrap_or_default();
     if let Some(obj) = value.as_object() {
         let _ = obj.set(
             js_string!("name"),
-            boa_engine::JsString::from(t.class.name()),
+            pi_jsrt::js::JsString::from(t.class.name()),
             true,
             ctx,
         );
@@ -348,7 +348,7 @@ fn typed_to_js(ctx: &mut Context, t: &TypedError) -> JsValue {
         }
         for (k, v) in &t.props {
             if let Ok(v) = value::to_js(ctx, v) {
-                let _ = obj.set(boa_engine::JsString::from(k.as_str()), v, true, ctx);
+                let _ = obj.set(pi_jsrt::js::JsString::from(k.as_str()), v, true, ctx);
             }
         }
     }

@@ -1,5 +1,5 @@
 //! The sandboxes of `@earendil-works/pi-codemode` (`js/pi-codemode/index.js`) over the native
-//! `pi_codemode::CodemodeSandbox`: `CodemodeSandbox` and `InlineCodemodeSandbox` start a Boa VM on
+//! `pi_codemode::CodemodeSandbox`: `CodemodeSandbox` and `InlineCodemodeSandbox` start a QuickJS VM on
 //! its own thread (the inline one with an interrupt budget, as upstream's in-thread QuickJS),
 //! `RemoteCodemodeSandbox` keeps the host role and reaches the caller's JS `remote` for the VM,
 //! and `serveCodemodeRemote` is the remote side. Tools, globals, admission callbacks and remotes

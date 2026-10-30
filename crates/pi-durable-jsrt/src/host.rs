@@ -34,9 +34,9 @@ use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
-use boa_engine::object::FunctionObjectBuilder;
-use boa_engine::property::PropertyDescriptor;
-use boa_engine::{
+use pi_jsrt::js::FunctionObjectBuilder;
+use pi_jsrt::js::PropertyDescriptor;
+use pi_jsrt::js::{
     Context, JsArgs, JsObject, JsResult, JsString, JsValue, NativeFunction, js_string,
 };
 use futures::FutureExt;
@@ -70,7 +70,8 @@ pub const BRIDGE: &str = "pi-durable:bridge";
 ///   `env/index.js` → `@earendil-works/pi-durable/env`) and `package.json.js` serves
 ///   `<package>/package.json`;
 /// - `pi-codemode/<p>.js` → `@earendil-works/pi-codemode/<p>` (same rules; the QuickJS-wasm
-///   sandbox package cannot run in Boa, so it is embedded over the native `pi-codemode` crate);
+///   sandbox package needs wasm and Node workers, so it is embedded over the native `pi-codemode`
+///   crate);
 /// - `pi-telemetry/<p>.js` → `@earendil-works/pi-telemetry/<p>` (same rules; over the native
 ///   `pi-telemetry` crate, so the embedded packages resolve nothing from `node_modules`).
 pub fn specifier_for(path: &str) -> Option<String> {
@@ -457,17 +458,17 @@ fn raw_call(
         .to_string(ctx)?
         .to_std_string_lossy();
     let rt = pi_jsrt::ctx::runtime(ctx)
-        .ok_or_else(|| boa_engine::JsNativeError::typ().with_message("runtime is shutting down"))?;
+        .ok_or_else(|| pi_jsrt::js::JsNativeError::typ().with_message("runtime is shutting down"))?;
     let fail = |ctx: &mut Context, e: HostError| -> JsResult<JsValue> {
         if is_async {
             let reason = e.to_js(ctx);
-            Ok(boa_engine::object::builtins::JsPromise::reject(
-                boa_engine::JsError::from_opaque(reason),
+            Ok(pi_jsrt::js::JsPromise::reject(
+                pi_jsrt::js::JsError::from_opaque(reason),
                 ctx,
             )?
             .into())
         } else {
-            Err(e.to_boa(ctx))
+            Err(e.to_error(ctx))
         }
     };
     let Some(method) = registry.lookup(&name) else {
@@ -496,7 +497,7 @@ fn raw_call(
             match r {
                 Ok(v) if is_async => {
                     let v = value::to_js(ctx, &v)?;
-                    Ok(boa_engine::object::builtins::JsPromise::resolve(v, ctx)?.into())
+                    Ok(pi_jsrt::js::JsPromise::resolve(v, ctx)?.into())
                 }
                 Ok(v) => value::to_js(ctx, &v),
                 Err(e) => fail(ctx, e),
@@ -514,7 +515,7 @@ fn raw_call(
                 let r = fut.await.unwrap_or_else(|_| Err(panic_error(&name)));
                 Box::new(move |ctx: &mut Context| match r {
                     Ok(v) => value::to_js(ctx, &v),
-                    Err(e) => Err(e.to_boa(ctx)),
+                    Err(e) => Err(e.to_error(ctx)),
                 }) as pi_jsrt::ctx::Settle
             }))
         }
@@ -532,7 +533,7 @@ fn invoke(
     args: &[HostValue],
 ) -> JsResult<JsValue> {
     let value = pi_jsrt::ctx::handle_value(ctx, target).ok_or_else(|| {
-        boa_engine::JsNativeError::typ().with_message(format!("invalid JS handle {}", target.id()))
+        pi_jsrt::js::JsNativeError::typ().with_message(format!("invalid JS handle {}", target.id()))
     })?;
     let mut js_args = Vec::with_capacity(args.len());
     for a in args {
@@ -541,7 +542,7 @@ fn invoke(
     match method {
         None => {
             let f = value.as_callable().ok_or_else(|| {
-                boa_engine::JsNativeError::typ().with_message("handle is not a function")
+                pi_jsrt::js::JsNativeError::typ().with_message("handle is not a function")
             })?;
             f.call(&JsValue::undefined(), &js_args, ctx)
         }
@@ -549,7 +550,7 @@ fn invoke(
             let obj = value.to_object(ctx)?;
             let f = obj.get(JsString::from(name), ctx)?;
             let f = f.as_callable().ok_or_else(|| {
-                boa_engine::JsNativeError::typ().with_message(format!("{name} is not a function"))
+                pi_jsrt::js::JsNativeError::typ().with_message(format!("{name} is not a function"))
             })?;
             f.call(&value, &js_args, ctx)
         }
@@ -581,19 +582,19 @@ pub fn call_sync(
     let rt = target.runtime().clone();
     if rt.is_js_thread() {
         let r = pi_jsrt::ctx::with_current(|ctx| {
-            let r = invoke(ctx, target, method, &args).map_err(|e| HostError::from_boa(ctx, e))?;
+            let r = invoke(ctx, target, method, &args).map_err(|e| HostError::from_error(ctx, e))?;
             let Some(promise) = r.as_promise() else {
                 return value::from_js(ctx, &r);
             };
             pi_jsrt::ctx::run_jobs(ctx);
             match promise.state() {
-                boa_engine::builtins::promise::PromiseState::Fulfilled(v) => {
+                pi_jsrt::js::PromiseState::Fulfilled(v) => {
                     value::from_js(ctx, &v)
                 }
-                boa_engine::builtins::promise::PromiseState::Rejected(e) => {
+                pi_jsrt::js::PromiseState::Rejected(e) => {
                     Err(HostError::from_js(ctx, &e))
                 }
-                boa_engine::builtins::promise::PromiseState::Pending => Err(HostError::new(
+                pi_jsrt::js::PromiseState::Pending => Err(HostError::new(
                     ErrorClass::Error,
                     "a synchronous call into JS returned a promise that is still pending",
                 )),

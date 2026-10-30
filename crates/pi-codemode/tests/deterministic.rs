@@ -245,7 +245,7 @@ async fn reports_the_fingerprint_before_any_call_and_the_calls_issued_after_each
     let fingerprint = recorded.fingerprint.lock().clone().unwrap();
     let parts: Vec<&str> = fingerprint.split(", ").collect();
     assert_eq!(parts.len(), 6, "{fingerprint}");
-    assert!(parts[0].starts_with("boa "), "{fingerprint}");
+    assert!(parts[0].starts_with("quickjs-ng "), "{fingerprint}");
     assert!(parts[1].starts_with("prelude ") && parts[1].len() == "prelude ".len() + 8, "{fingerprint}");
     assert!(parts[2].starts_with("deterministic "), "{fingerprint}");
     assert!(parts[3].starts_with("stack "), "{fingerprint}");

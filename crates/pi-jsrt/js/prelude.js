@@ -61,8 +61,8 @@ internal.describeReceived = (value) => {
 };
 
 // ---------------------------------------------------------------------------
-// ArrayBuffer.prototype.transfer / transferToFixedLength / detached (ES2024; Boa has them only
-// behind its experimental feature)
+// ArrayBuffer.prototype.transfer / transferToFixedLength / detached (ES2024), for engines without
+// them (QuickJS-ng has them; vm realms share this shim)
 // ---------------------------------------------------------------------------
 
 if (typeof ArrayBuffer.prototype.transfer !== "function") {
@@ -175,9 +175,9 @@ internal.requireBuiltin = (name) => {
 };
 
 // Globals provided by lazily loaded glue: an accessor loads the file on first use.
-// Lazy globals stay accessors for good, backed by `lazyValues`: redefining a global object
-// property from accessor to data (or deleting it) inside its own getter corrupts Boa's inline
-// caches (the next read of the name "calls" whatever now sits in the cached slot).
+// Lazy globals stay accessors for good, backed by `lazyValues` (redefining a global object
+// property from accessor to data inside its own getter broke the previous engine's inline caches;
+// accessors also keep `globalThis.X = v` working before the first read).
 for (const name of Object.keys(lazyGlobals)) {
   Object.defineProperty(globalThis, name, {
     configurable: true,

@@ -1,8 +1,8 @@
 // @earendil-works/pi-codemode over the native pi-codemode crate (src/dispatch/codemode.rs,
 // codemode/sdk.rs and codemode/live.rs, `codemode.sdk.*`). Upstream runs QuickJS compiled to wasm,
 // in a worker (`CodemodeSandbox`), on the calling thread (`InlineCodemodeSandbox`) or behind a
-// remote (`RemoteCodemodeSandbox`, `serveCodemodeRemote`). Boa has neither wasm nor a way to run
-// QuickJS, so every VM is pi-codemode's Boa VM on its own thread; the inline sandbox keeps its
+// remote (`RemoteCodemodeSandbox`, `serveCodemodeRemote`). Every VM is pi-codemode's native
+// QuickJS VM on its own thread (not QuickJS in wasm); the inline sandbox keeps its
 // interrupt budget, the remote one its protocol and the caller's remote. The host logic (tool
 // table, call records, deadline, abort, output and store limits, deterministic runs) is native;
 // tools, globals, admission callbacks and remotes stay the caller's JS objects.
@@ -41,7 +41,7 @@ export const MAX_STORE_TOTAL_CHARS = constants.MAX_STORE_TOTAL_CHARS;
 export const MAX_STORE_VALUE_CHARS = constants.MAX_STORE_VALUE_CHARS;
 
 /** What `loadQuickJSWasm()` resolves to: the VM is native, so there is no module to load. */
-const QUICKJS_STANDIN = Object.freeze({ embedded: "pi-codemode Boa VM" });
+const QUICKJS_STANDIN = Object.freeze({ embedded: "pi-codemode QuickJS VM" });
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -283,7 +283,7 @@ export class CodemodeSandboxBase {
   }
 }
 
-/** Runs JavaScript in pi-codemode's Boa VM on its own thread (upstream: QuickJS in a worker). */
+/** Runs JavaScript in pi-codemode's native QuickJS VM on its own thread (upstream: QuickJS in a worker). */
 export class CodemodeSandbox extends CodemodeSandboxBase {
   constructor(options = {}) {
     super(options, {

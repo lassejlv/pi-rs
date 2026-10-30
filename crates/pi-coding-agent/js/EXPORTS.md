@@ -1,6 +1,6 @@
 # JavaScript extension API: export checklist
 
-Extensions run in pi-jsrt (Boa + oxc). Every runtime export of the packages an extension can import
+Extensions run in pi-jsrt (QuickJS + oxc). Every runtime export of the packages an extension can import
 is listed below against the TypeScript entry points (type-only exports are erased by TypeScript
 stripping and are not listed). Regenerate the lists by extracting the runtime exports of the TS
 `index.ts` files and comparing them with the glue modules in this directory.

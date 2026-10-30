@@ -1,5 +1,5 @@
 // packages/codemode/src/runtime/prelude-source.ts: the VM prelude and its limits, from the native
-// pi-codemode crate (the prelude its Boa VM runs).
+// pi-codemode crate (the prelude its QuickJS VM runs).
 import { call } from "pi-durable:bridge";
 
 const constants = call("codemode.sdk.constants");

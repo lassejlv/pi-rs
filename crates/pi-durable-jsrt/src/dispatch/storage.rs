@@ -163,14 +163,14 @@ pub fn call_now(
     method: Option<&'static str>,
     args: Vec<HostValue>,
 ) -> futures::future::BoxFuture<'static, HostResult<HostValue>> {
-    use boa_engine::{JsString, JsValue};
+    use pi_jsrt::js::{JsString, JsValue};
     use futures::FutureExt;
     if target.runtime().is_js_thread() {
         let (tx, rx) = futures::channel::oneshot::channel();
         let started = pi_jsrt::ctx::with_current(|ctx| {
-            let invoked = (|| -> boa_engine::JsResult<JsValue> {
+            let invoked = (|| -> pi_jsrt::js::JsResult<JsValue> {
                 let value = pi_jsrt::ctx::handle_value(ctx, target).ok_or_else(|| {
-                    boa_engine::JsNativeError::typ().with_message("invalid JS handle")
+                    pi_jsrt::js::JsNativeError::typ().with_message("invalid JS handle")
                 })?;
                 let mut js_args = Vec::with_capacity(args.len());
                 for a in &args {
@@ -184,7 +184,7 @@ pub fn call_now(
                     }
                 };
                 let f = f.as_callable().ok_or_else(|| {
-                    boa_engine::JsNativeError::typ().with_message("not a function")
+                    pi_jsrt::js::JsNativeError::typ().with_message("not a function")
                 })?;
                 f.call(&this, &js_args, ctx)
             })();
@@ -233,9 +233,9 @@ pub fn promise_now(
     pi_jsrt::ctx::with_current(|ctx| {
         let promise = pi_jsrt::ctx::spawn_promise(ctx, async move {
             let result = future.await;
-            Box::new(move |ctx: &mut boa_engine::Context| match result {
+            Box::new(move |ctx: &mut pi_jsrt::js::Context| match result {
                 Ok(value) => crate::value::to_js(ctx, &value),
-                Err(error) => Err(error.to_boa(ctx)),
+                Err(error) => Err(error.to_error(ctx)),
             }) as pi_jsrt::ctx::Settle
         });
         pi_jsrt::ctx::make_handle(ctx, promise).map(HostValue::Handle)

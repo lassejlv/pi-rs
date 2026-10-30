@@ -7,7 +7,7 @@ description = "Embedded pure-Rust JavaScript runtime (QuickJS via rquickjs + oxc
 
 [dependencies]
 jiff.workspace = true
-rquickjs.workspace = true
+pi-quickjs.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_semantic.workspace = true

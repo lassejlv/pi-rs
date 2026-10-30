@@ -2,7 +2,7 @@
 //!
 //! The upstream packages' `exports` subpaths served as [`pi_jsrt`] virtual modules (`js/`), whose
 //! glue forwards to native `pi-durable` / `pi-chord` through in-process host methods
-//! ([`host`]). Values cross as [`HostValue`]s converted directly from Boa values (UTF-16
+//! ([`host`]). Values cross as [`HostValue`]s converted directly from QuickJS values (UTF-16
 //! lossless, explicit `undefined`, functions and objects as handles, see [`value`]); failures
 //! cross as [`HostError`]s reconstructed as the upstream error classes ([`errors`]).
 //!

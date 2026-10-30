@@ -79,7 +79,7 @@ if (typeof ArrayBuffer.prototype.transfer !== "function") {
 fn realm_of(v: &JsValue) -> Option<Realm> {
     let obj = v.as_object()?;
     let data = obj.downcast_ref::<VmRealm>()?;
-    Some(data.realm)
+    Some(data.realm.clone())
 }
 
 /// Run `f` with `realm` as the current realm.

@@ -3003,7 +3003,7 @@ dependencies = [
  "oxc_span",
  "parking_lot",
  "pi-json",
- "rquickjs",
+ "pi-quickjs",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -3129,7 +3129,6 @@ dependencies = [
  "pi-json",
  "pi-jsrt",
  "pi-telemetry",
- "rquickjs",
  "serde",
  "serde_json",
  "sha2",
@@ -3209,6 +3208,7 @@ dependencies = [
  "parking_lot",
  "pbkdf2",
  "pi-embed",
+ "pi-quickjs",
  "pkcs1",
  "pkcs8",
  "poly1305",
@@ -3216,7 +3216,6 @@ dependencies = [
  "regex",
  "reqwest",
  "ripemd",
- "rquickjs",
  "rsa",
  "rusqlite",
  "rustls",
@@ -3272,6 +3271,15 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+]
+
+[[package]]
+name = "pi-quickjs"
+version = "1.3.0"
+dependencies = [
+ "rquickjs",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

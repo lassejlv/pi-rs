@@ -1,4 +1,4 @@
-//! Drives one Boa VM through one script on a dedicated thread, independent of the transport that
+//! Drives one QuickJS VM through one script on a dedicated thread, independent of the transport that
 //! connects it to the host. The thread launcher and the remote server both run the VM through this
 //! module, so the bridge between prelude and host exists once.
 //!
@@ -7,13 +7,13 @@
 //!   block on the host.
 //! - [`VmHandle::deliver`] hands the VM a tool result; the VM applies it and runs the script until
 //!   it waits again.
-//! - [`VmHandle::stop`] sets an interrupt flag and asks the thread to exit. Boa cannot interrupt
-//!   running code from outside, so the flag is polled at every bridge call, on every iteration of
-//!   the script's loops (see [`super::instrument`]), and between promise jobs. Each loop iteration
-//!   and promise job also counts against the execution's interrupt budget, if it has one. Code the
-//!   script generates at run time (`eval`, `Function`) is only bounded by Boa's per-call loop
-//!   iteration limit and the recursion limit, which raise errors the script cannot catch. The
-//!   thread is never joined: stopping does not wait for it.
+//! - [`VmHandle::stop`] sets an interrupt flag and asks the thread to exit. The flag is polled at
+//!   every bridge call, on every iteration of the script's loops (see [`super::instrument`]),
+//!   between promise jobs, and by QuickJS's interrupt handler, which also stops code the script
+//!   generates at run time (`eval`, `Function`) once it exceeds the loop iteration limit. Each
+//!   loop iteration and promise job also counts against the execution's interrupt budget, if it
+//!   has one. Stopping raises an error the script cannot catch. The thread is never joined:
+//!   stopping does not wait for it.
 //! - The VM never decides on its own when it is finished: after `done` or `crash` it stays alive
 //!   until it is stopped. Once it has reported a terminal message, the next bridge call (output,
 //!   tool call) ends the script with an uncatchable error instead of letting it run on.
@@ -35,7 +35,7 @@
 //! number of calls issued after each drain, so the host can check a replay step by step.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -43,13 +43,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::time::Instant;
 
-use boa_engine::context::time::JsInstant;
-use boa_engine::context::{Clock, HostHooks};
-use boa_engine::job::{Job, JobExecutor};
-use boa_engine::object::FunctionObjectBuilder;
-use boa_engine::prelude::{EngineError, RuntimeLimitError};
-use boa_engine::property::PropertyKey;
-use boa_engine::{Context, JsError, JsObject, JsResult, JsString, JsValue, NativeFunction, Source, js_string};
+use pi_quickjs::{
+    Context, Engine, EngineOptions, FunctionObjectBuilder, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue, NativeFunction,
+    PropertyDescriptor, PropertyKey, Source, ext, js_string,
+};
 
 use super::prelude_source::{PRELUDE_HASH, PRELUDE_SOURCE};
 use super::protocol::{DoneMessage, HostToWorkerMessage, VmStartData, WorkerToHostMessage};
@@ -60,17 +57,25 @@ use crate::types::{CodemodeCallTarget, CodemodeDuring, CodemodeOutputItem};
 const DETERMINISTIC_VERSION: u32 = 5;
 
 /// The engine named in the fingerprint.
-const ENGINE: &str = "boa 0.22";
+const ENGINE: &str = "quickjs-ng 0.16.2";
 
 /// Promise jobs run between two interrupt polls while draining the job queue.
 const JOBS_PER_POLL: u64 = 50;
 
-/// Loop iterations one function invocation may run, for code the instrumentation does not reach
-/// (`eval`, `Function`). Exceeding it ends the script with `kind: "timeout"`.
+/// Loop iterations one synchronous run may take, for code the instrumentation does not reach
+/// (`eval`, `Function`). Exceeding it ends the script with `kind: "timeout"`. QuickJS counts
+/// operations: it polls its interrupt handler about every [`OPS_PER_INTERRUPT_POLL`] of them.
 pub const DEFAULT_LOOP_ITERATION_LIMIT: u64 = 100_000_000;
 
-/// Maximum JS call depth. Deep recursion past it throws a `RangeError` the script can catch, as in QuickJS.
+/// Operations QuickJS runs between two interrupt handler polls.
+const OPS_PER_INTERRUPT_POLL: u64 = 10_000;
+
+/// Maximum JS call depth. Deep recursion past it throws a `RangeError` the script can catch, as in
+/// QuickJS. QuickJS limits the native stack instead: [`STACK_BYTES_PER_CALL`] per level.
 pub const DEFAULT_RECURSION_LIMIT: usize = 4096;
+
+/// Native stack a JS call level may use (see [`DEFAULT_RECURSION_LIMIT`]).
+const STACK_BYTES_PER_CALL: usize = 2048;
 
 /// Native stack of a VM thread. Large, because native built-ins that call back into JS (for
 /// example `Array.prototype.map`) recurse on it.
@@ -203,101 +208,37 @@ fn vm_main(
 // Engine setup
 // ---------------------------------------------------------------------------
 
-/// Runs promise jobs one at a time, so the VM can poll its interrupt flag between them. There are
-/// no timers: timeout and interval jobs are dropped.
-#[derive(Default)]
-struct Executor {
-    jobs: RefCell<VecDeque<Job>>,
-}
-
-impl Executor {
-    fn pop(&self) -> Option<Job> {
-        self.jobs.borrow_mut().pop_front()
-    }
-}
-
-impl JobExecutor for Executor {
-    fn enqueue_job(self: Rc<Self>, job: Job, _context: &mut Context) {
-        match job {
-            Job::PromiseJob(_) | Job::GenericJob(_) | Job::AsyncJob(_) => self.jobs.borrow_mut().push_back(job),
-            _ => {}
-        }
-    }
-
-    fn run_jobs(self: Rc<Self>, context: &mut Context) -> JsResult<()> {
-        while let Some(job) = self.pop() {
-            run_job(job, context)?;
-        }
-        Ok(())
-    }
-}
-
-fn run_job(job: Job, context: &mut Context) -> JsResult<()> {
-    match job {
-        Job::PromiseJob(job) => job.call(context).map(|_| ()),
-        Job::GenericJob(job) => job.call(context).map(|_| ()),
-        Job::AsyncJob(job) => {
-            let cell = RefCell::new(context);
-            let future = job.call(&cell);
-            let mut future = std::pin::pin!(future);
-            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
-            loop {
-                if let std::task::Poll::Ready(result) = future.as_mut().poll(&mut cx) {
-                    return result.map(|_| ());
-                }
-                std::thread::yield_now();
-            }
-        }
-        _ => Ok(()),
-    }
-}
-
 /// The virtual clock of a deterministic VM.
 struct VirtualClock {
     started_at: f64,
     now: Cell<f64>,
 }
 
-struct VmClock {
-    virtual_clock: Option<Rc<VirtualClock>>,
-    started: Instant,
+/// The local timezone of `Date`: UTC in deterministic mode, else the one the execution names, else
+/// the host's (`None`: QuickJS asks the C library).
+enum VmTimezone {
+    Utc,
+    Named(jiff::tz::TimeZone),
 }
 
-impl Clock for VmClock {
-    fn now(&self) -> JsInstant {
-        let elapsed = self.started.elapsed();
-        JsInstant::new(elapsed.as_secs(), elapsed.subsec_nanos())
-    }
-
-    fn system_time_millis(&self) -> i64 {
-        match &self.virtual_clock {
-            Some(clock) => clock.now.get().round() as i64,
-            None => std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0),
-        }
-    }
+thread_local! {
+    /// The VM on this thread's clock and timezone, read by the QuickJS hooks.
+    static VM_CLOCK: RefCell<Option<Rc<VirtualClock>>> = const { RefCell::new(None) };
+    static VM_TIMEZONE: RefCell<Option<VmTimezone>> = const { RefCell::new(None) };
 }
 
-struct VmHooks {
-    utc: bool,
-    /// The host timezone the execution names; `None`: this thread's own.
-    timezone: Option<jiff::tz::TimeZone>,
-    max_buffer_size: u64,
+unsafe extern "C" fn vm_date_now(_opaque: *mut std::ffi::c_void) -> i64 {
+    VM_CLOCK.with(|clock| clock.borrow().as_ref().map_or(0, |clock| clock.now.get().round() as i64))
 }
 
-impl HostHooks for VmHooks {
-    fn local_timezone_offset_seconds(&self, unix_time_seconds: i64) -> i32 {
-        if self.utc {
-            return 0;
+unsafe extern "C" fn vm_timezone_offset(time_ms: i64, _opaque: *mut std::ffi::c_void) -> i32 {
+    VM_TIMEZONE.with(|tz| match tz.borrow().as_ref() {
+        Some(VmTimezone::Named(tz)) => {
+            let at = jiff::Timestamp::from_millisecond(time_ms).unwrap_or(jiff::Timestamp::UNIX_EPOCH);
+            -(tz.to_offset(at).seconds() / 60)
         }
-        match (&self.timezone, jiff::Timestamp::from_second(unix_time_seconds)) {
-            (Some(timezone), Ok(at)) => timezone.to_offset(at).seconds(),
-            _ => local_offset_seconds(unix_time_seconds),
-        }
-    }
-
-    fn max_buffer_size(&self, _context: &mut Context) -> u64 {
-        self.max_buffer_size
-    }
+        _ => 0,
+    })
 }
 
 /// A `TZ` value as a timezone, as the C library reads it: an IANA name (an optional leading `:`)
@@ -310,25 +251,6 @@ pub fn timezone_named(tz: &str) -> jiff::tz::TimeZone {
     jiff::tz::TimeZone::get(name)
         .or_else(|_| jiff::tz::TimeZone::posix(name))
         .unwrap_or(jiff::tz::TimeZone::UTC)
-}
-
-/// The host's UTC offset at `unix_time_seconds`, honoring `TZ`.
-#[cfg(unix)]
-fn local_offset_seconds(unix_time_seconds: i64) -> i32 {
-    let time = unix_time_seconds as libc::time_t;
-    // SAFETY: `localtime_r` writes into the provided `tm` and reads `time`; both outlive the call.
-    unsafe {
-        let mut tm: libc::tm = std::mem::zeroed();
-        if libc::localtime_r(&time, &mut tm).is_null() {
-            return 0;
-        }
-        tm.tm_gmtoff as i32
-    }
-}
-
-#[cfg(not(unix))]
-fn local_offset_seconds(_unix_time_seconds: i64) -> i32 {
-    0
 }
 
 /// QuickJS's `Math.random()`: xorshift64*, its state the first realtime clock reading in
@@ -378,6 +300,12 @@ struct BridgeState {
     budget: Option<u64>,
     /// Why a tick stopped the script, kept because the engine discards the error it raised.
     stopped: Cell<Option<Stop>>,
+    /// Interrupt handler polls in the current synchronous run, and whether the loop iteration
+    /// limit applies (not while the prelude sets up).
+    polls: Cell<u64>,
+    poll_limit: Cell<Option<u64>>,
+    /// The interrupt handler stopped the script for the loop iteration limit.
+    loop_limited: Cell<bool>,
     virtual_clock: Option<Rc<VirtualClock>>,
     started: Instant,
     prng: Option<Prng>,
@@ -427,6 +355,32 @@ enum Stop {
     Halted,
 }
 
+impl BridgeState {
+    /// QuickJS's interrupt handler: stop the script when the host interrupted it, after a
+    /// terminal message, or past the loop iteration limit.
+    fn interrupt_poll(&self) -> bool {
+        if self.stopped.get().is_some() || self.loop_limited.get() {
+            return true;
+        }
+        if self.halted() {
+            self.stopped.set(Some(Stop::Halted));
+            return true;
+        }
+        let polls = self.polls.get() + 1;
+        self.polls.set(polls);
+        if self.poll_limit.get().is_some_and(|limit| polls > limit) {
+            self.loop_limited.set(true);
+            return true;
+        }
+        false
+    }
+
+    /// A new synchronous run starts (script start, a promise job, a delivered result).
+    fn new_run(&self) {
+        self.polls.set(0);
+    }
+}
+
 fn state(context: &Context) -> &BridgeState {
     context.get_data::<BridgeState>().expect("codemode VM state")
 }
@@ -436,8 +390,8 @@ fn string_arg(args: &[JsValue], index: usize) -> Option<String> {
 }
 
 /// The error a native function returns to end the script: the script cannot catch it.
-fn halt_error() -> JsError {
-    RuntimeLimitError::LoopIteration.into()
+fn halt_error(context: &mut Context) -> JsError {
+    JsError::uncatchable("interrupted", context)
 }
 
 /// `bridge(kind, a, b, c)`, called from the prelude with primitives only.
@@ -445,7 +399,7 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
     let kind = string_arg(args, 0).unwrap_or_default();
     let st = state(context);
     if st.halted() {
-        return Err(halt_error());
+        return Err(halt_error(context));
     }
     match kind.as_str() {
         "call" | "global" => {
@@ -453,7 +407,7 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
             let id = args.get(1).and_then(JsValue::as_number).unwrap_or(0.0) as u64;
             let target = if kind == "call" { CodemodeCallTarget::Tool } else { CodemodeCallTarget::Global };
             if st.lossless_json {
-                let name = args.get(2).and_then(JsValue::as_string).map(|s| s.to_vec()).unwrap_or_default();
+                let name = args.get(2).and_then(JsValue::as_string).map(|s| s.to_utf16()).unwrap_or_default();
                 st.send(WorkerToHostMessage::CallUtf16 { id, target, name, args: string_arg(args, 3) });
             } else {
                 st.send(WorkerToHostMessage::Call { id, target, name: string_arg(args, 2).unwrap_or_default(), args: string_arg(args, 3) });
@@ -462,7 +416,7 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
         "output" => {
             let what = string_arg(args, 1).unwrap_or_default();
             if st.lossless_json {
-                let units = |index: usize| args.get(index).and_then(JsValue::as_string).map(|s| s.to_vec()).unwrap_or_default();
+                let units = |index: usize| args.get(index).and_then(JsValue::as_string).map(|s| s.to_utf16()).unwrap_or_default();
                 st.send(WorkerToHostMessage::OutputUtf16 { kind: what, data: units(2), mime_type: units(3) });
                 return Ok(JsValue::undefined());
             }
@@ -496,7 +450,7 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
 fn tick(_this: &JsValue, _args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
     match state(context).tick() {
         Ok(()) => Ok(JsValue::undefined()),
-        Err(_) => Err(halt_error()),
+        Err(_) => Err(halt_error(context)),
     }
 }
 
@@ -515,7 +469,7 @@ fn math_random(_this: &JsValue, _args: &[JsValue], context: &mut Context) -> JsR
     Ok(JsValue::from(value))
 }
 
-fn function(context: &mut Context, name: &str, length: usize, f: boa_engine::native_function::NativeFunctionPointer) -> JsObject {
+fn function(context: &mut Context, name: &str, length: usize, f: fn(&JsValue, &[JsValue], &mut Context) -> JsResult<JsValue>) -> JsObject {
     let realm = context.realm().clone();
     FunctionObjectBuilder::new(&realm, NativeFunction::from_fn_ptr(f)).name(JsString::from(name)).length(length).build().into()
 }
@@ -528,7 +482,7 @@ fn js_string_value(text: &str) -> JsValue {
 enum Fatal {
     /// The interrupt budget or the loop iteration limit, with the message for the host.
     Exhausted(String),
-    /// The recursion or VM stack limit, which QuickJS reports as a `RangeError`.
+    /// The native stack limit escaped the script (QuickJS reports it as a `RangeError`).
     StackOverflow,
     /// Interrupted by the host, or halted after a terminal message.
     Halted,
@@ -536,14 +490,13 @@ enum Fatal {
     Crash(String),
 }
 
-/// One VM. Field order matters: the GC handles drop before the context.
+/// One VM. Field order matters: the JS values drop before the engine.
 struct Vm {
     settle: JsObject,
     run: JsObject,
     stalled: JsObject,
     abandon: JsObject,
     api: JsObject,
-    executor: Rc<Executor>,
     virtual_clock: Option<Rc<VirtualClock>>,
     next_seq: u64,
     early: BTreeMap<u64, HostToWorkerMessage>,
@@ -551,6 +504,15 @@ struct Vm {
     fingerprint: Option<String>,
     limits: VmLimits,
     context: Context,
+    engine: Engine,
+}
+
+impl Drop for Vm {
+    fn drop(&mut self) {
+        self.engine.clear_data();
+        VM_CLOCK.with(|clock| clock.borrow_mut().take());
+        VM_TIMEZONE.with(|tz| tz.borrow_mut().take());
+    }
 }
 
 impl Vm {
@@ -563,24 +525,26 @@ impl Vm {
         let deterministic = data.deterministic;
         let virtual_clock = deterministic.map(|d| Rc::new(VirtualClock { started_at: d.started_at, now: Cell::new(d.started_at) }));
         let started = Instant::now();
-        let executor = Rc::new(Executor::default());
-        let mut context = Context::builder()
-            .job_executor(executor.clone())
-            .host_hooks(Rc::new(VmHooks {
-                utc: deterministic.is_some(),
-                timezone: data.timezone.as_deref().map(timezone_named),
-                max_buffer_size: data.memory_limit_bytes.unwrap_or(1_610_612_736),
-            }))
-            .clock(Rc::new(VmClock { virtual_clock: virtual_clock.clone(), started }))
-            .build()
+        let stack = limits.recursion_limit.saturating_mul(STACK_BYTES_PER_CALL).clamp(256 * 1024, VM_THREAD_STACK_SIZE / 2);
+        let memory = data.memory_limit_bytes.unwrap_or(1_610_612_736);
+        let engine = Engine::new(EngineOptions { max_stack_size: stack, memory_limit: usize::try_from(memory).unwrap_or(usize::MAX) })
             .map_err(|error| format!("Failed to create the VM: {error}"))?;
-        {
-            let runtime_limits = context.runtime_limits_mut();
-            runtime_limits.set_recursion_limit(limits.recursion_limit);
-            runtime_limits.set_backtrace_limit(32);
-            // The prelude's own loops do not count; the limit applies from the script on.
-            runtime_limits.disable_loop_iteration_limit();
+        let mut context = engine.context();
+        let timezone = if deterministic.is_some() { Some(VmTimezone::Utc) } else { data.timezone.as_deref().map(|tz| VmTimezone::Named(timezone_named(tz))) };
+        let rt = engine.raw_runtime();
+        if timezone.is_some() {
+            VM_TIMEZONE.with(|tz| *tz.borrow_mut() = timezone);
+            unsafe { ext::JS_SetTimezoneOffsetFunc(rt, Some(vm_timezone_offset), std::ptr::null_mut()) };
         }
+        if let Some(clock) = &virtual_clock {
+            VM_CLOCK.with(|c| *c.borrow_mut() = Some(clock.clone()));
+            unsafe { ext::JS_SetDateNowFunc(rt, Some(vm_date_now), std::ptr::null_mut()) };
+        }
+        let raw = context.as_raw();
+        engine.runtime().set_interrupt_handler(Some(Box::new(move || {
+            let context = Context::from_raw(raw);
+            context.get_data::<BridgeState>().is_some_and(BridgeState::interrupt_poll)
+        })));
         context.insert_data(BridgeState {
             post,
             interrupt,
@@ -592,6 +556,9 @@ impl Vm {
             ticks: Cell::new(0),
             budget: limits.interrupt_budget,
             stopped: Cell::new(None),
+            polls: Cell::new(0),
+            poll_limit: Cell::new(None),
+            loop_limited: Cell::new(false),
             virtual_clock: virtual_clock.clone(),
             started,
             prng: deterministic.map(|d| Prng::new(d.seed)),
@@ -607,7 +574,7 @@ impl Vm {
             let tick = function(context, "tick", 0, tick);
             global.define_property_or_throw(
                 JsString::from(super::instrument::TICK),
-                boa_engine::property::PropertyDescriptor::builder().value(tick).writable(false).enumerable(false).configurable(false),
+                PropertyDescriptor::builder().value(tick).writable(false).enumerable(false).configurable(false),
                 context,
             )?;
             if deterministic.is_some() {
@@ -622,7 +589,7 @@ impl Vm {
             }
             let prelude = context.eval(Source::from_bytes(PRELUDE_SOURCE.as_bytes()).with_path(Path::new("codemode-prelude.js")))?;
             let prelude =
-                prelude.as_callable().ok_or_else(|| boa_engine::JsNativeError::typ().with_message("prelude is not a function"))?;
+                prelude.as_callable().ok_or_else(|| JsNativeError::typ().with_message("prelude is not a function"))?;
             let bridge = function(context, "bridge", 4, bridge);
             let tools = serde_json::to_string(&data.tools).unwrap_or_else(|_| "[]".into());
             let globals = serde_json::to_string(&data.globals).unwrap_or_else(|_| "[]".into());
@@ -632,7 +599,7 @@ impl Vm {
                 &[bridge.into(), js_string_value(&tools), js_string_value(&globals), js_string_value(&store)],
                 context,
             )?;
-            api.as_object().ok_or_else(|| boa_engine::JsNativeError::typ().with_message("prelude returned no API").into())
+            api.as_object().ok_or_else(|| JsNativeError::typ().with_message("prelude returned no API").into())
         };
         let api = setup(&mut context).map_err(|error| format!("Failed to start the VM: {}", describe_error(error, &mut context)))?;
         let member = |name: &str, context: &mut Context| -> Result<JsObject, String> {
@@ -641,9 +608,8 @@ impl Vm {
                 .and_then(|value| value.as_object())
                 .ok_or_else(|| format!("Failed to start the VM: the prelude has no {name}"))
         };
-        if let Some(limit) = limits.loop_iteration_limit {
-            context.runtime_limits_mut().set_loop_iteration_limit(limit);
-        }
+        // The prelude's own loops do not count; the limit applies from the script on.
+        state(&context).poll_limit.set(limits.loop_iteration_limit.map(|limit| (limit / OPS_PER_INTERRUPT_POLL).max(1)));
         let settle = member("settle", &mut context)?;
         let run = member("run", &mut context)?;
         let stalled = member("stalled", &mut context)?;
@@ -664,7 +630,6 @@ impl Vm {
             stalled,
             abandon,
             api,
-            executor,
             virtual_clock,
             next_seq: 1,
             early: BTreeMap::new(),
@@ -672,6 +637,7 @@ impl Vm {
             fingerprint,
             limits,
             context,
+            engine,
         })
     }
 
@@ -699,10 +665,12 @@ impl Vm {
             let wrapper = format!("(async (tools, console) => {{{}\n}})", data.code);
             super::instrument::instrument_loops(&wrapper).unwrap_or(wrapper).encode_utf16().collect()
         };
-        let function = match self.context.eval(Source::from_utf16(&wrapper).with_path(Path::new("codemode.js"))) {
+        let source = utf16_source(&wrapper);
+        self.state().new_run();
+        let function = match self.context.eval(Source::from_bytes(source.as_bytes()).with_path(Path::new("codemode.js"))) {
             Ok(function) => function,
             Err(error) => {
-                if error.as_engine().is_some() {
+                if error.is_uncatchable() {
                     let fatal = self.classify(&error);
                     self.fail(fatal);
                     return;
@@ -728,8 +696,10 @@ impl Vm {
     /// Run queued jobs, then fail a script that waits on nothing that can ever resume it.
     fn drain(&mut self) -> Result<(), ()> {
         let mut jobs: u64 = 0;
-        while let Some(job) = self.executor.pop() {
-            if let Err(error) = run_job(job, &mut self.context) {
+        loop {
+            self.state().new_run();
+            let Some(result) = self.context.run_pending_job() else { break };
+            if let Err(error) = result {
                 // A job only fails for errors the script cannot catch.
                 let fatal = self.classify(&error);
                 self.fail(fatal);
@@ -744,7 +714,6 @@ impl Vm {
                 return Err(());
             }
         }
-        self.context.clear_kept_objects();
         // The engine discards errors raised inside an async function that resumed after an
         // await, so a tick that stopped the script is only visible here.
         if let Some(stop) = self.state().stopped.get() {
@@ -768,8 +737,7 @@ impl Vm {
         let abandon = self.abandon.clone();
         let api: JsValue = self.api.clone().into();
         let halted = self.state().halted();
-        // Clear the queue and stop the prelude from reporting anything else.
-        self.executor.jobs.borrow_mut().clear();
+        // Stop the prelude from reporting anything else; queued jobs never run (no more drains).
         let _ = abandon.call(&api, &[], &mut self.context);
         if halted {
             return;
@@ -803,13 +771,14 @@ impl Vm {
                 (*id, *ok, payload.as_deref().map_or_else(JsValue::undefined, js_string_value), properties)
             }
             HostToWorkerMessage::ResultUtf16 { id, ok, payload, properties, .. } => {
-                (*id, *ok, payload.as_ref().map_or_else(JsValue::undefined, |v| JsValue::from(JsString::from(v.as_slice()))), properties)
+                (*id, *ok, payload.as_ref().map_or_else(JsValue::undefined, |v| JsValue::from(JsString::from_utf16(v))), properties)
             }
         };
         let settle = self.settle.clone();
         let api: JsValue = self.api.clone().into();
         let args =
             [JsValue::from(id as f64), JsValue::from(ok), payload, properties.as_deref().map_or_else(JsValue::undefined, js_string_value)];
+        self.state().new_run();
         if let Err(error) = settle.call(&api, &args, &mut self.context) {
             let fatal = self.classify(&error);
             self.fail(fatal);
@@ -882,15 +851,16 @@ impl Vm {
         if self.state().halted() {
             return Fatal::Halted;
         }
-        match error.as_engine() {
-            Some(EngineError::RuntimeLimit(RuntimeLimitError::LoopIteration)) => Fatal::Exhausted(format!(
+        if self.state().loop_limited.get() {
+            return Fatal::Exhausted(format!(
                 "Execution exceeded its loop iteration limit of {}",
                 self.limits.loop_iteration_limit.unwrap_or_default()
-            )),
-            Some(EngineError::RuntimeLimit(_)) => Fatal::StackOverflow,
-            Some(other) => Fatal::Crash(other.to_string()),
-            None => Fatal::Crash(format!("Promise job failed: {error}")),
+            ));
         }
+        if !error.is_uncatchable() && error.to_string().ends_with("Maximum call stack size exceeded") {
+            return Fatal::StackOverflow;
+        }
+        Fatal::Crash(format!("Promise job failed: {error}"))
     }
 }
 
@@ -942,6 +912,19 @@ fn describe_exception(error: JsError, context: &mut Context) -> String {
         None => head,
     };
     serde_json::json!({ "name": name, "message": message, "stack": stack }).to_string()
+}
+
+/// UTF-16 source as UTF-8 for the parser. Lone surrogates (only meaningful inside string and
+/// template literals) become `\uXXXX` escapes, which denote the same code unit there.
+fn utf16_source(units: &[u16]) -> String {
+    let mut out = String::with_capacity(units.len());
+    for unit in char::decode_utf16(units.iter().copied()) {
+        match unit {
+            Ok(c) => out.push(c),
+            Err(e) => out.push_str(&format!("\\u{:04X}", e.unpaired_surrogate())),
+        }
+    }
+    out
 }
 
 /// `line L, col C` in a parser message.

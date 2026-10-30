@@ -111,8 +111,8 @@ pub struct CodemodeSandboxBaseOptions {
     /// Overall deadline per execution in ms, including time spent in tools. Non-finite values
     /// disable the deadline. Default: 300000.
     pub timeout_ms: Option<f64>,
-    /// Maximum memory the VM may allocate. Boa has no heap limit: only `ArrayBuffer` allocations
-    /// are capped at this size. It is part of the deterministic fingerprint.
+    /// Maximum memory the VM may allocate (QuickJS's heap limit). It is part of the deterministic
+    /// fingerprint.
     pub memory_limit_bytes: Option<u64>,
 }
 
