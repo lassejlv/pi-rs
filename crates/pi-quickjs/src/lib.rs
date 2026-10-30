@@ -1506,6 +1506,8 @@ impl Constructors {
 /// A property key.
 #[derive(Clone, Debug)]
 pub enum PropertyKey {
+    /// A string key from Rust text (no JS string is created to look it up).
+    Name(Rc<str>),
     /// A string key.
     String(JsString),
     /// A symbol key.
@@ -1527,6 +1529,7 @@ impl PropertyKey {
         let a = unsafe {
             match self {
                 PropertyKey::Index(i) => qjs::JS_NewAtomUInt32(ctx.raw, *i),
+                PropertyKey::Name(s) => qjs::JS_NewAtomLen(ctx.raw, s.as_ptr() as *const _, s.len() as _),
                 PropertyKey::String(s) => qjs::JS_ValueToAtom(ctx.raw, s.0.0),
                 PropertyKey::Symbol(s) => qjs::JS_ValueToAtom(ctx.raw, s.0.0),
             }
@@ -1558,6 +1561,7 @@ impl PropertyKey {
     /// The key as a JS value (indices become strings).
     pub fn to_value(&self) -> JsValue {
         match self {
+            PropertyKey::Name(s) => JsString::from(&**s).into(),
             PropertyKey::String(s) => s.clone().into(),
             PropertyKey::Symbol(s) => s.clone().into(),
             PropertyKey::Index(i) => JsString::from(i.to_string().as_str()).into(),
@@ -1568,6 +1572,7 @@ impl PropertyKey {
 impl fmt::Display for PropertyKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            PropertyKey::Name(s) => write!(f, "{s}"),
             PropertyKey::String(s) => write!(f, "{s}"),
             PropertyKey::Symbol(s) => write!(f, "{}", s.descriptive_string()),
             PropertyKey::Index(i) => write!(f, "{i}"),
@@ -1577,17 +1582,17 @@ impl fmt::Display for PropertyKey {
 
 impl From<&str> for PropertyKey {
     fn from(s: &str) -> Self {
-        PropertyKey::String(JsString::from(s))
+        PropertyKey::Name(Rc::from(s))
     }
 }
 impl From<String> for PropertyKey {
     fn from(s: String) -> Self {
-        PropertyKey::String(JsString::from(s.as_str()))
+        PropertyKey::Name(Rc::from(s))
     }
 }
 impl From<&String> for PropertyKey {
     fn from(s: &String) -> Self {
-        PropertyKey::String(JsString::from(s.as_str()))
+        PropertyKey::Name(Rc::from(s.as_str()))
     }
 }
 impl From<JsString> for PropertyKey {
