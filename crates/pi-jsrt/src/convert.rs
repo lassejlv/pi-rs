@@ -11,7 +11,7 @@
 //! JSON → JS revives `{"$jsHandle": id}` markers to the stored value and
 //! `{"$hostFn": id}` markers to host functions.
 
-use boa_engine::{Context, JsResult, JsValue, js_string};
+use crate::js::{Context, JsResult, JsValue, js_string};
 use serde_json::Value;
 
 use crate::engine::{internal, js_str, try_internal};
@@ -55,11 +55,11 @@ pub fn to_json(value: &JsValue, ctx: &mut Context) -> Result<Value, Error> {
     if value.is_symbol() {
         return Ok(Value::Null);
     }
-    let helper = internal(ctx).get(js_string!("toHost"), ctx).map_err(|e| error::from_boa(e, ctx))?;
+    let helper = internal(ctx).get(js_string!("toHost"), ctx).map_err(|e| error::from_js(e, ctx))?;
     let helper = helper.as_function().ok_or_else(|| Error::host("toHost helper missing"))?;
     let s = helper
         .call(&JsValue::undefined(), std::slice::from_ref(value), ctx)
-        .map_err(|e| error::from_boa(e, ctx))?;
+        .map_err(|e| error::from_js(e, ctx))?;
     match s.as_string() {
         Some(s) => serde_json::from_str(&s.to_std_string_lossy()).map_err(|e| Error::host(format!("invalid JSON from JS: {e}"))),
         None => Ok(Value::Null),

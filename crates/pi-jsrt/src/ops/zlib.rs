@@ -9,7 +9,7 @@
 
 use std::io::Read;
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 
 use super::{bytes_arg, bytes_to_js, coded_error, native_object, with_native};
 use crate::engine::{OpFn, arg_f64, js_str};
@@ -618,7 +618,7 @@ pub(crate) fn process(mode: i32, level: i32, data: &[u8]) -> ZResult<Vec<u8>> {
     ZStream::new(mode, ZOptions { level, window_bits: 15, ..Default::default() }, Vec::new())?.write(data, finish)
 }
 
-fn throw(ctx: &mut Context, e: ZError) -> boa_engine::JsError {
+fn throw(ctx: &mut Context, e: ZError) -> crate::js::JsError {
     coded_error(ctx, "Error", &e.message, &[("code", js_str(&e.code)), ("errno", JsValue::from(e.errno))])
 }
 
@@ -637,7 +637,7 @@ fn op_zlib_new(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsV
     let dictionary = if dict.is_null_or_undefined() { None } else { Some(bytes_arg(dict, ctx)?) };
     let mut params = Vec::new();
     if let Some(obj) = args.get_or_undefined(3).as_object() {
-        let len = obj.get(boa_engine::js_string!("length"), ctx)?.to_number(ctx)? as u32;
+        let len = obj.get(crate::js::js_string!("length"), ctx)?.to_number(ctx)? as u32;
         let mut i = 0;
         while i + 1 < len {
             let k = obj.get(i, ctx)?.to_number(ctx)? as u32;

@@ -89,7 +89,6 @@ for (const f of [() => port1.postMessage(1, [port1]), () => port1.postMessage({p
 const ab = new ArrayBuffer(8); port1.postMessage({ab}, [ab]); console.log("detached", ab.byteLength);
 port2.on("message", (m) => { console.log("got", m instanceof MessagePort ? "port" : m.ab ? ["ab", m.ab.byteLength] : m); });
 port2.on("close", () => console.log("close2")); port1.on("close", () => console.log("close1"));
-setTimeout(() => port1.close(), 50);
 const { receiveMessageOnPort } = require("worker_threads"); const c = new MessageChannel(); c.port1.postMessage({x: 1}); console.log(receiveMessageOnPort(c.port2), receiveMessageOnPort(c.port2)); c.port1.close();
 const bc1 = new BroadcastChannel("b"), bc2 = new BroadcastChannel("b"); bc2.onmessage = (e) => { console.log("bc", e.data, e.constructor.name); bc1.close(); bc2.close(); }; bc1.postMessage({hi: 1});
 // port passed to a worker
@@ -98,7 +97,7 @@ const ch = new MessageChannel();
 const w = new Worker(`const { workerData } = require("worker_threads"); workerData.port.postMessage("via transferred port " + workerData.n); workerData.port.close();`, { eval: true, workerData: { port: ch.port2, n: 7 }, transferList: [ch.port2] });
 ch.port1.on("message", (m) => console.log(m));
 ch.port1.on("close", () => console.log("transferred port closed"));
-w.on("exit", (c) => console.log("worker exit", c));
+w.on("exit", (c) => { console.log("worker exit", c); port1.close(); });
 "###;
     let expected = r###"DOMException DataCloneError Transfer list contains source port
 DOMException DataCloneError Object that needs transfer was found in message but not listed in transferList
@@ -110,11 +109,11 @@ detached 0
 got port
 got [ 'ab', 8 ]
 bc { hi: 1 } MessageEvent
-close1
-close2
 via transferred port 7
 transferred port closed
 worker exit 0
+close1
+close2
 "###;
     assert_eq!(run("mp.js", script), expected);
 }

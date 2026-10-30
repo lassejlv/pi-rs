@@ -7,7 +7,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use futures::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -42,7 +42,7 @@ fn dispatch(ctx: &mut Context, id: u64, args: Vec<JsValue>) {
 
 fn string_list(v: &JsValue, ctx: &mut Context) -> JsResult<Vec<String>> {
     let Some(obj) = v.as_object() else { return Ok(Vec::new()) };
-    let arr = boa_engine::object::builtins::JsArray::from_object(obj)?;
+    let arr = crate::js::JsArray::from_object(obj)?;
     let mut out = Vec::new();
     for i in 0..arr.length(ctx)? {
         out.push(arr.get(i, ctx)?.to_string(ctx)?.to_std_string_lossy());

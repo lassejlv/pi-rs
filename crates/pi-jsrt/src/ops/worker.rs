@@ -16,8 +16,8 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock};
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use parking_lot::Mutex;
 
 use super::{bytes_arg, bytes_to_js, object};
@@ -164,8 +164,8 @@ fn op_port_recv(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     let ports = super::array(ctx, ports);
     let mut buffers = Vec::new();
     for b in &msg.buffers {
-        let ab = boa_engine::object::builtins::JsArrayBuffer::new(b.len(), ctx)?;
-        if let Some(mut data) = ab.data_mut() {
+        let ab = crate::js::JsArrayBuffer::new(b.len(), ctx)?;
+        if let Some(data) = ab.data_mut() {
             data.copy_from_slice(b);
         }
         buffers.push(JsValue::from(ab));

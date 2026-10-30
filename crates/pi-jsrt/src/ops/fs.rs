@@ -10,7 +10,7 @@ use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsE
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 
 use super::{array, bytes_arg, bytes_to_js, io_error, object};
 use crate::engine::{self, OpFn, arg_f64, arg_string, js_str, state};
@@ -578,7 +578,7 @@ fn op_fs_sync(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsVa
             }
             to_js(out, ctx)
         }
-        Err(e) => Err(crate::error::to_boa(&e, ctx)),
+        Err(e) => Err(crate::error::to_js(&e, ctx)),
     }
 }
 
@@ -645,7 +645,7 @@ fn op_watch(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValu
             if !events.is_empty() {
                 let ok = poster.post(move |ctx| {
                     if let Some(internal) = engine::try_internal(ctx)
-                        && let Ok(f) = internal.get(boa_engine::js_string!("fsWatchEvent"), ctx)
+                        && let Ok(f) = internal.get(crate::js::js_string!("fsWatchEvent"), ctx)
                         && let Some(f) = f.as_function()
                     {
                         for (kind, name) in events {

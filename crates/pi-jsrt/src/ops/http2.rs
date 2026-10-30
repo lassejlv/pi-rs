@@ -10,8 +10,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use bytes::Bytes;
 use h2::{Reason, RecvStream, SendStream};
 use http::{HeaderMap, HeaderName, HeaderValue, Method, Request, Response, StatusCode};

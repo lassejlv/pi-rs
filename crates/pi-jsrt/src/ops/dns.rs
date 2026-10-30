@@ -6,8 +6,8 @@
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

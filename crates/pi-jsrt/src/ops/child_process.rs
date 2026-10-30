@@ -9,8 +9,8 @@ use std::io::Read;
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsObject, JsResult, JsValue, js_string};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsObject, JsResult, JsValue, js_string};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 

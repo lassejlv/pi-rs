@@ -36,10 +36,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use boa_engine::object::FunctionObjectBuilder;
-use boa_engine::object::builtins::{JsArray, JsArrayBuffer};
-use boa_engine::property::PropertyDescriptor;
-use boa_engine::{Context, JsArgs, JsBigInt, JsError, JsObject, JsResult, JsSymbol, JsValue, NativeFunction, js_string};
+use crate::js::FunctionObjectBuilder;
+use crate::js::{JsArray, JsArrayBuffer};
+use crate::js::PropertyDescriptor;
+use crate::js::{Context, JsArgs, JsBigInt, JsError, JsObject, JsResult, JsSymbol, JsValue, NativeFunction, js_string};
 use wasmi::{AsContextMut, Caller, Extern, ExternRef, ExternType, Func, FuncType, Global, Memory, MemoryType, Module, Mutability, Nullable, Ref, RefType, StoreContextMut, Table, TableType, Val, ValType};
 
 use super::{bytes_arg, native_object, object, with_native};
@@ -55,6 +55,7 @@ struct MemSlot {
     buffer: JsArrayBuffer,
     len: usize,
     ptr: *mut u8,
+    cap: usize,
 }
 
 struct Wasm {
@@ -102,12 +103,21 @@ fn state() -> Rc<Wasm> {
 pub(crate) fn teardown(_ctx: &mut Context) {
     let w = WASM.with(|w| w.borrow_mut().take());
     if let Some(w) = w {
-        // The store never frees static memory buffers; the ArrayBuffers that own them are freed
-        // with the context.
+        // The store never frees static memory buffers: free them once the store is gone (their
+        // ArrayBuffers are external views that JS can no longer reach).
+        let allocations: Vec<(*mut u8, usize)> = w.memories.borrow().values().map(|slot| (slot.ptr, slot.cap)).collect();
+        for slot in w.memories.borrow().values() {
+            slot.buffer.detach_in_place();
+        }
         w.memories.borrow_mut().clear();
         w.func_objects.borrow_mut().clear();
         w.js_funcs.borrow_mut().clear();
         w.externs.borrow_mut().clear();
+        drop(w);
+        for (ptr, cap) in allocations {
+            // SAFETY: allocated by `new_memory` with this layout; the store that used it is gone.
+            unsafe { std::alloc::dealloc(ptr, std::alloc::Layout::from_size_align_unchecked(cap, ALIGN)) };
+        }
     }
 }
 
@@ -147,7 +157,7 @@ fn wasm_error(ctx: &mut Context, kind: &str, message: &str) -> JsError {
             Ok(obj) => JsError::from_opaque(obj.into()),
             Err(e) => e,
         },
-        None => boa_engine::JsNativeError::error().with_message(format!("{kind}: {message}")).into(),
+        None => crate::js::JsNativeError::error().with_message(format!("{kind}: {message}")).into(),
     }
 }
 
@@ -162,7 +172,7 @@ fn trap_error(ctx: &mut Context, e: &wasmi::Error) -> JsError {
         Some(T::IntegerOverflow) => "divide result unrepresentable",
         Some(T::BadConversionToInteger) => "float unrepresentable in integer range",
         Some(T::StackOverflow) => {
-            return boa_engine::JsNativeError::range().with_message("Maximum call stack size exceeded").into();
+            return crate::js::JsNativeError::range().with_message("Maximum call stack size exceeded").into();
         }
         _ => return wasm_error(ctx, "RuntimeError", &e.to_string()),
     };
@@ -376,7 +386,7 @@ fn new_memory(w: &Wasm, ty: MemoryType, ctx: &mut Context) -> JsResult<Memory> {
         // Not `alloc_zeroed`: for this alignment the system allocator would memset (commit) the
         // whole reservation. wasmi zero-fills the initial size and every growth itself; the
         // untouched rest of a large reservation stays uncommitted virtual memory.
-        // SAFETY: non-zero size; freed by the ArrayBuffer's AlignedVec with the same layout.
+        // SAFETY: non-zero size; freed at teardown with the same layout.
         let p = unsafe { std::alloc::alloc(layout) };
         if !p.is_null() {
             break p;
@@ -397,16 +407,14 @@ fn new_memory(w: &Wasm, ty: MemoryType, ctx: &mut Context) -> JsResult<Memory> {
             return Err(range_error(&format!("WebAssembly.Memory(): {e}")));
         }
     };
-    // SAFETY: ptr/cap describe the allocation above (alignment ALIGN; wasmi zeroed the first
-    // `min` bytes); ownership passes to the ArrayBuffer.
-    let vec = unsafe { aligned_vec::AVec::<u8, aligned_vec::ConstAlign<ALIGN>>::from_raw_parts(ptr, ALIGN, min, cap) };
-    let buffer = JsArrayBuffer::from_byte_block(vec, ctx)?;
-    w.memories.borrow_mut().insert(key(&mem), MemSlot { mem, buffer, len: min, ptr });
+    // SAFETY: the allocation above lives until teardown (wasmi zeroed the first `min` bytes).
+    let buffer = unsafe { JsArrayBuffer::from_external(ptr, min, ctx)? };
+    w.memories.borrow_mut().insert(key(&mem), MemSlot { mem, buffer, len: min, ptr, cap });
     Ok(mem)
 }
 
 fn range_error(msg: &str) -> JsError {
-    boa_engine::JsNativeError::range().with_message(msg.to_string()).into()
+    crate::js::JsNativeError::range().with_message(msg.to_string()).into()
 }
 
 /// Detach the buffers of memories wasm grew, as V8 does at growth: JS that caches a view of
@@ -426,15 +434,13 @@ fn memory_buffer(w: &Wasm, mem: Memory, ctx: &mut Context) -> JsResult<JsValue> 
     let mut memories = w.memories.borrow_mut();
     let slot = memories.get_mut(&key(&mem)).ok_or_else(|| type_error("unknown WebAssembly memory"))?;
     if size != slot.len {
-        let mut vec = slot
-            .buffer
-            .detach(&JsValue::undefined())
-            .map_err(|_| type_error("the WebAssembly.Memory buffer was detached by JavaScript"))?;
-        debug_assert_eq!(vec.as_ptr(), slot.ptr as *const u8);
+        if slot.buffer.is_detached() {
+            return Err(type_error("the WebAssembly.Memory buffer was detached by JavaScript"));
+        }
+        slot.buffer.detach_in_place();
         // SAFETY: the allocation's capacity is the memory's reservation and wasmi grew within it
         // (zero-filled); `size` never exceeds it.
-        unsafe { vec.set_len(size) };
-        slot.buffer = JsArrayBuffer::from_byte_block(vec, ctx)?;
+        slot.buffer = unsafe { JsArrayBuffer::from_external(slot.ptr, size, ctx)? };
         slot.len = size;
     }
     Ok(slot.buffer.clone().into())
@@ -719,9 +725,7 @@ fn op_wasm_custom_sections(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> 
     let sections: Vec<Vec<u8>> = with_native::<WasmModule, _>(args.get_or_undefined(0), |m| m.custom.iter().filter(|(n, _)| *n == name).map(|(_, d)| d.clone()).collect())?;
     let mut items = Vec::new();
     for s in sections {
-        let mut block = aligned_vec::AVec::<u8, aligned_vec::ConstAlign<ALIGN>>::new(ALIGN);
-        block.extend_from_slice(&s);
-        items.push(JsArrayBuffer::from_byte_block(block, ctx)?.into());
+        items.push(JsArrayBuffer::from_byte_block(s, ctx)?.into());
     }
     Ok(super::array(ctx, items))
 }

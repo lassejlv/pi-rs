@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use boa_engine::{Context, JsError as BoaError, JsNativeError, JsObject, JsValue, js_string};
+use crate::js::{Context, JsError, JsNativeError, JsObject, JsValue, js_string};
 
 /// A JavaScript exception captured on the JS thread.
 #[derive(Debug, Clone, PartialEq)]
@@ -116,6 +116,10 @@ fn get_string(obj: &JsObject, key: &str, ctx: &mut Context) -> Option<String> {
 
 /// Convert a thrown JS value into an [`Error`].
 pub(crate) fn from_thrown(value: &JsValue, ctx: &mut Context) -> Error {
+    if value.is_uncatchable_error() {
+        // QuickJS's interrupt handler stopped a runaway script (`loop_iteration_limit`).
+        return Error::js("RuntimeLimitError", "Maximum loop iteration limit exceeded: the script was interrupted");
+    }
     if let Some(obj) = value.as_object() {
         let name = get_string(&obj, "name", ctx).unwrap_or_else(|| "Error".into());
         let message = get_string(&obj, "message", ctx).unwrap_or_default();
@@ -150,8 +154,8 @@ pub(crate) fn from_thrown(value: &JsValue, ctx: &mut Context) -> Error {
     })
 }
 
-/// Convert a Boa error into an [`Error`].
-pub(crate) fn from_boa(err: BoaError, ctx: &mut Context) -> Error {
+/// Convert a JS error into an [`Error`].
+pub(crate) fn from_js(err: JsError, ctx: &mut Context) -> Error {
     match err.into_opaque(ctx) {
         Ok(v) => from_thrown(&v, ctx),
         Err(e) => Error::Host(e.to_string()),
@@ -175,7 +179,7 @@ pub(crate) fn to_js_error(err: &Error, ctx: &mut Context) -> JsValue {
         "URIError" => JsNativeError::uri(),
         _ => JsNativeError::error(),
     };
-    let obj = native.with_message(message).into_opaque(ctx);
+    let obj = native.with_message(message).to_opaque(ctx);
     if !matches!(
         name.as_str(),
         "Error" | "TypeError" | "RangeError" | "SyntaxError" | "ReferenceError" | "EvalError" | "URIError" | ""
@@ -191,7 +195,7 @@ pub(crate) fn to_js_error(err: &Error, ctx: &mut Context) -> JsValue {
     obj.into()
 }
 
-/// Convert an [`Error`] into a throwable Boa error.
-pub(crate) fn to_boa(err: &Error, ctx: &mut Context) -> BoaError {
-    BoaError::from_opaque(to_js_error(err, ctx))
+/// Convert an [`Error`] into a throwable JS error.
+pub(crate) fn to_js(err: &Error, ctx: &mut Context) -> JsError {
+    JsError::from_opaque(to_js_error(err, ctx))
 }

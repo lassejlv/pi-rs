@@ -1,5 +1,7 @@
-//! `node:vm`: contexts are Boa realms with V8-like contextified globals. The expected output is
-//! Node 22's for the same script (run in Node mode by `pi-jsrt-node`).
+//! `node:vm`: contexts are QuickJS realms with V8-like contextified globals. The expected output is
+//! Node 22's for the same script (run in Node mode by `pi-jsrt-node`), except that QuickJS
+//! creates a script's `var` bindings before its function bindings (the order of `Object.keys` of
+//! a contextified object after `var x; function f() {}`; V8 creates `f` first).
 
 use std::process::Command;
 
@@ -42,7 +44,7 @@ console.log(vm.runInNewContext("var o = { p: 1 }; Object.getOwnPropertyNames(thi
 const EXPECTED: &str = r###"3 2 3 function
 false false true false
 true
-true false [ 'a', 'console', 'f', 'x', 'y' ]
+true false [ 'a', 'console', 'x', 'f', 'y' ]
 5 undefined 5
 2 3 11 has
 false TypeError x

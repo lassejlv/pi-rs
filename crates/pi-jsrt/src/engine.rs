@@ -1,11 +1,11 @@
-//! The JS thread: Boa context, job queue, timers, handle table and event loop.
+//! The JS thread: QuickJS engine, job queue, timers, handle table and event loop.
 //!
 //! Everything in this module runs on the dedicated runtime thread. The public,
 //! thread-safe API lives in [`crate::runtime`] and talks to this thread by
 //! posting [`Msg`]s.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -13,18 +13,13 @@ use std::sync::mpsc;
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
-use boa_engine::builtins::promise::{OperationType, PromiseState, ResolvingFunctions};
-use boa_engine::context::HostHooks;
-use boa_engine::job::{GenericJob, Job, JobExecutor, NativeAsyncJob, PromiseJob};
-use boa_engine::object::FunctionObjectBuilder;
-use boa_engine::object::builtins::{JsFunction, JsPromise};
-use boa_engine::{
-    Context, JsArgs, JsNativeError, JsObject, JsResult, JsString, JsValue, NativeFunction, Source, js_string,
+use crate::js::{
+    Context, Engine, EngineOptions, FunctionObjectBuilder, JsArgs, JsData, JsError, JsFunction, JsNativeError, JsObject, JsPromise, JsResult,
+    JsString, JsValue, NativeFunction, PromiseState, ResolvingFunctions, Source, Tracer, js_string,
 };
-use futures::StreamExt;
-use futures::stream::FuturesUnordered;
 
 use crate::error::{self, Error};
+use crate::js::rquickjs::qjs;
 use crate::runtime::{Inner, Shared};
 use crate::transpile::SourceMapTable;
 
@@ -82,6 +77,11 @@ pub(crate) struct State {
     queued: Arc<std::sync::atomic::AtomicUsize>,
     /// Waiters for [`State::alive`] to become false (see `JsRuntime::wait_idle`).
     idle_waiters: RefCell<Vec<futures::channel::oneshot::Sender<()>>>,
+    /// Interrupt-handler calls left before a synchronous run is stopped
+    /// (`loop_iteration_limit`), `None` when unlimited.
+    budget: Cell<Option<u64>>,
+    /// Async contexts saved by promise jobs entering theirs (see [`job_enter`]).
+    job_stack: RefCell<Vec<(AsyncCtx, bool)>>,
 }
 
 impl State {
@@ -203,130 +203,16 @@ pub(crate) fn try_internal(ctx: &Context) -> Option<JsObject> {
     ctx.get_data::<Rc<State>>()?.internal.borrow().clone()
 }
 
-// ---------------------------------------------------------------------------
-// Job executor
-// ---------------------------------------------------------------------------
-
-#[derive(Default)]
-pub(crate) struct Executor {
-    promise_jobs: RefCell<VecDeque<PromiseJob>>,
-    async_jobs: RefCell<VecDeque<NativeAsyncJob>>,
-    /// `FinalizationRegistry` cleanup jobs: each waits (forever, until the registry is
-    /// collected) for a GC notification, so they must not keep `run_jobs` from returning.
-    cleanup_jobs: RefCell<VecDeque<NativeAsyncJob>>,
-    generic_jobs: RefCell<VecDeque<GenericJob>>,
-}
-
-impl Executor {
-    fn is_empty(&self) -> bool {
-        self.promise_jobs.borrow().is_empty() && self.async_jobs.borrow().is_empty() && self.generic_jobs.borrow().is_empty()
-    }
-}
-
-impl JobExecutor for Executor {
-    fn enqueue_job(self: Rc<Self>, job: Job, context: &mut Context) {
-        match job {
-            Job::PromiseJob(j) => self.promise_jobs.borrow_mut().push_back(j),
-            Job::AsyncJob(j) => self.async_jobs.borrow_mut().push_back(j),
-            Job::FinalizationRegistryCleanupJob(j) => self.cleanup_jobs.borrow_mut().push_back(j),
-            Job::GenericJob(j) => self.generic_jobs.borrow_mut().push_back(j),
-            Job::TimeoutJob(j) => {
-                let delay = Duration::from_millis(j.timeout().as_millis());
-                let st = state(context);
-                st.timers.borrow_mut().add(
-                    st.next_id(),
-                    TimerCallback::Native(Some(Box::new(move |ctx: &mut Context| {
-                        let _ = j.call(ctx);
-                    }))),
-                    delay,
-                    None,
-                );
-            }
-            Job::IntervalJob(_) => {
-                // Not produced by any builtin we expose; our own timers implement setInterval.
-            }
-            _ => {}
-        }
-    }
-
-    fn run_jobs(self: Rc<Self>, context: &mut Context) -> JsResult<()> {
-        // Our async jobs (module loading) complete synchronously, so a spinning poll is
-        // enough. Unlike `futures::executor::block_on` this may be re-entered (e.g. by a
-        // synchronous `require()` of an ES module from inside a job).
-        let cell = RefCell::new(context);
-        let fut = self.run_jobs_async(&cell);
-        let mut fut = std::pin::pin!(fut);
-        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
-        loop {
-            if let std::task::Poll::Ready(r) = fut.as_mut().poll(&mut cx) {
-                return r;
-            }
-            std::thread::yield_now();
-        }
-    }
-
-    async fn run_jobs_async(self: Rc<Self>, context: &RefCell<&mut Context>) -> JsResult<()> {
-        let mut group = FuturesUnordered::new();
-        // Cleanup jobs are polled while other work is pending (so a collection that happens
-        // during this run still calls the cleanup callback) but never waited for; they are
-        // dropped when the queues are drained (the registry then never cleans up, which
-        // the spec allows: hosts are not required to call cleanup callbacks).
-        let mut cleanups = FuturesUnordered::new();
-        loop {
-            // Take the queue first: the borrow must not span `job.call` (which may enqueue jobs).
-            let jobs = std::mem::take(&mut *self.async_jobs.borrow_mut());
-            for job in jobs {
-                group.push(job.call(context));
-            }
-            let jobs = std::mem::take(&mut *self.cleanup_jobs.borrow_mut());
-            for job in jobs {
-                cleanups.push(job.call(context));
-            }
-            if self.is_empty() && group.is_empty() {
-                break;
-            }
-            if !group.is_empty()
-                && let Some(Some(Err(err))) = futures::FutureExt::now_or_never(group.next())
-            {
-                let ctx = &mut **context.borrow_mut();
-                report_uncaught(ctx, err);
-            }
-            if !cleanups.is_empty()
-                && let Some(Some(Err(err))) = futures::FutureExt::now_or_never(cleanups.next())
-            {
-                let ctx = &mut **context.borrow_mut();
-                report_uncaught(ctx, err);
-            }
-            let jobs = std::mem::take(&mut *self.promise_jobs.borrow_mut());
-            for job in jobs {
-                let result = job.call(&mut context.borrow_mut());
-                if let Err(err) = result {
-                    let ctx = &mut **context.borrow_mut();
-                    report_uncaught(ctx, err);
-                }
-            }
-            let jobs = std::mem::take(&mut *self.generic_jobs.borrow_mut());
-            for job in jobs {
-                let result = job.call(&mut context.borrow_mut());
-                if let Err(err) = result {
-                    let ctx = &mut **context.borrow_mut();
-                    report_uncaught(ctx, err);
-                }
-            }
-            context.borrow_mut().clear_kept_objects();
-        }
-        Ok(())
-    }
-}
-
 /// Run all pending microtasks, then report unhandled rejections.
 pub(crate) fn run_microtasks(ctx: &mut Context) {
     // Node's processTicksAndRejections: the nextTick queue runs before promise jobs, and ticks
     // queued by promise jobs run once the job queue is empty.
     loop {
         run_ticks(ctx);
-        if let Err(err) = ctx.run_jobs() {
-            report_uncaught(ctx, err);
+        while let Some(result) = ctx.run_pending_job() {
+            if let Err(err) = result {
+                report_uncaught(ctx, err);
+            }
         }
         if !state(ctx).ticks_pending.get() {
             break;
@@ -364,7 +250,7 @@ fn run_ticks(ctx: &mut Context) {
 fn op_loop_timing(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let st = state(ctx);
     let values = [JsValue::from(st.loop_start_ms.get()), JsValue::from(st.idle_ms.get())];
-    Ok(boa_engine::object::builtins::JsArray::from_iter(values, ctx).into())
+    Ok(crate::js::JsArray::from_iter(values, ctx).into())
 }
 
 /// `ops.ticksScheduled()`: the nextTick queue became non-empty.
@@ -384,20 +270,20 @@ fn handled_by_js(ctx: &mut Context, kind: &str, value: &JsValue, promise: Option
         Ok(v) => v.to_boolean(),
         Err(e) => {
             // A throwing listener is itself an uncaught exception (not offered again).
-            let err = error::from_boa(e, ctx);
+            let err = error::from_js(e, ctx);
             report(ctx, "Uncaught exception", &err);
             true
         }
     }
 }
 
-pub(crate) fn report_uncaught(ctx: &mut Context, err: boa_engine::JsError) {
+pub(crate) fn report_uncaught(ctx: &mut Context, err: JsError) {
     if let Ok(value) = err.clone().into_opaque(ctx)
         && handled_by_js(ctx, "uncaughtException", &value, None)
     {
         return;
     }
-    let err = error::from_boa(err, ctx);
+    let err = error::from_js(err, ctx);
     report(ctx, "Uncaught exception", &err);
 }
 
@@ -415,13 +301,8 @@ pub(crate) fn report(ctx: &mut Context, kind: &str, err: &Error) {
 }
 
 // ---------------------------------------------------------------------------
-// Host hooks (rejection tracking)
+// Async context and timezone
 // ---------------------------------------------------------------------------
-
-pub(crate) struct Hooks {
-    /// The runtime's timezone (`process.env.TZ`), `None` for the host's.
-    timezone: Rc<RefCell<Option<jiff::tz::TimeZone>>>,
-}
 
 /// A `TZ` value as a timezone, as the C library reads it: an IANA name (with an optional leading
 /// `:`) or a POSIX rule; anything else, including the empty string, is UTC.
@@ -452,14 +333,11 @@ impl AsyncCtx {
     }
 }
 
-impl boa_engine::gc::Finalize for AsyncCtx {}
-// SAFETY: the frame is the only GC-managed field and it is traced.
-unsafe impl boa_engine::gc::Trace for AsyncCtx {
-    boa_engine::gc::custom_trace!(this, mark, {
-        mark(&this.frame);
-    });
+impl JsData for AsyncCtx {
+    fn trace(&self, tracer: &Tracer) {
+        tracer.mark(&self.frame);
+    }
 }
-impl boa_engine::JsData for AsyncCtx {}
 
 impl State {
     /// A new async resource triggered by the current execution: captures the current frame.
@@ -488,82 +366,6 @@ pub(crate) fn emit_async_hook(ctx: &mut Context, kind: &str, id: f64, ty: &str, 
     st.in_async_hook.set(false);
     if let Err(e) = r {
         report_uncaught(ctx, e);
-    }
-}
-
-thread_local! {
-    /// The global object for the next realm created on this thread (`vm.createContext`): a
-    /// Proxy over the contextified object, and the Proxy's target whose prototype becomes the new
-    /// realm's `Object.prototype` (see `ops/vm.rs`).
-    pub(crate) static NEXT_REALM_GLOBAL: RefCell<Option<(JsObject, JsObject)>> = const { RefCell::new(None) };
-}
-
-impl HostHooks for Hooks {
-    fn local_timezone_offset_seconds(&self, unix_time_seconds: i64) -> i32 {
-        let timezone = self.timezone.borrow();
-        match (timezone.as_ref(), jiff::Timestamp::from_second(unix_time_seconds)) {
-            (Some(timezone), Ok(at)) => timezone.to_offset(at).seconds(),
-            _ => boa_engine::context::DefaultHooks.local_timezone_offset_seconds(unix_time_seconds),
-        }
-    }
-
-    fn make_job_callback(&self, callback: JsFunction, context: &mut Context) -> boa_engine::job::JobCallback {
-        let Some(st) = context.get_data::<Rc<State>>().cloned() else {
-            return boa_engine::job::JobCallback::new(callback, ());
-        };
-        let async_ctx = st.new_async_ctx();
-        if st.async_hook.borrow().is_some() {
-            emit_async_hook(context, "init", async_ctx.id, "PROMISE", async_ctx.trigger);
-        }
-        boa_engine::job::JobCallback::new(callback, async_ctx)
-    }
-
-    fn call_job_callback(
-        &self,
-        job: &boa_engine::job::JobCallback,
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        let saved = job.host_defined().downcast_ref::<AsyncCtx>().cloned();
-        let (Some(saved), Some(st)) = (saved, context.get_data::<Rc<State>>().cloned()) else {
-            return job.callback().call(this, args, context);
-        };
-        let id = saved.id;
-        let hooked = st.async_hook.borrow().is_some();
-        let previous = st.swap_async_ctx(saved);
-        if hooked {
-            emit_async_hook(context, "before", id, "", 0.0);
-        }
-        let r = job.callback().call(this, args, context);
-        if hooked {
-            emit_async_hook(context, "after", id, "", 0.0);
-        }
-        st.swap_async_ctx(previous);
-        r
-    }
-
-    fn create_global_object(&self, intrinsics: &boa_engine::context::intrinsics::Intrinsics) -> JsObject {
-        if let Some((global, target)) = NEXT_REALM_GLOBAL.with(|g| g.borrow_mut().take()) {
-            target.set_prototype(Some(intrinsics.constructors().object().prototype()));
-            return global;
-        }
-        JsObject::with_object_proto(intrinsics)
-    }
-
-    fn promise_rejection_tracker(
-        &self,
-        promise: &JsObject<boa_engine::builtins::promise::Promise>,
-        operation: OperationType,
-        context: &mut Context,
-    ) {
-        let Some(st) = context.get_data::<Rc<State>>().cloned() else { return };
-        let obj: JsObject = promise.clone().upcast();
-        let mut list = st.rejections.borrow_mut();
-        match operation {
-            OperationType::Reject => list.push(obj),
-            OperationType::Handle => list.retain(|p| !JsObject::equals(p, &obj)),
-        }
     }
 }
 
@@ -773,10 +575,12 @@ fn run_due_timers(ctx: &mut Context) {
                 },
             }
         };
-        if let Some(due) = due {
-            fire(ctx, due);
-        }
-        run_microtasks(ctx);
+        with_budget(ctx, |ctx| {
+            if let Some(due) = due {
+                fire(ctx, due);
+            }
+            run_microtasks(ctx);
+        });
     }
 }
 
@@ -815,9 +619,8 @@ fn ms_to_us(ms: f64) -> u64 {
 }
 
 /// `gc()`: a full collection (WeakRef targets kept alive by the current job are released too).
-fn op_gc(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
-    ctx.clear_kept_objects();
-    boa_engine::gc::force_collect();
+fn op_gc(_: &JsValue, _: &[JsValue], _ctx: &mut Context) -> JsResult<JsValue> {
+    crate::js::run_gc();
     Ok(JsValue::undefined())
 }
 
@@ -995,7 +798,7 @@ where
         let r = fut.await;
         Box::new(move |ctx: &mut Context| match r {
             Ok(v) => convert(v, ctx),
-            Err(e) => Err(error::to_boa(&e, ctx)),
+            Err(e) => Err(error::to_js(&e, ctx)),
         }) as Finish
     })
 }
@@ -1112,7 +915,7 @@ pub(crate) fn define_ops(ctx: &mut Context, target: &JsObject, ops: &[(&str, usi
 }
 
 /// Throw a TypeError.
-pub(crate) fn type_error(msg: impl Into<String>) -> boa_engine::JsError {
+pub(crate) fn type_error(msg: impl Into<String>) -> crate::js::JsError {
     JsNativeError::typ().with_message(msg.into()).into()
 }
 
@@ -1200,7 +1003,7 @@ fn op_timer_clear(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<
 /// `ops.asyncContext() -> [frame, executionAsyncId, triggerAsyncId]`
 fn op_async_context(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let a = state(ctx).async_ctx.borrow().clone();
-    Ok(boa_engine::object::builtins::JsArray::from_iter([a.frame, JsValue::from(a.id), JsValue::from(a.trigger)], ctx).into())
+    Ok(crate::js::JsArray::from_iter([a.frame, JsValue::from(a.id), JsValue::from(a.trigger)], ctx).into())
 }
 
 /// `ops.asyncFrameSet(frame)`: AsyncLocalStorage run/enterWith/exit.
@@ -1241,7 +1044,7 @@ fn op_async_enter(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<
 /// `ops.asyncResourceInfo(context) -> [asyncId, triggerAsyncId]`
 fn op_async_resource_info(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let a = args.get_or_undefined(0).as_object().and_then(|o| o.downcast_ref::<AsyncCtx>().map(|a| a.clone())).unwrap_or_else(AsyncCtx::root);
-    Ok(boa_engine::object::builtins::JsArray::from_iter([JsValue::from(a.id), JsValue::from(a.trigger)], ctx).into())
+    Ok(crate::js::JsArray::from_iter([JsValue::from(a.id), JsValue::from(a.trigger)], ctx).into())
 }
 
 /// `ops.asyncHooksEnable(emit | null)`: route hook events to `emit(kind, id, type, trigger)`.
@@ -1348,40 +1151,6 @@ pub(crate) const CORE_OPS: &[(&str, usize, OpFn)] = &[
 // Thread bootstrap and event loop
 // ---------------------------------------------------------------------------
 
-/// Serializes `Symbol.for` across every runtime of the process.
-static SYMBOL_FOR_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-/// Boa keeps one process-wide `Symbol.for` registry for all contexts, but its
-/// get-or-create is not atomic (look up, create, insert): two threads registering the
-/// same new key at once each get a different symbol, and the loser's symbol is not the
-/// registered one, so `Symbol.for(key)` later returns another symbol in that runtime
-/// (e.g. TypeBox's `Symbol.for("TypeBox.Kind")` or pi-tui's layout-node key no longer
-/// match; methods keyed by them become `undefined`). Wrap `Symbol.for` so registration
-/// runs under a process-wide lock. The key is converted first, outside the lock, because
-/// `ToString` can run user code that calls `Symbol.for` again.
-pub(crate) fn serialize_symbol_for(ctx: &mut Context) -> JsResult<()> {
-    use boa_engine::property::PropertyDescriptor;
-    let symbol = ctx.intrinsics().constructors().symbol().constructor();
-    let original = symbol.get(js_string!("for"), ctx)?;
-    let Some(original) = original.as_object() else { return Ok(()) };
-    let native = NativeFunction::from_copy_closure_with_captures(
-        |_this, args, original: &JsObject, ctx| {
-            let key: JsValue = args.get_or_undefined(0).to_string(ctx)?.into();
-            let _guard = SYMBOL_FOR_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-            original.call(&JsValue::undefined(), &[key], ctx)
-        },
-        original,
-    );
-    let realm = ctx.realm().clone();
-    let function = FunctionObjectBuilder::new(&realm, native).name(js_string!("for")).length(1).build();
-    symbol.define_property_or_throw(
-        js_string!("for"),
-        PropertyDescriptor::builder().value(function).writable(true).enumerable(false).configurable(true),
-        ctx,
-    )?;
-    Ok(())
-}
-
 /// Evaluate a glue script of the form `(function (ops, internal) { ... })`.
 pub(crate) fn run_glue(ctx: &mut Context, name: &str, src: &str, ops: &JsObject, internal: &JsObject) -> JsResult<()> {
     let wrapped = format!("(function (ops, internal) {{\"use strict\";\n{src}\n}})");
@@ -1404,30 +1173,20 @@ pub(crate) struct ThreadInit {
 /// Build the context and run the event loop until shutdown.
 pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<Result<(), Error>>) {
     let ThreadInit { rt, shared, tokio, tx, rx, cwd } = init;
-    let loader = Rc::new(crate::loader::Loader::new(shared.clone()));
-    // `process.env.TZ` is the runtime's timezone, as in Node (see `ops.setEnv`).
-    let timezone = Rc::new(RefCell::new(shared.env.get("TZ").map(|tz| timezone_named(tz))));
-    let mut ctx = match Context::builder()
-        .job_executor(Rc::new(Executor::default()))
-        .module_loader(loader.clone())
-        .host_hooks(Rc::new(Hooks { timezone: timezone.clone() }))
-        .build()
-    {
-        Ok(c) => c,
+    // QuickJS checks the native stack: leave room below the thread's stack for Rust frames.
+    let max_stack = shared.options.thread_stack_size.saturating_sub(shared.options.thread_stack_size / 4).max(256 * 1024);
+    let engine = match Engine::new(EngineOptions { max_stack_size: max_stack, memory_limit: 0 }) {
+        Ok(e) => e,
         Err(e) => {
             let _ = ready.send(Err(Error::host(format!("failed to create JS context: {e}"))));
             return;
         }
     };
-    {
-        let limits = ctx.runtime_limits_mut();
-        limits.set_recursion_limit(shared.options.recursion_limit);
-        limits.set_stack_size_limit(shared.options.stack_size_limit);
-        limits.set_backtrace_limit(32);
-        if let Some(n) = shared.options.loop_iteration_limit {
-            limits.set_loop_iteration_limit(n);
-        }
-    }
+    let mut ctx = engine.context();
+    let loader = Rc::new(crate::loader::Loader::new(shared.clone()));
+    crate::loader::install(&engine, loader.clone());
+    // `process.env.TZ` is the runtime's timezone, as in Node (see `ops.setEnv`).
+    let timezone = Rc::new(RefCell::new(shared.env.get("TZ").map(|tz| timezone_named(tz))));
     let st = Rc::new(State {
         tx,
         rt,
@@ -1455,11 +1214,15 @@ pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<R
         loop_start_ms: Cell::new(0.0),
         idle_ms: Cell::new(0.0),
         idle_waiters: RefCell::default(),
+        budget: Cell::new(None),
+        job_stack: RefCell::default(),
     });
     ctx.insert_data(st.clone());
+    TIMEZONE.with(|t| *t.borrow_mut() = Some(st.timezone.clone()));
+    install_hooks(&engine, &st);
 
-    if let Err(e) = serialize_symbol_for(&mut ctx).and_then(|()| crate::ops::bootstrap(&mut ctx)) {
-        let err = error::from_boa(e, &mut ctx);
+    if let Err(e) = crate::ops::bootstrap(&mut ctx) {
+        let err = error::from_js(e, &mut ctx);
         let _ = ready.send(Err(err));
         return;
     }
@@ -1468,7 +1231,7 @@ pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<R
 
     event_loop(&mut ctx, &rx);
 
-    // Tear down: drop every GC value we hold before the context goes away.
+    // Tear down: drop every JS value we hold before the engine goes away.
     st.stopping.set(true);
     st.handles.borrow_mut().clear();
     st.host_fns.borrow_mut().clear();
@@ -1481,7 +1244,127 @@ pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<R
     *st.async_hook.borrow_mut() = None;
     loader.clear();
     crate::ops::teardown(&mut ctx);
+    st.job_stack.borrow_mut().clear();
+    TIMEZONE.with(|t| t.borrow_mut().take());
+    drop(st);
+    drop(loader);
     drop(ctx);
+    drop(engine);
+}
+
+/// Rejection tracking, the interrupt handler (runaway-script budget), promise job async contexts
+/// and the timezone of `Date`.
+fn install_hooks(engine: &Engine, st: &Rc<State>) {
+    unsafe {
+        crate::js::ext::JS_SetJobContextHooks(engine.raw_runtime(), Some(job_capture), Some(job_enter), Some(job_exit), std::ptr::null_mut());
+        crate::js::ext::JS_SetTimezoneOffsetFunc(engine.raw_runtime(), Some(timezone_offset), std::ptr::null_mut());
+    }
+    let runtime = engine.runtime();
+    runtime.set_host_promise_rejection_tracker(Some(Box::new(|ctx, promise, _reason, is_handled| {
+        let ctx = Context::from_raw(ctx.as_raw().as_ptr());
+        let Some(st) = ctx.get_data::<Rc<State>>().cloned() else { return };
+        // SAFETY: `promise` is a live value of this runtime; we take our own reference.
+        let promise = unsafe { JsValue::from_raw_dup(promise.as_raw()) };
+        let Some(obj) = promise.as_object() else { return };
+        let mut list = st.rejections.borrow_mut();
+        if is_handled {
+            list.retain(|p| !JsObject::equals(p, &obj));
+        } else {
+            list.push(obj);
+        }
+    })));
+    if st.shared.options.loop_iteration_limit.is_some() {
+        let weak = Rc::downgrade(st);
+        runtime.set_interrupt_handler(Some(Box::new(move || {
+            let Some(st) = weak.upgrade() else { return false };
+            match st.budget.get() {
+                Some(0) => true,
+                Some(n) => {
+                    st.budget.set(Some(n - 1));
+                    false
+                }
+                None => false,
+            }
+        })));
+    }
+}
+
+/// A promise reaction is created: capture the current async context (HostMakeJobCallback).
+unsafe extern "C" fn job_capture(raw: *mut qjs::JSContext, _opaque: *mut std::ffi::c_void) -> qjs::JSValue {
+    let mut ctx = Context::from_raw(raw);
+    let Some(st) = ctx.get_data::<Rc<State>>().cloned() else { return JsValue::undefined().into_raw() };
+    let async_ctx = st.new_async_ctx();
+    if st.async_hook.borrow().is_some() {
+        emit_async_hook(&mut ctx, "init", async_ctx.id, "PROMISE", async_ctx.trigger);
+    }
+    JsValue::from(JsObject::from_proto_and_data(None, async_ctx)).into_raw()
+}
+
+/// A promise job runs: enter the context it captured (HostCallJobCallback).
+unsafe extern "C" fn job_enter(raw: *mut qjs::JSContext, job_context: qjs::JSValue, _opaque: *mut std::ffi::c_void) -> qjs::JSValue {
+    let mut ctx = Context::from_raw(raw);
+    let Some(st) = ctx.get_data::<Rc<State>>().cloned() else { return JsValue::undefined().into_raw() };
+    // SAFETY: a live value of this runtime, borrowed for the call.
+    let data = unsafe { JsValue::from_raw_dup(job_context) };
+    let saved = data.as_object().and_then(|o| o.downcast_ref::<AsyncCtx>().map(|a| a.clone()));
+    let Some(saved) = saved else {
+        st.job_stack.borrow_mut().push((st.async_ctx.borrow().clone(), false));
+        return JsValue::undefined().into_raw();
+    };
+    let id = saved.id;
+    let hooked = st.async_hook.borrow().is_some();
+    let previous = st.swap_async_ctx(saved);
+    st.job_stack.borrow_mut().push((previous, hooked));
+    if hooked {
+        emit_async_hook(&mut ctx, "before", id, "", 0.0);
+    }
+    JsValue::from(id).into_raw()
+}
+
+/// A promise job finished: restore the context saved by [`job_enter`].
+unsafe extern "C" fn job_exit(raw: *mut qjs::JSContext, previous: qjs::JSValue, _opaque: *mut std::ffi::c_void) {
+    let mut ctx = Context::from_raw(raw);
+    // SAFETY: we own the reference returned by `job_enter`.
+    let id = unsafe { JsValue::from_raw(previous) };
+    let Some(st) = ctx.get_data::<Rc<State>>().cloned() else { return };
+    let Some((saved, hooked)) = st.job_stack.borrow_mut().pop() else { return };
+    if hooked && let Some(id) = id.as_number() {
+        emit_async_hook(&mut ctx, "after", id, "", 0.0);
+    }
+    st.swap_async_ctx(saved);
+}
+
+/// `Date`'s local timezone: the runtime's `TZ`, else the system's.
+unsafe extern "C" fn timezone_offset(time_ms: i64, _opaque: *mut std::ffi::c_void) -> i32 {
+    let at = jiff::Timestamp::from_millisecond(time_ms).unwrap_or(jiff::Timestamp::UNIX_EPOCH);
+    let offset = current_timezone().map(|tz| tz.to_offset(at).seconds()).unwrap_or(0);
+    -(offset / 60)
+}
+
+thread_local! {
+    /// The timezone of the runtime on this thread (`None`: the system's).
+    static TIMEZONE: RefCell<Option<Rc<RefCell<Option<jiff::tz::TimeZone>>>>> = const { RefCell::new(None) };
+}
+
+fn current_timezone() -> Option<jiff::tz::TimeZone> {
+    let runtime_tz = TIMEZONE.with(|t| t.borrow().as_ref().and_then(|tz| tz.borrow().clone()));
+    runtime_tz.or_else(|| jiff::tz::TimeZone::try_system().ok())
+}
+
+/// QuickJS calls the interrupt handler about every 10000 operations: the number of calls a
+/// synchronous run may take before it is stopped for `loop_iteration_limit` iterations.
+fn interrupt_budget(limit: u64) -> u64 {
+    (limit / 10_000).max(1)
+}
+
+/// Run `f` with a fresh runaway-script budget (when `loop_iteration_limit` is set).
+pub(crate) fn with_budget<R>(ctx: &mut Context, f: impl FnOnce(&mut Context) -> R) -> R {
+    let st = state(ctx);
+    let Some(limit) = st.shared.options.loop_iteration_limit else { return f(ctx) };
+    let previous = st.budget.replace(Some(interrupt_budget(limit)));
+    let r = f(ctx);
+    st.budget.set(previous);
+    r
 }
 
 fn event_loop(ctx: &mut Context, rx: &mpsc::Receiver<Msg>) {
@@ -1503,10 +1386,10 @@ fn event_loop(ctx: &mut Context, rx: &mpsc::Receiver<Msg>) {
         };
         st.idle_ms.set(st.idle_ms.get() + waiting.elapsed().as_secs_f64() * 1000.0);
         match msg {
-            Ok(Msg::Task(task)) => {
+            Ok(Msg::Task(task)) => with_budget(ctx, |ctx| {
                 task(ctx);
                 run_microtasks(ctx);
-            }
+            }),
             Ok(Msg::Release(id)) => st.release(id),
             Ok(Msg::Shutdown) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
             Err(mpsc::RecvTimeoutError::Timeout) => {}

@@ -2,7 +2,7 @@
 //! `crypto.createDiffieHellman(bits, generator)`, following OpenSSL's `BN_generate_prime_ex`
 //! (top bits set, `add`/`rem` congruences, safe primes) and `DH_check` (Node's `verifyError`).
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use num_bigint_dig::{BigUint, RandBigInt};
 use num_traits::{One, ToPrimitive, Zero};
 

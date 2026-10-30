@@ -1,29 +1,20 @@
-//! `node:vm`: every context is a new Boa realm (its own intrinsics: `Object`, `Array`, ...).
+//! `node:vm`: every context is a new QuickJS context (realm: its own intrinsics `Object`, `Array`, ...).
 //!
 //! A contextified object behaves like V8's: the realm's global object is a Proxy (built by
 //! `js/node/vm.js` in the outer realm) that resolves names on the contextified object first and
 //! on the realm's builtins next, and sends assignments and declarations to the contextified
-//! object. The Proxy becomes the realm's global object through `Hooks::create_global_object`.
+//! object. The Proxy becomes the realm's global object (`JS_SetGlobalObject`, vendored QuickJS patch).
 
-use std::path::PathBuf;
-
-use boa_engine::realm::Realm;
-use boa_engine::{Context, Finalize, JsArgs, JsData, JsObject, JsResult, JsValue, Script, Source, Trace};
+use crate::js::rquickjs::qjs;
+use crate::js::{Context, JsArgs, JsData, JsObject, JsResult, JsValue, Realm};
 
 use crate::engine::{self, OpFn, arg_opt_string, arg_string, state};
 
-/// A realm owned by a JS object (traced, so the realm lives as long as the object).
+/// A realm referenced by a JS object (realms live as long as the engine).
 struct VmRealm {
     realm: Realm,
 }
 
-impl Finalize for VmRealm {}
-// SAFETY: the only GC-managed field is traced.
-unsafe impl Trace for VmRealm {
-    boa_engine::gc::custom_trace!(this, mark, {
-        mark(&this.realm);
-    });
-}
 impl JsData for VmRealm {}
 
 const REALM_GLUE: &str = r#"
@@ -88,31 +79,26 @@ if (typeof ArrayBuffer.prototype.transfer !== "function") {
 fn realm_of(v: &JsValue) -> Option<Realm> {
     let obj = v.as_object()?;
     let data = obj.downcast_ref::<VmRealm>()?;
-    Some(data.realm.clone())
+    Some(data.realm)
 }
 
 /// Run `f` with `realm` as the current realm.
-fn in_realm<R>(ctx: &mut Context, realm: &Realm, f: impl FnOnce(&mut Context) -> R) -> R {
-    let previous = ctx.enter_realm(realm.clone());
-    let r = f(ctx);
-    ctx.enter_realm(previous);
-    r
+fn in_realm<R>(_ctx: &mut Context, realm: &Realm, f: impl FnOnce(&mut Context) -> R) -> R {
+    let mut ctx = Context::for_realm(realm);
+    f(&mut ctx)
 }
 
 /// `ops.vmCreateRealm(global?, target?) -> realm handle`: a new realm whose global object is
 /// `global` (a Proxy whose target is `target`), or an ordinary global object.
 fn op_vm_create_realm(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let realm = ctx.create_realm()?;
     if let (Some(global), Some(target)) = (args.get_or_undefined(0).as_object(), args.get_or_undefined(1).as_object()) {
-        engine::NEXT_REALM_GLOBAL.with(|g| *g.borrow_mut() = Some((global, target)));
+        in_realm(ctx, &realm, |ctx| install_global(ctx, &global, &target))?;
     }
-    let realm = ctx.create_realm();
-    engine::NEXT_REALM_GLOBAL.with(|g| g.borrow_mut().take());
-    let realm = realm?;
     let ops = state(ctx).ops.borrow().clone();
     in_realm(ctx, &realm, |ctx| -> JsResult<()> {
-        engine::serialize_symbol_for(ctx)?;
         let wrapped = format!("(function (ops) {{\"use strict\";\n{REALM_GLUE}\n}})");
-        let f = ctx.eval(Source::from_bytes(wrapped.as_bytes()).with_path(&PathBuf::from("pi-jsrt:vm-realm.js")))?;
+        let f = ctx.eval_with_flags(wrapped.as_bytes(), "pi-jsrt:vm-realm.js", qjs::JS_EVAL_TYPE_GLOBAL as i32)?;
         if let (Some(f), Some(ops)) = (f.as_function(), ops) {
             f.call(&JsValue::undefined(), &[ops.into()], ctx)?;
         }
@@ -122,13 +108,32 @@ fn op_vm_create_realm(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsRes
     Ok(JsObject::from_proto_and_data(Some(proto), VmRealm { realm }).into())
 }
 
+/// Make `global` (a Proxy over `target`) the realm's global object: the realm's builtins move to
+/// `target`, whose prototype becomes the realm's `Object.prototype`.
+fn install_global(ctx: &mut Context, global: &JsObject, target: &JsObject) -> JsResult<()> {
+    let original = ctx.global_object();
+    for key in original.own_property_keys(ctx)? {
+        if let Some(desc) = original.get_own_property(key.clone(), ctx)? {
+            target.define_property_or_throw(key, desc, ctx)?;
+        }
+    }
+    target.define_property_or_throw(
+        "globalThis",
+        crate::js::PropertyDescriptor::builder().value(global.clone()).writable(true).enumerable(false).configurable(true),
+        ctx,
+    )?;
+    target.set_prototype(Some(ctx.intrinsics().constructors().object().prototype()));
+    ctx.set_global_object(global);
+    Ok(())
+}
+
 /// `ops.vmGlobal(realm) -> globalThis of the realm`
 fn op_vm_global(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let realm = realm_of(args.get_or_undefined(0)).ok_or_else(|| engine::type_error("invalid vm context"))?;
     Ok(in_realm(ctx, &realm, |ctx| ctx.global_object()).into())
 }
 
-/// Shift positions like V8's `lineOffset`/`columnOffset` (Boa sources start at 1:1).
+/// Shift positions like V8's `lineOffset`/`columnOffset` (QuickJS sources start at 1:1).
 fn with_offsets(code: &str, line_offset: i64, column_offset: i64) -> String {
     let mut out = String::new();
     for _ in 0..line_offset.max(0) {
@@ -145,7 +150,8 @@ fn with_offsets(code: &str, line_offset: i64, column_offset: i64) -> String {
 fn op_vm_compile(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let code = arg_string(args, 0, ctx)?;
     let filename = arg_opt_string(args, 1, ctx)?.unwrap_or_else(|| "evalmachine.<anonymous>".into());
-    Script::parse(Source::from_bytes(code.as_bytes()).with_path(&PathBuf::from(filename)), None, ctx)?;
+    let flags = (qjs::JS_EVAL_TYPE_GLOBAL | qjs::JS_EVAL_FLAG_COMPILE_ONLY) as i32;
+    drop(ctx.eval_with_flags(code.as_bytes(), &filename, flags)?);
     Ok(JsValue::undefined())
 }
 
@@ -158,12 +164,7 @@ fn op_vm_run(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsVal
     let line = args.get_or_undefined(3).to_number(ctx).unwrap_or(0.0) as i64;
     let column = args.get_or_undefined(4).to_number(ctx).unwrap_or(0.0) as i64;
     let code = with_offsets(&code, line, column);
-    let path = PathBuf::from(filename);
-    let run = |ctx: &mut Context| -> JsResult<JsValue> {
-        let realm = ctx.realm().clone();
-        let script = Script::parse(Source::from_bytes(code.as_bytes()).with_path(&path), Some(realm), ctx)?;
-        script.evaluate(ctx)
-    };
+    let run = |ctx: &mut Context| -> JsResult<JsValue> { ctx.eval_with_flags(code.as_bytes(), &filename, qjs::JS_EVAL_TYPE_GLOBAL as i32) };
     match realm {
         Some(realm) => in_realm(ctx, &realm, run),
         None => run(ctx),

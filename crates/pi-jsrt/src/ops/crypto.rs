@@ -1,8 +1,8 @@
 //! Hashing, HMAC, randomness and key derivation ops (`crypto.createHash`, `randomUUID`,
 //! `getRandomValues`, `pbkdf2`, `scrypt`, `hkdf`).
 
-use boa_engine::object::builtins::{JsArrayBuffer, JsTypedArray};
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{JsArrayBuffer, JsTypedArray};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use rand::RngCore;
 use sha2::Digest;
 
@@ -278,7 +278,7 @@ macro_rules! with_digest {
 #[allow(unused_imports)]
 pub(crate) use with_digest;
 
-fn digest_error(ctx: &mut Context, e: DigestError) -> boa_engine::JsError {
+fn digest_error(ctx: &mut Context, e: DigestError) -> crate::js::JsError {
     let props: Vec<(&str, JsValue)> = e.1.map(|c| vec![("code", js_str(c))]).unwrap_or_default();
     super::coded_error(ctx, "Error", e.0, &props)
 }
@@ -372,7 +372,7 @@ fn op_random_uuid(_: &JsValue, _: &[JsValue], _: &mut Context) -> JsResult<JsVal
 fn op_random_bytes(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let n = arg_f64(args, 0, ctx)?;
     if !(0.0..=(1u64 << 31) as f64).contains(&n) {
-        return Err(boa_engine::JsNativeError::range().with_message("The value of \"size\" is out of range.").into());
+        return Err(crate::js::JsNativeError::range().with_message("The value of \"size\" is out of range.").into());
     }
     let mut buf = vec![0u8; n as usize];
     rand::thread_rng().fill_bytes(&mut buf);
@@ -386,7 +386,7 @@ fn op_fill_random(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<
     let offset = ta.byte_offset(ctx)?;
     let len = ta.byte_length(ctx)?;
     if len > 65536 {
-        return Err(boa_engine::JsNativeError::error()
+        return Err(crate::js::JsNativeError::error()
             .with_message(format!(
                 "The ArrayBufferView's byte length ({len}) exceeds the number of bytes of entropy available via this API (65536)"
             ))
@@ -395,7 +395,7 @@ fn op_fill_random(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<
     let buffer = ta.buffer(ctx)?;
     if let Some(b) = buffer.as_object()
         && let Ok(ab) = JsArrayBuffer::from_object(b)
-        && let Some(mut data) = ab.data_mut()
+        && let Some(data) = ab.data_mut()
     {
         rand::thread_rng().fill_bytes(&mut data[offset..offset + len]);
     }

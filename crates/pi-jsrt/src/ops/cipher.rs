@@ -7,7 +7,7 @@
 //! Ciphers only in OpenSSL's legacy provider (Blowfish, CAST5, DES, IDEA, RC2, RC4, SEED) fail
 //! like they do in Node 22 (`ERR_OSSL_EVP_UNSUPPORTED`).
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use cipher::generic_array::GenericArray;
 use cipher::{BlockDecrypt, BlockEncrypt, KeyInit, KeyIvInit, StreamCipher, StreamCipherSeek};
 use universal_hash::UniversalHash;
@@ -43,7 +43,7 @@ impl CipherError {
     fn bad_tag_len(n: usize) -> Self {
         Self::new("TypeError", &format!("Invalid authentication tag length: {n}"), Some("ERR_CRYPTO_INVALID_AUTH_TAG"))
     }
-    pub(crate) fn throw(&self, ctx: &mut Context) -> boa_engine::JsError {
+    pub(crate) fn throw(&self, ctx: &mut Context) -> crate::js::JsError {
         let props: Vec<(&str, JsValue)> = self.code.map(|c| vec![("code", js_str(c))]).unwrap_or_default();
         coded_error(ctx, self.kind, &self.message, &props)
     }

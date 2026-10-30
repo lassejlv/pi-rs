@@ -55,7 +55,7 @@ icu_segmenter = "2"
 icu_collator = "~2.3"
 fancy-regex = "0.14"
 libc = "0.2"
-boa_engine = { version = "0.22", features = ["annex-b"] }
+rquickjs = { version = "0.14", default-features = false, features = ["std", "disable-assertions"] }
 oxc_allocator = "0.155"
 oxc_parser = "0.155"
 oxc_semantic = "0.155"
@@ -100,35 +100,11 @@ opt-level = 2
 [profile.dev.package.photon-rs]
 opt-level = 2
 
-# The embedded JavaScript engine parses and compiles every extension module (and pi's bundled
-# glue, TypeBox and marked) when an extension loads; unoptimized, with debug assertions, it is
-# several times slower, which dominates debug builds and tests. Optimize just the engine, its hot
-# dependencies and the TypeScript stripper (release semantics, so behavior is identical).
-[profile.dev.package.boa_engine]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_parser]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_ast]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_interner]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_gc]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_string]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.regress]
+# The embedded JavaScript engine (QuickJS, C) parses and compiles every extension module (and pi's
+# bundled glue, TypeBox and marked) when an extension loads; unoptimized it is several times slower,
+# which dominates debug builds and tests. Optimize just the engine (its C code is compiled with the
+# package's opt-level).
+[profile.dev.package.rquickjs-sys]
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
@@ -152,35 +128,7 @@ overflow-checks = false
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
-[profile.dev.package."fast-float2"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
 [profile.dev.package."num-bigint"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."thin-vec"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.small_btree]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."ryu-js"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.dashmap]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."intrusive-collections"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.arrayvec]
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
@@ -327,12 +275,10 @@ incremental = false
 
 # Vendored crates with local fixes (see vendor/<crate>/PATCH.md).
 [patch.crates-io]
-boa_engine = { path = "vendor/boa_engine" }
-boa_ast = { path = "vendor/boa_ast" }
-boa_parser = { path = "vendor/boa_parser" }
+rquickjs-sys = { path = "vendor/rquickjs-sys" }
 
 # Release builds: one codegen unit with fat LTO lets LLVM drop and merge code across the
-# workspace's large dependency graph (Boa, oxc, ICU4X, RustCrypto, wasmi, rustls), and symbols are
+# workspace's large dependency graph (QuickJS, oxc, ICU4X, RustCrypto, wasmi, rustls), and symbols are
 # stripped. Code is optimized for size, except the hot paths, which keep full speed optimization:
 # the TUI renderer, the JavaScript runtime with its engine and TypeScript stripper, regex engines,
 # JSON, hash tables, crypto, WebAssembly and compression. Measured on x86-64 Linux, the binary is
@@ -351,25 +297,10 @@ opt-level = 3
 [profile.release.package.pi-jsrt]
 opt-level = 3
 
-[profile.release.package.boa_engine]
+[profile.release.package.rquickjs-sys]
 opt-level = 3
 
-[profile.release.package.boa_parser]
-opt-level = 3
-
-[profile.release.package.boa_ast]
-opt-level = 3
-
-[profile.release.package.boa_interner]
-opt-level = 3
-
-[profile.release.package.boa_gc]
-opt-level = 3
-
-[profile.release.package.boa_string]
-opt-level = 3
-
-[profile.release.package.regress]
+[profile.release.package.rquickjs-core]
 opt-level = 3
 
 [profile.release.package.icu_properties]
@@ -387,28 +318,7 @@ opt-level = 3
 [profile.release.package."rustc-hash"]
 opt-level = 3
 
-[profile.release.package."fast-float2"]
-opt-level = 3
-
 [profile.release.package."num-bigint"]
-opt-level = 3
-
-[profile.release.package."thin-vec"]
-opt-level = 3
-
-[profile.release.package.small_btree]
-opt-level = 3
-
-[profile.release.package."ryu-js"]
-opt-level = 3
-
-[profile.release.package.dashmap]
-opt-level = 3
-
-[profile.release.package."intrusive-collections"]
-opt-level = 3
-
-[profile.release.package.arrayvec]
 opt-level = 3
 
 [profile.release.package.oxc_allocator]

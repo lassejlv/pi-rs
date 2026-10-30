@@ -12,7 +12,7 @@
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::client::WebPkiServerVerifier;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName, UnixTime};
@@ -301,7 +301,7 @@ fn alpn_list(ctx: &mut Context, v: &JsValue) -> JsResult<Vec<Vec<u8>>> {
     Ok(out)
 }
 
-fn throw(ctx: &mut Context, code: &str, message: &str) -> boa_engine::JsError {
+fn throw(ctx: &mut Context, code: &str, message: &str) -> crate::js::JsError {
     coded_error(ctx, "Error", message, &[("code", js_str(code))])
 }
 

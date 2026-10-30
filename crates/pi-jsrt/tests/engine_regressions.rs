@@ -1,4 +1,5 @@
-//! Regression tests for engine bugs fixed by the vendored Boa patches (`vendor/*/PATCH.md`).
+//! Engine behavior regressions: cases that broke under the previous engine (Boa) or that the
+//! vendored QuickJS patches fix (`vendor/rquickjs-sys/PATCH.md`).
 
 use std::path::Path;
 
@@ -192,7 +193,7 @@ fn symbol_for_is_consistent_across_parallel_runtimes() {
     }
 }
 
-/// vendor/boa_parser: `async(x)` not followed by `=>` is a call of a function named `async`
+/// `async(x)` not followed by `=>` is a call of a function named `async`
 /// (`asynckit`, used by form-data and axios), not an async arrow head.
 #[tokio::test]
 async fn call_of_a_function_named_async() {

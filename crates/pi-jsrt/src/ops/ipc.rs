@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use tokio::io::Interest;
 use tokio::net::UnixStream;
 use tokio::sync::mpsc;

@@ -7,7 +7,7 @@
 //! keeps the bytes; every op parses what it needs).
 
 use base64::Engine as _;
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use der::asn1::ObjectIdentifier;
 use der::Decode;
 use p256::elliptic_curve::sec1::ToEncodedPoint;
@@ -1643,7 +1643,7 @@ fn details(ctx: &mut Context, key: &Imported) -> JsResult<JsValue> {
     }
 }
 
-fn throw(ctx: &mut Context, e: CipherError) -> boa_engine::JsError {
+fn throw(ctx: &mut Context, e: CipherError) -> crate::js::JsError {
     e.throw(ctx)
 }
 
@@ -1929,7 +1929,7 @@ fn name_object(ctx: &mut Context, name: &[u8]) -> JsResult<JsValue> {
             }
         }
     }
-    let obj = boa_engine::JsObject::with_object_proto(ctx.intrinsics());
+    let obj = crate::js::JsObject::with_object_proto(ctx.intrinsics());
     for (k, v) in entries {
         obj.set(js_str(&k).as_string().unwrap(), js_str(&v), true, ctx)?;
     }

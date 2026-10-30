@@ -10,8 +10,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use boa_engine::object::builtins::{JsArrayBuffer, JsTypedArray};
-use boa_engine::{Context, JsArgs, JsBigInt, JsObject, JsResult, JsString, JsValue, js_string};
+use crate::js::{JsArrayBuffer, JsTypedArray};
+use crate::js::{Context, JsArgs, JsBigInt, JsObject, JsResult, JsString, JsValue, js_string};
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use rusqlite::{Connection, OpenFlags};
 
@@ -23,7 +23,7 @@ thread_local! {
     static NEXT_ID: std::cell::Cell<u64> = const { std::cell::Cell::new(1) };
 }
 
-fn sqlite_error(ctx: &mut Context, e: &rusqlite::Error) -> boa_engine::JsError {
+fn sqlite_error(ctx: &mut Context, e: &rusqlite::Error) -> crate::js::JsError {
     let (errcode, errstr) = match e {
         rusqlite::Error::SqliteFailure(f, _) => (
             f.extended_code,
@@ -47,7 +47,7 @@ fn sqlite_error(ctx: &mut Context, e: &rusqlite::Error) -> boa_engine::JsError {
     )
 }
 
-fn invalid_state(ctx: &mut Context, message: &str) -> boa_engine::JsError {
+fn invalid_state(ctx: &mut Context, message: &str) -> crate::js::JsError {
     coded_error(
         ctx,
         "Error",
@@ -191,7 +191,7 @@ fn view_bytes(v: &JsValue, ctx: &mut Context) -> JsResult<Option<Vec<u8>>> {
         return Ok(None);
     };
     if JsTypedArray::from_object(obj.clone()).is_ok()
-        || boa_engine::object::builtins::JsDataView::from_object(obj.clone()).is_ok()
+        || crate::js::JsDataView::from_object(obj.clone()).is_ok()
     {
         return super::bytes_arg(v, ctx).map(Some);
     }

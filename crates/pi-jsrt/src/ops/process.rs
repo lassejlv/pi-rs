@@ -1,6 +1,6 @@
 //! `process` / `os` ops and the static configuration object.
 
-use boa_engine::{Context, JsArgs, JsObject, JsResult, JsString, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsObject, JsResult, JsString, JsValue, js_string};
 
 use super::{array, object};
 use crate::engine::{OpFn, arg_f64, arg_opt_string, js_str, state};
@@ -299,7 +299,7 @@ fn op_stdin_read(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsVa
                     let Some(f) = f.as_function() else { return };
                     let payload = if kind == "error" {
                         let e = std::io::Error::from_raw_os_error(errno);
-                        crate::error::to_boa(&super::io_error(&e, "read", None), ctx).into_opaque(ctx).unwrap_or_default()
+                        crate::error::to_js(&super::io_error(&e, "read", None), ctx).into_opaque(ctx).unwrap_or_default()
                     } else {
                         super::bytes_to_js(&data, ctx).unwrap_or_default()
                     };

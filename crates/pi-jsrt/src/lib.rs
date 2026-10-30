@@ -106,6 +106,7 @@
 pub mod convert;
 pub mod ctx;
 mod engine;
+pub mod js;
 mod error;
 mod loader;
 pub mod node;
@@ -119,5 +120,3 @@ pub use runtime::{
     OutputSink, RuntimeOptions, UncaughtHandler, VirtualModule,
 };
 
-/// Re-export of the Boa engine for use with [`JsRuntime::with_context`].
-pub use boa_engine as boa;

@@ -50,7 +50,8 @@ process.exitCode = 3;
     let b = write(dir.path(), "b.mjs", "await new Promise((r) => setTimeout(r, 10));\nPromise.reject(new Error(\"boom\"));\n");
     let (_, err, code) = run_node_mode(dir.path(), &[&b]);
     assert_eq!(code, 1);
-    assert!(err.starts_with(&format!("{b}:2\nPromise.reject(new Error(\"boom\"));\n               ^\n\nError: boom\n")), "{err}");
+    // QuickJS positions `new Error()` at the constructor name (V8: at `new`).
+    assert!(err.starts_with(&format!("{b}:2\nPromise.reject(new Error(\"boom\"));\n                   ^\n\nError: boom\n")), "{err}");
     assert!(err.ends_with("\n\nNode.js v22.19.0\n"), "{err}");
 
     let c = write(

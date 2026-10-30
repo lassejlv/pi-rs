@@ -17,7 +17,7 @@ use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering};
 use std::sync::Once;
 
-use boa_engine::{Context, JsResult, JsValue, js_string};
+use crate::js::{Context, JsResult, JsValue, js_string};
 use parking_lot::Mutex;
 
 use super::coded_error;

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue, js_string};
+use crate::js::{Context, JsArgs, JsResult, JsValue, js_string};
 use socket2::{Domain, Protocol, Socket, Type};
 use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;

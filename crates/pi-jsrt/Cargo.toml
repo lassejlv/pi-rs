@@ -3,11 +3,11 @@ name = "pi-jsrt"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Embedded pure-Rust JavaScript runtime (Boa + oxc) used by pi extensions and code mode"
+description = "Embedded pure-Rust JavaScript runtime (QuickJS via rquickjs + oxc) used by pi extensions and code mode"
 
 [dependencies]
 jiff.workspace = true
-boa_engine.workspace = true
+rquickjs.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_semantic.workspace = true

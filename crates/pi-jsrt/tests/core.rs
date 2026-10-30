@@ -322,7 +322,7 @@ async fn with_context_escape_hatch() {
     let rt = JsRuntime::new(RuntimeOptions::default()).unwrap();
     let n = rt
         .with_context(|ctx| {
-            let v = ctx.eval(pi_jsrt::boa::Source::from_bytes("[1,2,3].length")).unwrap();
+            let v = ctx.eval(pi_jsrt::js::Source::from_bytes("[1,2,3].length")).unwrap();
             v.as_number().unwrap()
         })
         .await
@@ -330,7 +330,7 @@ async fn with_context_escape_hatch() {
     assert_eq!(n, 3.0);
     let h = rt
         .with_context(|ctx| {
-            let v = ctx.eval(pi_jsrt::boa::Source::from_bytes("({ greet: (n) => 'hi ' + n })")).unwrap();
+            let v = ctx.eval(pi_jsrt::js::Source::from_bytes("({ greet: (n) => 'hi ' + n })")).unwrap();
             pi_jsrt::ctx::make_handle(ctx, v).unwrap()
         })
         .await
@@ -372,7 +372,7 @@ async fn runaway_scripts_are_contained() {
     let err = rt.eval("let i = 0; while (true) { i++; }").await.unwrap_err();
     assert!(err.to_string().to_lowercase().contains("loop"), "{err}");
     let err = rt.eval("function f(n) { return f(n + 1) + 1; } f(0)").await.unwrap_err();
-    // Node's stack overflow error (vendor/boa_engine/PATCH.md: catchable, as in V8).
+    // Node's stack overflow error (catchable, as in V8).
     assert!(err.to_string().contains("Maximum call stack size exceeded"), "{err}");
     // The runtime is still usable afterwards.
     assert_eq!(rt.eval("1 + 1").await.unwrap(), json!(2));

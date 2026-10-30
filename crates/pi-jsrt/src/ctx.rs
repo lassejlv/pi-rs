@@ -5,7 +5,7 @@
 
 use std::future::Future;
 
-use boa_engine::{Context, JsResult, JsValue};
+use crate::js::{Context, JsResult, JsValue};
 use serde_json::Value;
 
 use crate::engine::state;
