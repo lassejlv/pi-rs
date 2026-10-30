@@ -289,7 +289,7 @@ async fn cloudflare_system_one_through_models() {
     let usage = result.usage.unwrap();
     assert_eq!((usage.input, usage.output, usage.total_tokens), (426, 73, 499));
 
-    for (id, price) in [("@cf/cloudflare/clef", 0.24), ("@cf/cloudflare/clef-flash", 0.09)] {
+    for (id, price) in [("@cf/cloudflare/clef", 0.24), ("@cf/cloudflare/clef-flash", 0.038), ("@cf/cloudflare/clef-omni", 0.15)] {
         let Some(AnyModel::Classifier(clef)) = models.get_model_of_type(ModelType::Classifier, "cloudflare-workers-ai", id) else {
             panic!("missing {id}");
         };

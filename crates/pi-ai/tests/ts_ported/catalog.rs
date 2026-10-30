@@ -181,12 +181,10 @@ async fn xiaomi_models_and_thinking_toggle() {
 
 #[test]
 fn zai_coding_plan_catalog() {
-    // The TS test expects cacheRead 0.05, but the checked-in catalog (identical in both trees)
-    // carries 0 for GLM-4.6V, so cacheRead is not compared.
     assert_matches(
         &serde_json::to_value(builtin("zai-coding-cn", "glm-4.6v")).unwrap(),
         &json!({"id": "glm-4.6v", "provider": "zai-coding-cn", "api": "openai-completions", "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
-            "reasoning": true, "input": ["text", "image"], "cost": {"input": 0.3, "output": 0.9, "cacheWrite": 0},
+            "reasoning": true, "input": ["text", "image"], "cost": {"input": 0.3, "output": 0.9, "cacheRead": 0.05, "cacheWrite": 0},
             "contextWindow": 128000, "maxTokens": 32768, "compat": {"maxTokensField": "max_tokens", "thinkingFormat": "zai", "zaiToolStream": true}}),
         "glm-4.6v",
     );
