@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(format_user_agent(Some(&short)), "pi");
         let custom = ClientIdentity { user_agent: Some(UserAgentMode::Custom { custom: "x/1".into() }), ..Default::default() };
         assert_eq!(format_user_agent(Some(&custom)), "x/1");
-        assert!(format_user_agent(None).starts_with("pi/1.3.0 ("));
+        assert!(format_user_agent(None).starts_with("pi/1.4.0 ("));
         let json: ClientIdentity = serde_json::from_str(r#"{"userAgent":"short","attribution":null}"#).unwrap();
         assert_eq!(json.attribution, Some(None));
         assert_eq!(serde_json::to_string(&json).unwrap(), r#"{"userAgent":"short","attribution":null}"#);

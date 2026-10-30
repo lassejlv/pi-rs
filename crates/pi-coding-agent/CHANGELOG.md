@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-21
+
 ### New Features
 
+- **Image input for classifiers**: codemode `models.classify()` accepts `images` for TypeSafe's Jev and Cloudflare's Clef models on `typesafe`, `cloudflare-workers-ai`, and OpenRouter. See [Use classifier models](docs/models.md#use-classifier-models) and [Codemode](docs/codemode.md#models).
 - **Models Configuration reference**: every provider, model, model override, and compatibility field of `models.json`, generated from its schema. See [Models Configuration](docs/models-configuration.md).
 - **Summaries without a fixed output cap**: compaction and branch summaries use the model's output limit, so long reasoning no longer makes them fail. See [Compaction](docs/compaction.md#compaction).
 - **Codemode waits for a free worker**: parallel scripts and in-process subagents queue instead of failing, and `PI_CODEMODE_MAX_WORKERS` raises the limit. See [Codemode limits](docs/codemode.md#limits).
@@ -12,6 +15,8 @@
 ### Added
 
 - Added a Models Configuration reference generated from the `models.json` schema, listing all provider, model, model override, and compatibility fields ([#10790](https://github.com/earendil-works/pi/issues/10790))
+- Codemode `models.classify()` now accepts `images` for TypeSafe's Jev and Cloudflare's Clef models on `typesafe`, `cloudflare-workers-ai`, and OpenRouter, and lists Clef Omni and Jev 1.14 on Workers AI.
+- Provider-level `compat` in `models.json` now also applies to classifier models, with the System One fields `imageInput` and `sendImageOptInHeader` for proxies that serve another service's classifiers. Extension classifier models accept `compat` too.
 - Added `MiniMax-M3.1-Flash` to the `minimax` and `minimax-cn` providers, with thinking levels low through max ([#11121](https://github.com/earendil-works/pi/issues/11121))
 - Added support for the Rex terminal: OSC 8 hyperlinks, truecolor, and inline images ([#11131](https://github.com/earendil-works/pi/issues/11131), [#11150](https://github.com/earendil-works/pi/pull/11150) by [@petrroll](https://github.com/petrroll), [#11183](https://github.com/earendil-works/pi/pull/11183) by [@nihaals](https://github.com/nihaals))
 
