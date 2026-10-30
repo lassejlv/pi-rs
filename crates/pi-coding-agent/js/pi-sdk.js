@@ -1731,6 +1731,7 @@ export class AgentSessionRuntime {
 	async importFromJsonl(inputPath, cwdOverride) {
 		const fs = await import("node:fs");
 		const path = await import("node:path");
+		// TS `resolvePath(inputPath)`: the host resolves it the same way as a services cwd.
 		const resolvedPath = call("sdk.servicesPaths", { a: [inputPath, null] }).cwd;
 		if (!fs.existsSync(resolvedPath)) throw new SessionImportFileNotFoundError(resolvedPath);
 		const sessionDir = this.session.sessionManager.getSessionDir();

@@ -664,6 +664,67 @@ async function probe(ctx) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn resource_loader_resolve_project_trust_matches_ts() {
+    let source = format!(
+        "{PROBE_PRELUDE}{}",
+        r#"
+import { mkdtempSync, mkdirSync, writeFileSync as writeFile } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
+export default function (pi) {
+    pi.on("session_start", async () => {
+        try { await probe(); } catch (e) { out.fatal = String(e?.stack ?? e); finish(); }
+    });
+}
+async function probe() {
+    if (globalThis.probeRan) return;
+    globalThis.probeRan = true;
+    const agentDir = mkdtempSync(join(tmpdir(), "trust-agent-"));
+    const cwd = mkdtempSync(join(tmpdir(), "trust-cwd-"));
+    mkdirSync(join(cwd, ".pi", "extensions"), { recursive: true });
+    writeFile(join(cwd, ".pi", "extensions", "local.ts"), "export default function (pi) { pi.registerFlag('local-x', { type: 'boolean', description: 'x' }); }\n");
+    const settingsManager = SettingsManager.create(cwd, agentDir);
+    const inline = (p) => { p.registerFlag("inline-x", { type: "boolean", description: "x" }); };
+    const loader = new DefaultResourceLoader({
+        cwd, agentDir, settingsManager, extensionFactories: [inline],
+        noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+    });
+    const flags = (result) => result.extensions.map((e) => [...e.flags.keys()]);
+    const seen = [];
+    const resolve = (answer) => async ({ extensionsResult }) => {
+        seen.push([flags(extensionsResult), extensionsResult.errors.length, settingsManager.isProjectTrusted()]);
+        return answer;
+    };
+    await t("untrusted", async () => {
+        await loader.reload({ resolveProjectTrust: resolve(false) });
+        return [flags(loader.getExtensions()), settingsManager.isProjectTrusted()];
+    });
+    await t("trusted", async () => {
+        await loader.reload({ resolveProjectTrust: resolve(true) });
+        return [flags(loader.getExtensions()), settingsManager.isProjectTrusted()];
+    });
+    await t("noOption", async () => {
+        await loader.reload();
+        return [flags(loader.getExtensions()), settingsManager.isProjectTrusted()];
+    });
+    await t("throws", async () => {
+        await loader.reload({ resolveProjectTrust: async () => { throw new Error("trust failed"); } });
+        return "ok";
+    });
+    await t("seen", () => seen);
+    finish();
+}
+"#
+    );
+    let (result, harness, dir) = run_probe(&source).await;
+    let expected: Value = serde_json::from_str(include_str!("fixtures/extensions_resource_loader_trust_ts.json")).unwrap();
+    assert_eq!(result, expected, "{result:#}");
+    harness.cleanup();
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn rpc_client_drives_a_pi_child() {
     let source = format!(
         "{PROBE_PRELUDE}const PI_BIN = {};\n{}",

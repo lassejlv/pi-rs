@@ -10,7 +10,7 @@ in pi-rs; the reason is given), `[ ]` missing (only the Chord APIs outside the d
 
 | Package | Runtime exports | Implemented | Host-only | Missing |
 | --- | ---: | ---: | ---: | ---: |
-| `@earendil-works/pi-coding-agent` | 157 | 130 | 27 | 0 |
+| `@earendil-works/pi-coding-agent` | 157 | 137 | 20 | 0 |
 | `@earendil-works/pi-tui` | 91 | 88 | 3 | 0 |
 | `@earendil-works/pi-ai` | 77 | 77 | 0 | 0 |
 | `@earendil-works/pi-ai/compat` | 136 | 136 | 0 | 0 |
@@ -85,7 +85,7 @@ in pi-rs; the reason is given), `[ ]` missing (only the Chord APIs outside the d
 ## `@earendil-works/pi-coding-agent`
 
 - [x] `AgentSession`: the class of sessions from `createAgentSession()` (a Rust AgentSession: prompt/steer/followUp/abort, subscribe, state and tool getters, models, compaction, bindExtensions, `agent.beforeToolCall`/`afterToolCall`, ...); not constructible directly
-- [x] `AgentSessionRuntime`: JS port over Rust AgentSessions (new/switch/fork/import/dispose)
+- [x] `AgentSessionRuntime`: JS port of the TS class over Rust AgentSessions (newSession/switchSession/fork/importFromJsonl/dispose, rebind and before-invalidate hooks); `tests/extensions_context_api.rs` compares it with TS
 - [~] `ArminComponent`: host-only, interactive-mode component bound to host session state (Rust); extensions get UI through ctx.ui
 - [x] `AssistantMessageComponent`: pi's Rust component (constructor arguments and methods as in TS)
 - [x] `BashExecutionComponent`: pi's Rust component (constructor arguments and methods as in TS)
@@ -115,7 +115,7 @@ in pi-rs; the reason is given), `[ ]` missing (only the Chord APIs outside the d
 - [~] `ModelSelectorComponent`: host-only, interactive-mode component bound to host session state (Rust); extensions get UI through ctx.ui
 - [~] `OAuthSelectorComponent`: host-only, interactive-mode component bound to host session state (Rust); extensions get UI through ctx.ui
 - [x] `ProjectTrustStore`: the Rust trust store (`get`/`getEntry`/`set`/`setMany`)
-- [~] `RpcClient`: host-only, spawns and drives a pi child process (SDK use, not extension use)
+- [x] `RpcClient`: JS port; without `cliPath` it spawns this pi binary, a `.js`/`.ts` `cliPath` runs under `node` as in TS, any other `cliPath` is spawned as an executable
 - [x] `SessionManager`: the class of `ctx.sessionManager` and of `newSession({ setup })`'s manager; constructor and static factories (`create`, `open`, `continueRecent`, `inMemory`, `forkFrom`, `findById`, `list`, `listAll`) create Rust session managers
 - [~] `SessionSelectorComponent`: host-only, interactive-mode component bound to host session state (Rust); extensions get UI through ctx.ui
 - [x] `SettingsManager`: `create`, `inMemory` and `fromStorage` (a JS `SettingsStorage`) build Rust settings managers; every public method
@@ -239,8 +239,8 @@ in pi-rs; the reason is given), `[ ]` missing (only the Chord APIs outside the d
 - [x] `truncateTail`
 - [x] `truncateToVisualLines`
 - [x] `withFileMutationQueue`
-- [~] `wrapRegisteredTool`: host-only, host-internal (tool wrapping is done by the Rust runner)
-- [~] `wrapRegisteredTools`: host-only, host-internal
+- [x] `wrapRegisteredTool`: tool contexts from the given runner (`session.extensionRunner`)
+- [x] `wrapRegisteredTools`
 
 ## `@earendil-works/pi-tui`
 
