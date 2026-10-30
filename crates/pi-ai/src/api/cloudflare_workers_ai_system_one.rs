@@ -6,13 +6,19 @@
 //! record: `{ success, result: { state: "Completed", result: { answers, usage } } }`.
 //! Cloudflare-hosted models such as `@cf/cloudflare/clef` return the output directly:
 //! `{ success, result: { model, answers, usage } }`.
+//!
+//! Clef models take images as an `images` list of data URLs. TypeSafe's models take them as
+//! System One `assets`, without TypeSafe's opt-in header. The catalog sets `compat.imageInput`;
+//! the model ID check only covers models without it.
 
 use async_trait::async_trait;
 use serde_json::{Map, Value, json};
 
-use super::system_one_shared::{SystemOneTransport, SystemOneWireRequest, classify_system_one, join_base_url};
+use super::system_one_shared::{
+    ResolvedSystemOneCompat, SystemOneTransport, SystemOneWireRequest, classify_system_one, join_base_url,
+};
 use crate::models::ProviderClassifier;
-use crate::types::{ClassifierContext, ClassifierModel, ClassifierResult, StreamOptions};
+use crate::types::{ClassifierContext, ClassifierModel, ClassifierResult, StreamOptions, SystemOneImageInput};
 
 const LABEL: &str = "Cloudflare Workers AI";
 
@@ -63,10 +69,22 @@ fn output(body: Value) -> anyhow::Result<Map<String, Value>> {
     }
 }
 
+fn detect_compat(model: &ClassifierModel) -> ResolvedSystemOneCompat {
+    ResolvedSystemOneCompat {
+        image_input: if model.id.starts_with("@cf/cloudflare/clef") {
+            SystemOneImageInput::Images
+        } else {
+            SystemOneImageInput::Assets
+        },
+        send_image_opt_in_header: false,
+    }
+}
+
 /// The Workers AI System One transport.
 pub const TRANSPORT: SystemOneTransport = SystemOneTransport {
     api: "cloudflare-workers-ai-system-one",
     label: LABEL,
+    detect_compat,
     url: |model| join_base_url(&model.base_url, "run"),
     payload,
     output,

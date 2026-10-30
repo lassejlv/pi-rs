@@ -132,7 +132,7 @@ Run a ported test with `cargo test -p pi-coding-agent --test <file stem> <name>`
 | `model-registry.test.ts` | 87 | COVERED | `tests/model_registry.rs`: anthropic_model_override_replaces_allowed_fallback_metadata, api_key_commands, api_key_environment_interpolation, built_in_provider_custom_models_inherit_api_and_base_url, can_mix_base_url_override_and_models_merge, command_api_keys_are_not_executed_for_status_or_availability +32 more<br>`src/core/resolve_config_value.rs` (whole file) |  |
 | `model-resolver.test.ts` | 29 | PARTIAL | `src/core/model_resolver.rs`: built_in_chat_providers_have_defaults_in_their_generated_catalogs, cli_allows_custom_ids_for_explicit_providers_without_double_prefixing, cli_custom_model_fallback_with_thinking_suffix, cli_does_not_strip_invalid_suffix_as_thinking_level, cli_duplicate_raw_ids_behind_a_known_provider_prefix, cli_errors_without_models_and_for_unknown_providers +9 more | 15 Rust tests for 29 TS cases (Rust tests often group several cases; see the listed files) |
 | `model-runtime-auth-options.test.ts` | 11 | COVERED | `tests/model_runtime.rs`: accepts_a_pi_ai_credential_store, attaches_the_providers_active_auth_status_to_every_method_option, constructs_an_api_key_method_for_an_extension_api_key_provider, distinguishes_subscription_oauth_from_generic_oauth_sign_in, does_not_cancel_an_extension_oauth_refresh_with_the_request, does_not_fabricate_an_api_key_method_for_an_extension_oauth_only_provider +5 more |  |
-| `model-runtime-classifiers.test.ts` | 1 | COVERED | `tests/model_runtime.rs`: lists_jev_separately_and_classifies_with_runtime_resolved_auth |  |
+| `model-runtime-classifiers.test.ts` | 3 | COVERED | `tests/model_runtime.rs`: applies_provider_compat_from_models_json_to_classifier_models, keeps_openrouters_image_form_when_models_json_routes_openrouter_through_a_proxy, lists_jev_separately_and_classifies_with_runtime_resolved_auth | the proxy URL is a local server |
 | `model-runtime-cloudflare-compat.test.ts` | 2 | COVERED | `tests/model_runtime.rs`: materializes_the_cloudflare_endpoint_after_extension_style_auth_resolution, materializes_the_cloudflare_endpoint_through_model_runtime_streaming |  |
 | `model-runtime-credential-sync.test.ts` | 10 | COVERED | `tests/model_runtime.rs`: allows_different_providers_to_run_credential_flows_concurrently, does_not_run_network_refresh_inside_the_credential_operation_chain, does_not_wait_for_unrelated_provider_availability_during_local_synchronization, keeps_provider_scoped_refreshes_from_superseding_unrelated_providers, orders_same_provider_credential_operations_through_local_synchronization, publishes_locally_consistent_availability_before_login_and_logout_resolve +4 more |  |
 | `model-runtime-images.test.ts` | 7 | COVERED | `tests/model_runtime.rs`: does_not_add_image_generation_or_classification_to_composed_chat_only_providers, extension_model_lists_replace_undeclared_models_of_every_operation, generates_images_through_a_native_provider_with_runtime_resolved_auth, keeps_image_generation_on_a_built_in_provider_composed_with_models_json_overrides, lists_built_in_openrouter_image_models_separately_from_chat_models, registers_extension_image_and_classifier_models_with_their_implementations +1 more |  |
@@ -338,7 +338,7 @@ Shorter tables for the other packages against their crates. Files that need prov
 
 ### packages/ai/test vs crates/pi-ai
 
-177 files: COVERED: 167, NOT PORTABLE: 6, PARTIAL: 4.
+178 files: COVERED: 168, NOT PORTABLE: 6, PARTIAL: 4.
 
 | TS test file | Cases | Status | Rust tests | Notes |
 |---|---:|---|---|---|
@@ -381,10 +381,11 @@ Shorter tables for the other packages against their crates. Files that need prov
 | `bedrock-response-headers.test.ts` | 1 | COVERED | `pi-ai/tests/bedrock.rs`: forwards_raw_response_headers_and_fails_empty_streams |  |
 | `bedrock-thinking-payload.test.ts` | 16 | COVERED | `pi-ai/tests/bedrock.rs`: converts_messages_with_placeholders_and_error_images, simple_stream_budgets_for_budget_based_claude, strict_tools_are_gated_by_model_capability, thinking_payloads<br>`pi-ai/tests/ts_ported/bedrock.rs` | max-tokens E2E #[ignore]d (AWS credentials) |
 | `cache-retention.test.ts` | 12 | COVERED | `pi-ai/tests/ts_ported/cache.rs` | unit file; the TS key-gated cases only need a key to reach the payload hook and run offline here; the cerebras strict case uses strict: prefer (the TS literal without strict is not a valid ConstrainedSamplingConfig) |
+| `classifier-images-live.test.ts` | 8 | COVERED | `pi-ai/tests/ts_ported/live/classifier_images.rs` | E2E #[ignore]d (TypeSafe, Workers AI and OpenRouter credentials) |
 | `classifier-models.test.ts` | 7 | COVERED | `pi-ai/tests/classifiers.rs` (whole file) |  |
 | `cloudflare-ai-binding.test.ts` | 3 | COVERED | `pi-ai/tests/cloudflare.rs` (whole file) |  |
 | `cloudflare-stream.test.ts` | 2 | COVERED | `pi-ai/src/providers/cloudflare.rs` (whole file)<br>`pi-ai/tests/cloudflare.rs` (whole file) |  |
-| `cloudflare-workers-ai-system-one.test.ts` | 4 | COVERED | `pi-ai/tests/classifiers.rs` (whole file) |  |
+| `cloudflare-workers-ai-system-one.test.ts` | 9 | COVERED | `pi-ai/tests/classifiers.rs` (whole file) |  |
 | `compat-env.test.ts` | 1 | COVERED | `pi-ai/tests/ts_ported/models.rs` | uses a dedicated api name instead of overriding the global openai-responses registration |
 | `compat-schema.test.ts` | 3 | COVERED | `pi-ai/src/providers/compat_schema.rs` (whole file)<br>`pi-ai/src/providers/schemas.rs` (whole file) |  |
 | `constrained-sampling.test.ts` | 7 | COVERED | `pi-ai/tests/constrained_sampling.rs`: derives_strict_schemas_without_changing_tool_definitions, falls_back_or_rejects_unconvertible_schemas, grammar_input_json_deltas_are_append_only<br>`pi-ai/tests/catalog.rs`: native_constrained_sampling_metadata<br>+1 more files |  |
@@ -508,7 +509,7 @@ Shorter tables for the other packages against their crates. Files that need prov
 | `transcript-tool-changes.test.ts` | 21 | COVERED | `pi-ai/tests/ts_ported/transcript.rs` |  |
 | `transform-messages-copilot-openai-to-anthropic.test.ts` | 3 | COVERED | `pi-ai/tests/ts_ported/misc.rs` |  |
 | `transform-messages-cross-model-thinking.test.ts` | 2 | COVERED | `pi-ai/tests/ts_ported/misc.rs` |  |
-| `typesafe-system-one.test.ts` | 10 | COVERED | `pi-ai/src/api/typesafe_system_one.rs` (whole file)<br>`pi-ai/tests/classifiers.rs` (whole file) |  |
+| `typesafe-system-one.test.ts` | 17 | COVERED | `pi-ai/src/api/typesafe_system_one.rs` (whole file)<br>`pi-ai/tests/classifiers.rs` (whole file) |  |
 | `unicode-surrogate.test.ts` | 76 | COVERED | `pi-ai/tests/ts_ported/live/matrix.rs` | E2E #[ignore]d live matrix; the lone-surrogate case sends U+FFFD (a Rust String cannot hold a lone surrogate) |
 | `uuid.test.ts` | 4 | COVERED | `pi-ai/src/auth/oauth/openai_chatgpt.rs`: host_ids, manual_input_validation<br>`pi-ai/src/utils/uuid.rs`: generates_ordered_v7_ids, preserves_supplied_timestamp |  |
 | `validation.test.ts` | 10 | COVERED | `pi-ai/src/utils/validation.rs`: preserves_optional_nulls_whose_referenced_schema_is_nullable, treats_null_as_omission_for_optional_non_nullable_properties<br>`pi-ai/tests/oauth_flows.rs`: chatgpt_login_validation | the Function-constructor (CSP) case is TypeBox-specific; the Rust validator never generates code, the coercion it checks is covered |

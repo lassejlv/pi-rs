@@ -88,6 +88,9 @@ pub fn bedrock_compat_schema() -> &'static Value {
 pub fn mistral_conversations_compat_schema() -> &'static Value {
     get("MistralConversationsCompatSchema")
 }
+pub fn system_one_compat_schema() -> &'static Value {
+    get("SystemOneCompatSchema")
+}
 /// Provider-level compat superset (`ProviderCompatSchema`).
 pub fn provider_compat_schema() -> &'static Value {
     get("ProviderCompatSchema")

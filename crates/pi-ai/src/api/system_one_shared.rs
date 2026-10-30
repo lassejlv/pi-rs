@@ -6,23 +6,62 @@ use serde_json::{Map, Value, json};
 use super::classifier_shared::{normalize_classifier_error, parse_classifier_usage, post_classifier_request, required_number};
 use crate::types::{
     ClassifierAnswer, ClassifierContext, ClassifierModel, ClassifierQuestion, ClassifierResult, ClassifierStopReason,
-    StreamOptions,
+    ImageContent, ModelInputModality, ProviderHeaders, StreamOptions, SystemOneImageInput,
 };
 use crate::utils::error_body::format_provider_error;
 
 /// TypeSafe System One request body without the transport-specific envelope.
+///
+/// Images take one of three forms (`SystemOneCompat.imageInput`):
+/// - `assets`: TypeSafe's `assets` map, `{ "<image-1>": { type: "image", format, data_base64 } }`,
+///   with the names placed before the state: `state: ["<image-1>", state]`. PNG and JPEG only.
+/// - `images`: Clef's `images` list of data URLs, which the model reads before the state.
+///   PNG, JPEG, and WebP, at most four.
+/// - `state-image-urls`: OpenRouter's form, data URL parts placed before the state:
+///   `state: [{ type: "image_url", image_url: { url } }, state]`. OpenRouter accepts this for every
+///   model, and drops `assets` silently.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SystemOneWireRequest {
-    pub state: Map<String, Value>,
+    /// The context state, or with images a list of the images or their asset names followed by
+    /// the state.
+    pub state: Value,
     pub questions: Map<String, Value>,
+    /// Images as System One assets, keyed by the names the state references.
+    pub assets: Option<Map<String, Value>>,
+    /// Images as data URLs, Clef's extension to System One.
+    pub images: Option<Vec<String>>,
 }
 
 impl SystemOneWireRequest {
-    /// `{ state, questions }` as JSON.
+    /// `{ state, questions, assets?, images? }` as a JSON object.
+    pub fn to_map(&self) -> Map<String, Value> {
+        let mut map = Map::new();
+        map.insert("state".into(), self.state.clone());
+        map.insert("questions".into(), Value::Object(self.questions.clone()));
+        if let Some(images) = &self.images {
+            map.insert("images".into(), json!(images));
+        }
+        if let Some(assets) = &self.assets {
+            map.insert("assets".into(), Value::Object(assets.clone()));
+        }
+        map
+    }
+
+    /// `{ state, questions, assets?, images? }` as JSON.
     pub fn to_value(&self) -> Value {
-        json!({ "state": self.state, "questions": self.questions })
+        Value::Object(self.to_map())
     }
 }
+
+/// System One compatibility settings with every field resolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResolvedSystemOneCompat {
+    pub image_input: SystemOneImageInput,
+    pub send_image_opt_in_header: bool,
+}
+
+/// TypeSafe's opt-in header for its experimental image input.
+const IMAGE_OPT_IN_HEADER: (&str, &str) = ("TypeSafe-Danger-Zone-Images", "true");
 
 /// Differences between services that serve System One models.
 pub struct SystemOneTransport {
@@ -30,6 +69,8 @@ pub struct SystemOneTransport {
     pub api: &'static str,
     /// Service name used in error messages.
     pub label: &'static str,
+    /// Compatibility settings for models that do not set them in `compat`.
+    pub detect_compat: fn(&ClassifierModel) -> ResolvedSystemOneCompat,
     /// Absolute request URL.
     pub url: fn(&ClassifierModel) -> String,
     /// Wraps the System One request in the service's request envelope.
@@ -100,6 +141,78 @@ fn parse_answers(label: &str, value: Option<&Value>, context: &ClassifierContext
     Ok(answers)
 }
 
+/// Clef accepts at most this many images per request.
+const MAX_DATA_URL_IMAGES: usize = 4;
+
+fn asset_format(mime_type: &str) -> Option<&'static str> {
+    match mime_type {
+        "image/png" => Some("png"),
+        "image/jpeg" => Some("jpeg"),
+        _ => None,
+    }
+}
+
+fn data_url(image: &ImageContent) -> String {
+    format!("data:{};base64,{}", image.mime_type, image.data)
+}
+
+/// Adds the context images to `request` in the service's form.
+fn add_images(
+    label: &str,
+    model: &ClassifierModel,
+    input: SystemOneImageInput,
+    images: &[ImageContent],
+    request: &mut SystemOneWireRequest,
+) -> anyhow::Result<()> {
+    match input {
+        SystemOneImageInput::Images => {
+            if images.len() > MAX_DATA_URL_IMAGES {
+                anyhow::bail!(
+                    "{label} accepts at most {MAX_DATA_URL_IMAGES} images for {}, got {}",
+                    model.id,
+                    images.len()
+                );
+            }
+            let mut urls = Vec::with_capacity(images.len());
+            for image in images {
+                if !matches!(image.mime_type.as_str(), "image/png" | "image/jpeg" | "image/webp") {
+                    anyhow::bail!("{label} accepts PNG, JPEG, and WebP images for {}, got {}", model.id, image.mime_type);
+                }
+                urls.push(data_url(image));
+            }
+            request.images = Some(urls);
+        }
+        SystemOneImageInput::StateImageUrls => {
+            // OpenRouter validates the images against the model that serves the request.
+            let mut state: Vec<Value> = images
+                .iter()
+                .map(|image| json!({ "type": "image_url", "image_url": { "url": data_url(image) } }))
+                .collect();
+            state.push(std::mem::take(&mut request.state));
+            request.state = Value::Array(state);
+        }
+        SystemOneImageInput::Assets => {
+            let mut assets = Map::new();
+            for (index, image) in images.iter().enumerate() {
+                let Some(format) = asset_format(&image.mime_type) else {
+                    anyhow::bail!("{label} accepts PNG and JPEG images for {}, got {}", model.id, image.mime_type);
+                };
+                assets.insert(
+                    format!("<image-{}>", index + 1),
+                    json!({ "type": "image", "format": format, "data_base64": image.data }),
+                );
+            }
+            // Every asset must be referenced from the request. The names go before the state, where
+            // Clef also places its images.
+            let mut state: Vec<Value> = assets.keys().map(|name| Value::String(name.clone())).collect();
+            state.push(std::mem::take(&mut request.state));
+            request.state = Value::Array(state);
+            request.assets = Some(assets);
+        }
+    }
+    Ok(())
+}
+
 /// Map public `bool` questions to TypeSafe's wire-level `noul` type.
 pub fn wire_request(context: &ClassifierContext) -> SystemOneWireRequest {
     let questions = context
@@ -114,7 +227,7 @@ pub fn wire_request(context: &ClassifierContext) -> SystemOneWireRequest {
             (id.clone(), value)
         })
         .collect();
-    SystemOneWireRequest { state: context.state.clone(), questions }
+    SystemOneWireRequest { state: Value::Object(context.state.clone()), questions, assets: None, images: None }
 }
 
 /// Run one System One classification over the given transport. Never fails: errors become
@@ -139,15 +252,32 @@ pub async fn classify_system_one(
         if model.api != transport.api {
             anyhow::bail!("Unsupported classifier API: {}", model.api);
         }
-        if context.images.as_ref().is_some_and(|i| !i.is_empty()) {
-            anyhow::bail!("{} does not support image input", transport.label);
+        let mut request = wire_request(context);
+        let mut image_options = None;
+        if let Some(images) = context.images.as_ref().filter(|i| !i.is_empty()) {
+            if !model.input.contains(&ModelInputModality::Image) {
+                anyhow::bail!("{} does not support image input for {}", transport.label, model.id);
+            }
+            let detected = (transport.detect_compat)(model);
+            let compat = model.compat.as_deref();
+            let image_input = compat.and_then(|c| c.image_input).unwrap_or(detected.image_input);
+            add_images(transport.label, model, image_input, images, &mut request)?;
+            if compat.and_then(|c| c.send_image_opt_in_header).unwrap_or(detected.send_image_opt_in_header) {
+                // `{ ...IMAGE_OPT_IN_HEADERS, ...options.headers }`: caller headers win.
+                let mut headers = ProviderHeaders::new();
+                headers.insert(IMAGE_OPT_IN_HEADER.0.into(), Some(IMAGE_OPT_IN_HEADER.1.into()));
+                for (name, value) in options.headers.iter().flatten() {
+                    headers.insert(name.clone(), value.clone());
+                }
+                image_options = Some(StreamOptions { headers: Some(headers), ..options.clone() });
+            }
         }
         let body = post_classifier_request(
             transport.label,
             &(transport.url)(model),
             model,
-            (transport.payload)(model, &wire_request(context)),
-            options,
+            (transport.payload)(model, &request),
+            image_options.as_ref().unwrap_or(options),
             &[],
         )
         .await?;

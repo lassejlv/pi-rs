@@ -17,8 +17,8 @@ use tokio_util::sync::CancellationToken;
 pub use crate::providers::compat_schema::{
     AnthropicAllowedFallbackModel, AnthropicMessagesCompat, BedrockCompat, ChatTemplateKwargValue,
     MistralConversationsCompat, ModelCompat, OpenAICompletionsCompat, OpenAIResponsesCompat,
-    OpenRouterRouting, ProviderCompat, SessionAffinityFormat, ThinkingTokenBudgetField,
-    VercelGatewayRouting,
+    OpenRouterRouting, ProviderCompat, SessionAffinityFormat, SystemOneCompat, SystemOneImageInput,
+    ThinkingTokenBudgetField, VercelGatewayRouting,
 };
 pub use crate::providers::model_schema::{
     CacheRetention, ModelCost, ModelCostRates, ModelCostTier, ModelImageInputLimits,
@@ -1484,6 +1484,10 @@ pub struct ClassifierModel {
     pub input_limits: Option<ModelInputLimits>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<IndexMap<String, String>>,
+    /// Compatibility overrides for System One APIs. If not set, auto-detected from provider,
+    /// baseUrl, and id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compat: Option<Box<ModelCompat>>,
     /// Always `"classifier"`.
     #[serde(rename = "type")]
     pub model_type: String,

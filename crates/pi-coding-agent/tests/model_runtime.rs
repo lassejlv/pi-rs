@@ -1148,6 +1148,78 @@ async fn lists_jev_separately_and_classifies_with_runtime_resolved_auth() {
     assert_eq!(result.answers["approved"], ClassifierAnswer::Bool { probability: 0.8 });
 }
 
+/// A models.json routing `provider` through a local server standing in for TS's proxy URL.
+async fn classifier_proxy_runtime(
+    provider: &str,
+    compat: Option<Value>,
+) -> (Arc<ModelRuntime>, tempfile::TempDir, mock_http::MockServer) {
+    let server = mock_http::MockServer::start(|_, _| {
+        mock_http::Response::json(200, json!({ "answers": { "approved": { "type": "noul", "noul": 0.8 } } }))
+    })
+    .await;
+    let mut config = json!({ "baseUrl": format!("{}/v1", server.url) });
+    if let Some(compat) = compat {
+        config["compat"] = compat;
+    }
+    let (runtime, dir) =
+        runtime_with_models_json(AuthStorage::in_memory(None), json!({ "providers": { provider: config } })).await;
+    (runtime, dir, server)
+}
+
+/// Classifies one image and returns the request the service received.
+async fn capture_image_request(
+    runtime: &ModelRuntime,
+    server: &mock_http::MockServer,
+    provider: &str,
+    id: &str,
+) -> mock_http::Request {
+    runtime.set_runtime_api_key(provider, "secret", None).await.unwrap();
+    let Some(AnyModel::Classifier(model)) = runtime.get_model_of_type(ModelType::Classifier, provider, id) else {
+        panic!("missing classifier {provider}/{id}");
+    };
+    let mut context = classifier_context();
+    context.images = Some(vec![ImageContent { data: "cG5n".into(), mime_type: "image/png".into() }]);
+    let result = runtime.classify(model, context, None).await;
+    assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{:?}", result.error_message);
+    assert_eq!(server.requests().len(), 1);
+    server.request(0)
+}
+
+#[tokio::test]
+async fn keeps_openrouters_image_form_when_models_json_routes_openrouter_through_a_proxy() {
+    let (runtime, _dir, server) = classifier_proxy_runtime("openrouter", None).await;
+
+    let request = capture_image_request(&runtime, &server, "openrouter", "typesafe/jev-1.14").await;
+
+    // OpenRouter answers TypeSafe `assets` with 200 but drops the images.
+    assert_eq!(request.path, "/v1/systemone");
+    let body = request.json();
+    assert_eq!(
+        body["state"],
+        json!([{ "type": "image_url", "image_url": { "url": "data:image/png;base64,cG5n" } }, classifier_context().state])
+    );
+    assert!(body.get("assets").is_none());
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
+}
+
+#[tokio::test]
+async fn applies_provider_compat_from_models_json_to_classifier_models() {
+    let (runtime, _dir, server) = classifier_proxy_runtime(
+        "typesafe",
+        Some(json!({ "imageInput": "state-image-urls", "sendImageOptInHeader": false })),
+    )
+    .await;
+
+    let request = capture_image_request(&runtime, &server, "typesafe", "jev-latest").await;
+
+    assert_eq!(request.path, "/v1/systemone");
+    assert_eq!(
+        request.json()["state"],
+        json!([{ "type": "image_url", "image_url": { "url": "data:image/png;base64,cG5n" } }, classifier_context().state])
+    );
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
+}
+
 // ---------------------------------------------------------------------------
 // model-runtime-images.test.ts
 // ---------------------------------------------------------------------------
