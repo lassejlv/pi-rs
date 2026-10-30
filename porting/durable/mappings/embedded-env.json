@@ -1,0 +1,578 @@
+{
+ "chunk": "E",
+ "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+ "modules": [
+  {
+   "module": "@earendil-works/pi-durable/env",
+   "glue": "crates/pi-durable-jsrt/js/env/index.js",
+   "reference": "packages/durable/src/env/index.ts",
+   "native": [
+    "pi_durable::env::decode::{RangeDecoder, StreamDecoder}",
+    "pi_durable::env::LineScanner"
+   ],
+   "methods": [
+    "env.rangeDecoder",
+    "env.rangeDecode",
+    "env.streamDecoder",
+    "env.streamDecode",
+    "env.lineScanner",
+    "env.lineScannerPush",
+    "env.lineScannerFinish"
+   ],
+   "glueOnly": [
+    "ok",
+    "err",
+    "getOrThrow",
+    "getOrUndefined",
+    "toError",
+    "startsWithBom"
+   ],
+   "classes": [
+    "FileError",
+    "ExecutionError (pi-durable:bridge)"
+   ],
+   "note": "No Node built-ins and nothing from env/node (storage-runtime-boundary hygiene)."
+  },
+  {
+   "module": "@earendil-works/pi-durable/env/node",
+   "glue": "crates/pi-durable-jsrt/js/env/node.js",
+   "reference": "packages/durable/src/env/node.ts",
+   "native": [
+    "pi_durable::env::NativeFileSystem (NativeExecutionEnv)",
+    "native_shell",
+    "native_watch",
+    "readers"
+   ],
+   "methods": [
+    "fs.*",
+    "reader.*",
+    "watch.close"
+   ],
+   "note": "Text line readers and flushFile open files through the runtime's node:fs/promises and spill streams use node:fs createWriteStream (as upstream), so FileHandle spies and vi.mock(\"node:fs\") reach them; binary readers open natively because pi-jsrt's fs.open has no O_NONBLOCK/O_NOFOLLOW. readTextLines/exists compose this.openTextLineReader/this.fileInfo like upstream. State is held under a module symbol (upstream uses TS private), so Object.create(env) works. No listFiles (upstream NodeExecutionEnv has none at the pin)."
+  },
+  {
+   "module": "pi-durable:internal/env/port",
+   "glue": "crates/pi-durable-jsrt/js/internal/env/port.js",
+   "reference": null,
+   "native": [
+    "crates/pi-durable-jsrt/src/dispatch/env/host.rs JsEnv"
+   ],
+   "methods": [
+    "env.linkSignal",
+    "env.output",
+    "env.watchDeliver"
+   ],
+   "note": "describeEnv(env) + Rust dispatch::env::js_env: any JS ExecutionEnv (subclass, instance override, test double) as a native ExecutionEnv; every call goes to the object's own method with native cancellation mirrored into a JS AbortSignal. Re-hosts examples/support/tool_environment.rs."
+  },
+  {
+   "module": "@earendil-works/pi-durable/tools",
+   "glue": "crates/pi-durable-jsrt/js/tools/index.js",
+   "reference": "packages/durable/src/tools/index.ts",
+   "native": [
+    "pi_durable::tools::{read, write, edit, bash}",
+    "create_*_tool declarations"
+   ],
+   "methods": [
+    "builtin.describe",
+    "builtin.prepareEdit",
+    "builtin.read",
+    "builtin.write",
+    "builtin.edit",
+    "builtin.bash",
+    "builtin.powershell"
+   ],
+   "note": "execute runs natively against the call's api.env (as JsEnv) and api (output/retainedOutput/diagnostic/agent+models, prepare) with the caller's context; createCodingTools inlines defineExtension (identity). Re-hosts examples/support/builtin_bridge.rs."
+  },
+  {
+   "module": "pi-durable:internal/src/durable/tools/{read,write,edit,bash,file-mutation-queue,image,image-processor}",
+   "glue": "crates/pi-durable-jsrt/js/internal/src/durable/tools/",
+   "reference": "packages/durable/src/tools/*.ts",
+   "native": [
+    "pi_durable::tools::file_mutation_queue::with_file_mutation_queue",
+    "pi_durable::tools::image",
+    "pi_durable::tools::image_processor"
+   ],
+   "methods": [
+    "builtin.mutation",
+    "image.detect",
+    "image.dimensions",
+    "image.base64",
+    "image.base64Length"
+   ],
+   "note": "detectSupportedImageMimeTypeOf (reader-based) is used inside native read and not exposed."
+  },
+  {
+   "module": "pi-durable:internal/src/durable/truncate",
+   "glue": "crates/pi-durable-jsrt/js/internal/src/durable/truncate.js",
+   "reference": "packages/durable/src/truncate.ts",
+   "native": [
+    "pi_durable::truncate"
+   ],
+   "methods": [
+    "truncate.formatSize",
+    "truncate.head",
+    "truncate.headOf"
+   ],
+   "note": "utf8ByteLength re-exported from @earendil-works/chord/output; no Buffer needed."
+  },
+  {
+   "module": "@earendil-works/pi-durable/images, /images/node, /images/cloudflare",
+   "glue": "crates/pi-durable-jsrt/js/images/*.js, js/internal/images/native.js",
+   "reference": "packages/durable/src/images/*.ts",
+   "native": [
+    "pi_durable::images::create_native_photon_images",
+    "pi_durable::images::exif"
+   ],
+   "methods": [
+    "image.photon",
+    "image.prepare",
+    "image.prepareInline",
+    "image.exif"
+   ],
+   "note": "createPhotonImages(wasm) accepts and ignores the module (native Photon is always initialized); worker processors prepare off the event loop, inline ones on the JS thread like upstream. Native tools take the native processor directly unless prepare was replaced."
+  },
+  {
+   "module": "@earendil-works/pi-durable/testing",
+   "glue": "crates/pi-durable-jsrt/js/testing/index.js",
+   "reference": "packages/durable/src/testing/index.ts",
+   "native": [
+    "pi_durable::testing::create_env_conformance"
+   ],
+   "methods": [
+    "testing.envCases",
+    "testing.envRun",
+    "testing.envUse",
+    "testing.storageCases",
+    "testing.storageTrace",
+    "testing.benchmarkScales",
+    "testing.benchmarkDefinitions"
+   ],
+   "exports": [
+    "createExpectAssertions",
+    "createEnvConformance",
+    "registerEnvConformance",
+    "registerStorageConformance",
+    "createStorageConformance",
+    "STORAGE_MEMORY_SCALES",
+    "TIMING_SCALE",
+    "storageBenchmarkPrimaryRecordCount",
+    "seedStorageBenchmark",
+    "STORAGE_READ_BENCHMARKS",
+    "seedStorageWriteBenchmark",
+    "STORAGE_WRITE_BENCHMARKS"
+   ],
+   "pending": [],
+   "note": "Env cases are the native case list run through the caller's provider against the JS env (JsEnv). Storage cases replay the pinned per-backend recordings (crates/pi-durable/tests/fixtures/storage*.json, the traces pi_durable::testing replays natively) through the storage's own JS methods, compared with the caller's expect; the recording follows the storage's class (Memory/Jsonl/Sqlite[Native]/IndexedDb), and a storage holding one (ReopeningStorage) replays that backend's -reopen recording. Verified: memory-storage 27/27, sqlite-storage 65/65, sqlite-cloudflare 30/30, jsonl-storage 91/93 with every conformance case passing (2 Pico failures outside the drivers), both modes. Benchmarks: the reference drivers over the storage's own methods; at load their names, order and write counts are checked against pi_durable::testing::storage_{read,write}_benchmarks, and the scales/record count come from the native definitions. Covered by env_embedded::storage_benchmarks_run_on_memory_and_sqlite (every read and write result equals its expected value on MemoryStorage and SQLite)."
+  }
+ ],
+ "tests": [
+  {
+   "reference": "packages/durable/test/env-node.test.ts",
+   "sha256": "27d23c2473c758952a9023e8462c59287952a9f1f03dea06e73cbf6881927cd0",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/env-node.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 52,
+     "failed": 0,
+     "skipped": 1,
+     "total": 53,
+     "uncaught": 0,
+     "nativeCalls": 15269,
+     "nativeMethods": 26
+    },
+    {
+     "retention": "0",
+     "passed": 52,
+     "failed": 0,
+     "skipped": 1,
+     "total": 53,
+     "uncaught": 0,
+     "nativeCalls": 15269,
+     "nativeMethods": 26
+    }
+   ],
+   "skips": [
+    {
+     "name": "NodeExecutionEnv shell settles after the shell exits when a detached descendant retains inherited stdio",
+     "reason": "original platform skip (it.skipIf(process.platform !== \"win32\"))"
+    }
+   ],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/env-node-spill.test.ts",
+   "sha256": "8d28d92e9ee8bf7200cfafff871e50d32909305d855986f8e83c370c16918be0",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/env-node-spill.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 1,
+     "failed": 0,
+     "skipped": 0,
+     "total": 1,
+     "uncaught": 0,
+     "nativeCalls": 7,
+     "nativeMethods": 6
+    },
+    {
+     "retention": "0",
+     "passed": 1,
+     "failed": 0,
+     "skipped": 0,
+     "total": 1,
+     "uncaught": 0,
+     "nativeCalls": 7,
+     "nativeMethods": 6
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/env-node-conformance.test.ts",
+   "sha256": "2647c6f6035768f51b85689faf352431d5a13c75e209a861f1d1354a55370ca1",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/env-node-conformance.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 51,
+     "failed": 0,
+     "skipped": 0,
+     "total": 51,
+     "uncaught": 0,
+     "nativeCalls": 1631,
+     "nativeMethods": 28
+    },
+    {
+     "retention": "0",
+     "passed": 51,
+     "failed": 0,
+     "skipped": 0,
+     "total": 51,
+     "uncaught": 0,
+     "nativeCalls": 1629,
+     "nativeMethods": 28
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/env-line-scan.test.ts",
+   "sha256": "177b8fd52d5392bb4de4a81fe54e49c583a34d3e25a4b7d57b2a31a063fdb5e8",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/env-line-scan.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 4,
+     "failed": 0,
+     "skipped": 0,
+     "total": 4,
+     "uncaught": 0,
+     "nativeCalls": 166587,
+     "nativeMethods": 5
+    },
+    {
+     "retention": "0",
+     "passed": 4,
+     "failed": 0,
+     "skipped": 0,
+     "total": 4,
+     "uncaught": 0,
+     "nativeCalls": 166587,
+     "nativeMethods": 5
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/env-truncate.test.ts",
+   "sha256": "e0b88d0353921059e25b19d70d5596811fab35452c49e611728b7dc75ffcbc2c",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/env-truncate.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 8,
+     "failed": 0,
+     "skipped": 0,
+     "total": 8,
+     "uncaught": 0,
+     "nativeCalls": 21,
+     "nativeMethods": 3
+    },
+    {
+     "retention": "0",
+     "passed": 8,
+     "failed": 0,
+     "skipped": 0,
+     "total": 8,
+     "uncaught": 0,
+     "nativeCalls": 21,
+     "nativeMethods": 3
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/tools.test.ts",
+   "sha256": "1b2bb2277f4465fac766cad7f33aa9fc74fa43f7d6328fb81f3b2d90e1816182",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/tools.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 35,
+     "failed": 0,
+     "skipped": 1,
+     "total": 36,
+     "uncaught": 0,
+     "nativeCalls": 1058,
+     "nativeMethods": 31
+    },
+    {
+     "retention": "0",
+     "passed": 35,
+     "failed": 0,
+     "skipped": 1,
+     "total": 36,
+     "uncaught": 0,
+     "nativeCalls": 1034,
+     "nativeMethods": 31
+    }
+   ],
+   "skips": [
+    {
+     "name": "durable tools powershell runs real PowerShell with UTF-8 output",
+     "reason": "original platform skip (it.runIf(process.platform === \"win32\"))"
+    }
+   ],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/tools-read-differential.test.ts",
+   "sha256": "a91fb33826e74ec2ab561a99ad11f0ba81115bc84c89c02e461d28efa44e9014",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/tools-read-differential.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 2,
+     "failed": 0,
+     "skipped": 0,
+     "total": 2,
+     "uncaught": 0,
+     "nativeCalls": 18687,
+     "nativeMethods": 16
+    },
+    {
+     "retention": "0",
+     "passed": 2,
+     "failed": 0,
+     "skipped": 0,
+     "total": 2,
+     "uncaught": 0,
+     "nativeCalls": 18687,
+     "nativeMethods": 16
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  },
+  {
+   "reference": "packages/durable/test/tools-images.test.ts",
+   "sha256": "5587d0f92d75de10cdfb3fe4b227f51c5238040c34318c20584499c4ad9d6a7c",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/tools-images.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 34,
+     "failed": 0,
+     "skipped": 0,
+     "total": 34,
+     "uncaught": 0,
+     "nativeCalls": 433,
+     "nativeMethods": 24
+    },
+    {
+     "retention": "0",
+     "passed": 34,
+     "failed": 0,
+     "skipped": 0,
+     "total": 34,
+     "uncaught": 0,
+     "nativeCalls": 433,
+     "nativeMethods": 24
+    }
+   ],
+   "skips": [],
+   "debug": "31-32/34 per mode: debug Boa is 3-4x slower; the fixture builders (pixels(4000, 1000), noisyPng(1100, 1100)) miss their original 5 s timeouts",
+   "note": "Every case passes in release in both modes with original timeouts. @silvia-odwyer/photon (used only to build fixtures) is the substituted dependency below; noisyPng(1100, 1100) is close to its 5 s budget under heavy machine load (Boa JS loop)."
+  },
+  {
+   "reference": "packages/durable/test/images-wasm-module.test.ts",
+   "sha256": "53cc856094ba97638f1af4c18c908481a76d517710080666840127443756cd72",
+   "status": "verified",
+   "runner": "cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=packages/durable/test/images-wasm-module.test.ts",
+   "release": [
+    {
+     "retention": null,
+     "passed": 1,
+     "failed": 0,
+     "skipped": 0,
+     "total": 1,
+     "uncaught": 0,
+     "nativeCalls": 8,
+     "nativeMethods": 4
+    },
+    {
+     "retention": "0",
+     "passed": 1,
+     "failed": 0,
+     "skipped": 0,
+     "total": 1,
+     "uncaught": 0,
+     "nativeCalls": 8,
+     "nativeMethods": 4
+    }
+   ],
+   "skips": [],
+   "debug": "same counts as release"
+  }
+ ],
+ "rustTests": [
+  {
+   "target": "cargo test -p pi-durable-jsrt --test env_embedded",
+   "result": "8 passed"
+  },
+  {
+   "target": "cargo test -p pi-jsrt --test boa_patches",
+   "result": "14 passed (2 new)"
+  }
+ ],
+ "otherChanges": [
+  {
+   "file": "crates/pi-durable/src/env/{filesystem,shell}.rs",
+   "change": "additive FileErrorCode/ExecutionErrorCode::{ALL, as_str, from_name}; examples/env_stock_bridge.rs and dispatch/env.rs both use them (stock env gate re-run: all/spill/conformance pass both modes)"
+  },
+  {
+   "file": "crates/pi-durable-jsrt/examples/embedded_stock.rs",
+   "change": "node mode: the runner is the tests' process.execPath, so `process.execPath -e/--import/script` children run in pi-jsrt with the embedded modules and the same source routing (PI_DURABLE_EMBEDDED_REFERENCE)"
+  },
+  {
+   "file": "crates/pi-jsrt/src/node.rs",
+   "change": "run_with(args, configure, setup) for embedders; --import/--require preloads; --input-type=module for -e"
+  },
+  {
+   "file": "crates/pi-jsrt/js/node/fs.js",
+   "change": "createWriteStream honors highWaterMark (env-node-spill backpressure)"
+  },
+  {
+   "file": "crates/pi-jsrt/src/ops/wasm.rs",
+   "change": "detach grown WebAssembly.Memory buffers when the growing wasm call returns or calls into JS (V8 behavior; wasm-bindgen's cached views, Photon fixtures)"
+  },
+  {
+   "file": "vendor/boa_engine/src/builtins/typed_array/{builtin,object}.rs",
+   "change": "%TypedArray%.prototype.set fast path for dense number arrays; typed-array string keys that cannot be canonical numeric strings skip ToNumber/ToString. PATCH.md entries; regression tests in crates/pi-jsrt/tests/boa_patches.rs. Microbench (release, 4M calls): shared-array set 2843 -> ~1150 ms, literal-array set 4953 -> ~1900-2900 ms."
+  },
+  {
+   "file": "crates/pi-durable-jsrt/examples/embedded_stock.rs",
+   "change": "photon substitute alias (see substitutedDependencies)"
+  }
+ ],
+ "substitutedDependencies": [
+  {
+   "package": "@silvia-odwyer/photon@0.3.3",
+   "entry": "node_modules/@silvia-odwyer/photon/photon_rs.js",
+   "servedBy": "pi-durable:internal/photon (crates/pi-durable-jsrt/js/internal/photon.js) over photon-rs 0.3.3 natively (src/dispatch/images.rs photon.*)",
+   "scope": "embedded_stock runner and its node-mode children only (absolute-path alias in examples/embedded_stock.rs)",
+   "surface": [
+    "initSync",
+    "default (async init)",
+    "PhotonImage(rawPixels, width, height)",
+    "PhotonImage.new_from_byteslice",
+    "get_width",
+    "get_height",
+    "get_raw_pixels",
+    "get_bytes",
+    "get_bytes_jpeg",
+    "free"
+   ],
+   "reason": "The package is photon-rs 0.3.3 compiled to WebAssembly; pi-jsrt runs WebAssembly on the wasmi interpreter, where the tests' fixture encoders (4000x1000 PNG: 3.6-6 s) exceed their original timeouts. Same Rust source, same version; durable code never imports it (its images are native already). photon_rs_bg.wasm stays in place for images-wasm-module.test.ts, which compiles it."
+  }
+ ],
+ "storageConformanceTests": [
+  {
+   "reference": "packages/durable/test/memory-storage.test.ts",
+   "owner": "embedded-c (storage); conformance drivers: chunk E",
+   "release": [
+    {
+     "retention": null,
+     "passed": 27,
+     "total": 27
+    },
+    {
+     "retention": "0",
+     "passed": 27,
+     "total": 27
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/sqlite-storage.test.ts",
+   "owner": "embedded-c (storage); conformance drivers: chunk E",
+   "release": [
+    {
+     "retention": null,
+     "passed": 65,
+     "total": 65
+    },
+    {
+     "retention": "0",
+     "passed": 65,
+     "total": 65
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/sqlite-cloudflare.test.ts",
+   "owner": "embedded-c (storage); conformance drivers: chunk E",
+   "release": [
+    {
+     "retention": null,
+     "passed": 30,
+     "total": 30
+    },
+    {
+     "retention": "0",
+     "passed": 30,
+     "total": 30
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/jsonl-storage.test.ts",
+   "owner": "embedded-c (storage); conformance drivers: chunk E",
+   "release": [
+    {
+     "retention": null,
+     "passed": 93,
+     "total": 93
+    },
+    {
+     "retention": "0",
+     "passed": 93,
+     "total": 93
+    }
+   ]
+  }
+ ]
+}

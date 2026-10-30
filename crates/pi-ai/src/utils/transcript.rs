@@ -20,6 +20,7 @@ pub fn create_initial_system_message(system_prompt: Option<&str>, tools: Option<
         timestamp: 0,
         // `{ role, content, toolsAdded?, timestamp }`
         timestamp_last: true,
+        ..Default::default()
     })
 }
 
@@ -85,15 +86,17 @@ fn current_tools_of<'a>(messages: impl Iterator<Item = &'a SystemMessage>) -> Ve
 /// Replay every system message into one leading system message holding the current prompt and tools.
 pub fn get_current_system_message(messages: &[Message]) -> Option<SystemMessage> {
     let mut content: Vec<String> = Vec::new();
-    let mut sections: IndexMap<String, String> = IndexMap::new();
+    let mut content_removed = false;
+    let mut sections: IndexMap<String, (String, bool)> = IndexMap::new();
     let mut timestamp: Option<i64> = None;
     for message in system_messages(messages) {
         if timestamp.is_none() {
             timestamp = Some(message.timestamp);
         }
         let text = system_content_text(&message.content);
-        if !text.is_empty() {
+        if !message.content_is_empty() {
             content.push(text);
+            content_removed |= message.content_lone_surrogates_removed();
         }
         if let Some(message_sections) = &message.sections {
             for (name, value) in message_sections {
@@ -102,12 +105,14 @@ pub fn get_current_system_message(messages: &[Message]) -> Option<SystemMessage>
                         sections.shift_remove(name);
                     }
                     Some(value) => {
-                        sections.insert(name.clone(), value.clone());
+                        let removed = message.section_lone_surrogates_removed(name);
+                        sections.insert(name.clone(), (value.clone(), removed));
                     }
                 }
             }
         }
     }
+    let sections_removed = sections.iter().filter(|(_, (_, removed))| *removed).map(|(name, _)| name.clone()).collect();
     let tools = get_current_tools(messages);
     if timestamp.is_none() && tools.is_empty() {
         return None;
@@ -117,13 +122,15 @@ pub fn get_current_system_message(messages: &[Message]) -> Option<SystemMessage>
         sections: if sections.is_empty() {
             None
         } else {
-            Some(sections.into_iter().map(|(k, v)| (k, Some(v))).collect())
+            Some(sections.into_iter().map(|(k, (v, _))| (k, Some(v))).collect())
         },
         tools_added: if tools.is_empty() { None } else { Some(tools) },
         tools_removed: None,
         timestamp: timestamp.unwrap_or(0),
         // `{ role, content, sections?, toolsAdded?, timestamp }`
         timestamp_last: true,
+        content_lone_surrogates_removed: content_removed,
+        sections_lone_surrogates_removed: sections_removed,
     })
 }
 

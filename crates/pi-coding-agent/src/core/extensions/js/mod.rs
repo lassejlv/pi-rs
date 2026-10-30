@@ -527,6 +527,9 @@ impl JsExtensionHost {
                 }
             })
             .await?;
+            // `@earendil-works/pi-durable[/…]` and `@earendil-works/chord[/…]`: the embedded packages
+            // over native pi-durable/pi-chord (crates/pi-durable-jsrt; js/EXPORTS.md).
+            pi_durable_jsrt::install(&rt2, pi_durable_jsrt::HostOptions::default()).await?;
             let glue = rt2.import(BRIDGE_SPECIFIER).await?;
             Ok::<JsHandle, pi_jsrt::Error>(glue)
         };
@@ -575,7 +578,22 @@ impl JsExtensionHost {
         let weak = Arc::downgrade(&bridge);
         let unregister = pi_ai::session_resources::register_session_resource_cleanup(Arc::new(move |session_id| {
             if let Some(bridge) = weak.upgrade() {
-                bridge.glue_call_blocking("cleanupJsSessionResources", vec![serde_json::json!(session_id)])?;
+                let args = vec![serde_json::json!(session_id)];
+                // pi-ai's cleanup registry is process-wide, so disposing a session runs this for
+                // every extension runtime. A session disposed from another runtime's host call runs
+                // it on that runtime's JS thread; blocking that thread on this runtime deadlocks
+                // when this runtime's JS thread is doing the same towards it (two hosts disposing
+                // at once), so from another runtime's JS thread the cleanup is queued here and
+                // runs in order with this runtime's other work. On this runtime's own JS thread,
+                // or off any JS thread, it runs before teardown continues, as in pi.
+                if !bridge.rt.is_js_thread() && pi_jsrt::ctx::with_current(|_| ()).is_some() {
+                    let glue = bridge.glue.clone();
+                    bridge.rt.tokio().spawn(async move {
+                        let _ = glue.call_method("cleanupJsSessionResources", args).await;
+                    });
+                } else {
+                    bridge.glue_call_blocking("cleanupJsSessionResources", args)?;
+                }
             }
             Ok(())
         }));

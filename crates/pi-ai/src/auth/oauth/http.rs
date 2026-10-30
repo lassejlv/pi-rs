@@ -193,7 +193,7 @@ pub fn current_oauth_fetch() -> OAuthFetch {
 /// The reqwest-backed transport (honors the proxy environment).
 pub fn default_oauth_fetch() -> OAuthFetch {
     Arc::new(|request: OAuthHttpRequest| {
-        Box::pin(async move {
+        crate::utils::wasm::boxed(async move {
             let client = client_for(&request.url, None)?;
             let method = reqwest::Method::from_bytes(request.method.as_bytes())?;
             let mut builder = client.request(method, &request.url);
@@ -249,7 +249,7 @@ pub async fn send(
     let request_future = fetch(request);
     let timeout = async {
         match timeout_ms {
-            Some(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
+            Some(ms) => crate::utils::wasm::sleep(Duration::from_millis(ms)).await,
             None => std::future::pending::<()>().await,
         }
     };

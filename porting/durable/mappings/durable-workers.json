@@ -1,0 +1,190 @@
+{
+  "files": [
+    {
+      "reference": "packages/durable/test-workers/worker.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/worker/mod.rs",
+        "crates/pi-durable/src/worker/session.rs",
+        "crates/pi-durable/src/worker/js.rs",
+        "crates/pi-durable/tests/worker_wake.rs",
+        "crates/pi-durable/tests/workerd/worker/src/wake.rs"
+      ],
+      "exports": [
+        {
+          "name": "HEARTBEAT_MS",
+          "rust": "pi_durable::worker::HEARTBEAT_MS",
+          "note": ""
+        },
+        {
+          "name": "TestSession.arm",
+          "rust": "pi_durable::worker::{alarm_at, arm}",
+          "note": "Pure alarm computation plus the AlarmHost write; unit tested."
+        },
+        {
+          "name": "TestSession constructor (fallback alarm, offset, open, arm, resume)",
+          "rust": "pi_durable::worker::WakeSession::open",
+          "note": "Also installs the Workers timer policy and the on_wake -> alarm bridge; a failed alarm write calls DurableObjectHost::abort."
+        },
+        {
+          "name": "TestSession.alarm / advance / now / wakes / submit's pre-arm",
+          "rust": "pi_durable::worker::WakeSession::{alarm, advance, now, wakes, arm_active}",
+          "note": ""
+        },
+        {
+          "name": "ctx.storage alarm + kv",
+          "rust": "pi_durable::worker::{AlarmHost, KvHost, DurableObjectHost}",
+          "note": "JS implementation: worker::js::JsStorage (wasm32 + cloudflare feature)."
+        },
+        {
+          "name": "Reminder task, scripted faux model, root(), remind()",
+          "rust": "crates/pi-durable/tests/worker_wake.rs",
+          "note": "Test fixtures; the faux script lives in the host kv like upstream."
+        },
+        {
+          "name": "default export fetch handler",
+          "rust": null,
+          "note": "JS-only test worker entry; an application defines its own Worker and Durable Object class."
+        }
+      ],
+      "note": "The Durable Object is the JS class WakeSession (tests/workerd/worker.mjs, lifecycle only) over the Rust WakeCore (worker/src/wake.rs) built on pi_durable::worker::WakeSession; TestSession's constructor flow, arm/alarm, script, submit, remind and clock offset all run in workerd. workers-rs still generates no class for applications, so the library exposes the hosting pieces."
+    },
+    {
+      "reference": "packages/durable/test-workers/wake.test.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/worker_wake.rs",
+        "crates/pi-durable/tests/workerd/wake.test.ts",
+        "crates/pi-durable/tests/workerd/worker/src/wake.rs"
+      ],
+      "exports": [
+        {
+          "name": "sleeps through an eviction and resumes the task from its alarm",
+          "rust": "sleeps_through_an_eviction_and_resumes_the_task_from_its_alarm",
+          "note": "Eviction = drop the session and open a new one on the same SQL/alarm/kv hosts. After re-open the wake check polls, because task recovery settles asynchronously."
+        },
+        {
+          "name": "recovers a turn an eviction cut off mid-stream through the heartbeat alarm",
+          "rust": "recovers_a_turn_an_eviction_cut_off_mid_stream_through_the_heartbeat_alarm",
+          "note": "The cut-off closes the Harness before dropping it."
+        },
+        {
+          "name": "can evict an object whose Harness keeps idle documents and contexts in memory",
+          "rust": "can_evict_an_object_whose_harness_keeps_idle_documents_and_contexts_in_memory",
+          "note": "Asserts worker::workers_timer declines background timers (the nativeTimer check) and the Harness closes within 2s."
+        }
+      ],
+      "note": "Runs in real workerd against the Rust Durable Object (crates/pi-durable/tests/workerd/run.sh): the three upstream scenarios (sleep through an eviction and resume from the alarm; recover a mid-stream turn through the heartbeat alarm; evict an object with idle documents) pass with cloudflare:test eviction and alarms, 3/3. Also ported host-side in tests/worker_wake.rs against the SQLite shim."
+    },
+    {
+      "reference": "packages/durable/test-workers/storage.test.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/worker_wake.rs",
+        "crates/pi-durable/tests/workerd/storage.test.ts",
+        "crates/pi-durable/tests/workerd/worker/src/lib.rs"
+      ],
+      "exports": [
+        {
+          "name": "registerStorageConformance on Durable Object SQLite",
+          "rust": "sqlite_storage_on_durable_object_sqlite_passes_the_storage_conformance_suite",
+          "note": "26 cases through DurableObjectSqliteStorage with per-case table prefixes."
+        },
+        {
+          "name": "migrates a version 1 schema to admit sleeping tasks",
+          "rust": "migrates_a_version_1_schema_to_admit_sleeping_tasks_keeping_tasks_and_indexes",
+          "note": "Version column compares as a number: the Cloudflare SQL shim reports integers as Real."
+        }
+      ],
+      "note": "Also runs in real workerd against the Rust Durable Object (crates/pi-durable/tests/workerd/run.sh: 26 storage conformance cases + migration scenario, plus 3 alarm-host tests; 30/30 pass, clean link). "
+    },
+    {
+      "reference": "packages/durable/test-workers/vitest.config.ts",
+      "status": "verified",
+      "rust": null,
+      "exports": [],
+      "note": "JS-only: vitest/workerd runner configuration and module aliases. Rust tests are plain cargo tests."
+    },
+    {
+      "reference": "packages/durable/test-workers/cloudflare.d.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-chord/src/sqlite/cloudflare.rs",
+        "crates/pi-durable/src/worker/mod.rs",
+        "crates/pi-durable/src/worker/session.rs"
+      ],
+      "exports": [
+        {
+          "name": "DurableObjectStorage (sql, getAlarm/setAlarm/deleteAlarm, kv)",
+          "rust": "DurableObjectSqliteHost, AlarmHost, KvHost",
+          "note": ""
+        },
+        {
+          "name": "DurableObjectState.abort",
+          "rust": "DurableObjectHost::abort",
+          "note": ""
+        },
+        {
+          "name": "cloudflare:test runInDurableObject / runDurableObjectAlarm / evictDurableObject",
+          "rust": null,
+          "note": "JS-only workerd test helpers; emulated by ObjectState::{start, run_alarm} in the Rust test."
+        }
+      ],
+      "note": "Type declarations only."
+    },
+    {
+      "reference": "packages/durable/src/images/cloudflare.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/images/cloudflare.rs"
+      ],
+      "exports": [
+        {
+          "name": "createCloudflarePhotonImages",
+          "rust": "pi_durable::images::create_cloudflare_photon_images",
+          "note": "Photon is Rust compiled into the Worker, so there is no CompiledWasm module to import; the processor runs inline without a worker thread."
+        }
+      ],
+      "note": "On wasm32 the Photon decode path (photon_rs::native) would need the crate's wasm build; see the blockers in the report."
+    },
+    {
+      "reference": "packages/durable/src/images/photon-wasm.d.ts",
+      "status": "verified",
+      "rust": null,
+      "exports": [],
+      "note": "JS-only: types for the Wrangler CompiledWasm import. Not needed natively."
+    },
+    {
+      "reference": "packages/durable/test/images-wasm-module.test.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/worker_wake.rs"
+      ],
+      "exports": [
+        {
+          "name": "createPhotonImages takes a compiled WebAssembly module",
+          "rust": "the_cloudflare_photon_processor_decodes_without_a_module_or_a_thread",
+          "note": "The 1x1 GIF is returned as-is only once it decodes; there is no module to pass."
+        }
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/src/storage/sqlite/cloudflare.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-chord/src/sqlite/cloudflare.rs",
+        "crates/pi-durable/src/storage/sqlite/mod.rs",
+        "crates/pi-durable/src/storage/sqlite/cloudflare_js.rs"
+      ],
+      "exports": [
+        {
+          "name": "openDurableObjectSqliteStorage",
+          "rust": "storage::sqlite::open_durable_object_sqlite_storage (host) / open_js_durable_object_sqlite_storage (Worker)",
+          "note": "The JS-backed host is checked on wasm32 only through a stub harness, not yet in workerd."
+        }
+      ],
+      "note": "cloudflare_js.rs implements DurableObjectSqliteHost over ctx.storage.sql.exec and ctx.storage.transaction through wasm-bindgen, with rollback failures reported separately from the callback error."
+    }
+  ]
+}

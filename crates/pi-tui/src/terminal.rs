@@ -683,7 +683,9 @@ mod process {
                 }
                 self.forward(forward);
 
-                if fds[0].revents & (libc::POLLIN | libc::POLLHUP | libc::POLLERR) != 0 {
+                // POLLNVAL: macOS poll() rejects device files such as /dev/null; read() then reports EOF
+                // instead of the loop spinning on an instantly-ready descriptor.
+                if fds[0].revents & (libc::POLLIN | libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 {
                     let n = unsafe { libc::read(libc::STDIN_FILENO, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) };
                     if n == 0 {
                         // EOF: stop polling stdin.

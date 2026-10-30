@@ -370,7 +370,7 @@ fn fetch_access_token<'a>(
     scope: &'a str,
     client: &'a reqwest::Client,
 ) -> futures::future::BoxFuture<'a, anyhow::Result<(String, Option<i64>)>> {
-    Box::pin(async move {
+    crate::utils::wasm::boxed(async move {
         match credentials {
             GoogleCredentials::ServiceAccount { client_email, private_key, private_key_id, universe_domain, .. } => {
                 if universe_domain != DEFAULT_UNIVERSE {

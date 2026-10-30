@@ -18,7 +18,7 @@ impl AuthContext for DefaultAuthContext {
 
     async fn file_exists(&self, path: &str) -> bool {
         let resolved = expand_home(path);
-        tokio::fs::metadata(resolved).await.is_ok()
+        crate::utils::wasm::fs::metadata(resolved).await.is_ok()
     }
 }
 

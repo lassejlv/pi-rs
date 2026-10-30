@@ -57,7 +57,7 @@ use crate::types::{CodemodeCallTarget, CodemodeDuring, CodemodeOutputItem};
 
 /// Bumped whenever this module or the prelude changes what a deterministic script observes,
 /// beyond what the fingerprint's other parts (engine version, prelude hash, limits) already capture.
-const DETERMINISTIC_VERSION: u32 = 1;
+const DETERMINISTIC_VERSION: u32 = 5;
 
 /// The engine named in the fingerprint.
 const ENGINE: &str = "boa 0.22";
@@ -69,7 +69,7 @@ const JOBS_PER_POLL: u64 = 50;
 /// (`eval`, `Function`). Exceeding it ends the script with `kind: "timeout"`.
 pub const DEFAULT_LOOP_ITERATION_LIMIT: u64 = 100_000_000;
 
-/// Maximum JS call depth. Deep recursion past it ends the script with an uncatchable `RangeError`.
+/// Maximum JS call depth. Deep recursion past it throws a `RangeError` the script can catch, as in QuickJS.
 pub const DEFAULT_RECURSION_LIMIT: usize = 4096;
 
 /// Native stack of a VM thread. Large, because native built-ins that call back into JS (for
@@ -149,32 +149,27 @@ pub fn spawn_vm(options: StartVmOptions) -> std::io::Result<VmHandle> {
     let (tx, rx) = mpsc::channel();
     let interrupt = Arc::new(AtomicBool::new(false));
     let thread_interrupt = interrupt.clone();
-    std::thread::Builder::new()
-        .name("pi-codemode-vm".to_string())
-        .stack_size(VM_THREAD_STACK_SIZE)
-        .spawn(move || {
-            let StartVmOptions { data, limits, post, on_exit } = options;
-            struct ExitGuard(Option<Box<dyn FnOnce() + Send>>);
-            impl Drop for ExitGuard {
-                fn drop(&mut self) {
-                    if let Some(on_exit) = self.0.take() {
-                        on_exit();
-                    }
+    std::thread::Builder::new().name("pi-codemode-vm".to_string()).stack_size(VM_THREAD_STACK_SIZE).spawn(move || {
+        let StartVmOptions { data, limits, post, on_exit } = options;
+        struct ExitGuard(Option<Box<dyn FnOnce() + Send>>);
+        impl Drop for ExitGuard {
+            fn drop(&mut self) {
+                if let Some(on_exit) = self.0.take() {
+                    on_exit();
                 }
             }
-            let _guard = ExitGuard(on_exit);
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                vm_main(data, limits, post.clone(), rx, thread_interrupt)
-            }));
-            if let Err(panic) = result {
-                let message = panic
-                    .downcast_ref::<String>()
-                    .cloned()
-                    .or_else(|| panic.downcast_ref::<&str>().map(|s| s.to_string()))
-                    .unwrap_or_else(|| "unknown panic".to_string());
-                post(VmReport::Message(WorkerToHostMessage::Crash { message: format!("VM panicked: {message}") }));
-            }
-        })?;
+        }
+        let _guard = ExitGuard(on_exit);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| vm_main(data, limits, post.clone(), rx, thread_interrupt)));
+        if let Err(panic) = result {
+            let message = panic
+                .downcast_ref::<String>()
+                .cloned()
+                .or_else(|| panic.downcast_ref::<&str>().map(|s| s.to_string()))
+                .unwrap_or_else(|| "unknown panic".to_string());
+            post(VmReport::Message(WorkerToHostMessage::Crash { message: format!("VM panicked: {message}") }));
+        }
+    })?;
     Ok(VmHandle { tx, interrupt })
 }
 
@@ -192,7 +187,7 @@ fn vm_main(
             return;
         }
     };
-    vm.start(&data.code);
+    vm.start(&data);
     while let Ok(command) = rx.recv() {
         if interrupt.load(Ordering::SeqCst) {
             break;
@@ -277,27 +272,44 @@ impl Clock for VmClock {
     fn system_time_millis(&self) -> i64 {
         match &self.virtual_clock {
             Some(clock) => clock.now.get().round() as i64,
-            None => std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as i64)
-                .unwrap_or(0),
+            None => std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0),
         }
     }
 }
 
 struct VmHooks {
     utc: bool,
+    /// The host timezone the execution names; `None`: this thread's own.
+    timezone: Option<jiff::tz::TimeZone>,
     max_buffer_size: u64,
 }
 
 impl HostHooks for VmHooks {
     fn local_timezone_offset_seconds(&self, unix_time_seconds: i64) -> i32 {
-        if self.utc { 0 } else { local_offset_seconds(unix_time_seconds) }
+        if self.utc {
+            return 0;
+        }
+        match (&self.timezone, jiff::Timestamp::from_second(unix_time_seconds)) {
+            (Some(timezone), Ok(at)) => timezone.to_offset(at).seconds(),
+            _ => local_offset_seconds(unix_time_seconds),
+        }
     }
 
     fn max_buffer_size(&self, _context: &mut Context) -> u64 {
         self.max_buffer_size
     }
+}
+
+/// A `TZ` value as a timezone, as the C library reads it: an IANA name (an optional leading `:`)
+/// or a POSIX rule; anything else, including the empty string, is UTC.
+pub fn timezone_named(tz: &str) -> jiff::tz::TimeZone {
+    let name = tz.strip_prefix(':').unwrap_or(tz);
+    if name.is_empty() {
+        return jiff::tz::TimeZone::UTC;
+    }
+    jiff::tz::TimeZone::get(name)
+        .or_else(|_| jiff::tz::TimeZone::posix(name))
+        .unwrap_or(jiff::tz::TimeZone::UTC)
 }
 
 /// The host's UTC offset at `unix_time_seconds`, honoring `TZ`.
@@ -319,25 +331,33 @@ fn local_offset_seconds(_unix_time_seconds: i64) -> i32 {
     0
 }
 
-/// mulberry32: a small, fast PRNG; one 32-bit draw per call.
+/// QuickJS's `Math.random()`: xorshift64*, its state the first realtime clock reading in
+/// microseconds, which upstream's deterministic VM makes `seed + 1` (so seed 0 does not become
+/// seed 1's zero-state fix-up). QuickJS draws once while the context is created, so the script's
+/// first value is the second draw. Same values as upstream for every seed.
 struct Prng {
-    state: Cell<u32>,
+    state: Cell<u64>,
 }
 
 impl Prng {
-    fn next(&self) -> u32 {
-        let state = self.state.get().wrapping_add(0x6d2b_79f5);
-        self.state.set(state);
-        let mut value = (state ^ (state >> 15)).wrapping_mul(1 | state);
-        value = (value.wrapping_add((value ^ (value >> 7)).wrapping_mul(61 | value))) ^ value;
-        value ^ (value >> 14)
+    fn new(seed: u32) -> Self {
+        let prng = Prng { state: Cell::new(u64::from(seed) + 1) };
+        prng.next_f64();
+        prng
     }
 
-    /// A double in [0, 1) from 53 random bits.
+    fn next(&self) -> u64 {
+        let mut x = self.state.get();
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        self.state.set(x);
+        x.wrapping_mul(0x2545_f491_4f6c_dd1d)
+    }
+
+    /// A double in [0, 1): 52 random mantissa bits in [1, 2), minus one.
     fn next_f64(&self) -> f64 {
-        let high = u64::from(self.next() >> 5);
-        let low = u64::from(self.next() >> 6);
-        ((high << 26) | low) as f64 / (1u64 << 53) as f64
+        f64::from_bits((0x3ff << 52) | (self.next() >> 12)) - 1.0
     }
 }
 
@@ -350,6 +370,7 @@ struct BridgeState {
     /// The result being processed, 0 during the script's first run; reported with `done`.
     current: Cell<u64>,
     deterministic: bool,
+    lossless_json: bool,
     /// A terminal message was reported; the next bridge call ends the script.
     settled: Cell<bool>,
     /// Loop iterations and promise jobs so far, and the budget for them.
@@ -430,15 +451,21 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
         "call" | "global" => {
             st.issued.set(st.issued.get() + 1);
             let id = args.get(1).and_then(JsValue::as_number).unwrap_or(0.0) as u64;
-            st.send(WorkerToHostMessage::Call {
-                id,
-                target: if kind == "call" { CodemodeCallTarget::Tool } else { CodemodeCallTarget::Global },
-                name: string_arg(args, 2).unwrap_or_default(),
-                args: string_arg(args, 3),
-            });
+            let target = if kind == "call" { CodemodeCallTarget::Tool } else { CodemodeCallTarget::Global };
+            if st.lossless_json {
+                let name = args.get(2).and_then(JsValue::as_string).map(|s| s.to_vec()).unwrap_or_default();
+                st.send(WorkerToHostMessage::CallUtf16 { id, target, name, args: string_arg(args, 3) });
+            } else {
+                st.send(WorkerToHostMessage::Call { id, target, name: string_arg(args, 2).unwrap_or_default(), args: string_arg(args, 3) });
+            }
         }
         "output" => {
             let what = string_arg(args, 1).unwrap_or_default();
+            if st.lossless_json {
+                let units = |index: usize| args.get(index).and_then(JsValue::as_string).map(|s| s.to_vec()).unwrap_or_default();
+                st.send(WorkerToHostMessage::OutputUtf16 { kind: what, data: units(2), mime_type: units(3) });
+                return Ok(JsValue::undefined());
+            }
             let data = string_arg(args, 2).unwrap_or_default();
             let item = match what.as_str() {
                 "image" => CodemodeOutputItem::Image { data, mime_type: string_arg(args, 3).unwrap_or_default() },
@@ -450,8 +477,7 @@ fn bridge(_this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<
         "done" => {
             // The host stops the VM on `done`, so the `idle` of this drain never arrives: report its
             // numbers here.
-            let during =
-                st.deterministic.then(|| CodemodeDuring { seq: st.current.get(), issued: st.issued.get() });
+            let during = st.deterministic.then(|| CodemodeDuring { seq: st.current.get(), issued: st.issued.get() });
             let ok = args.get(1).is_some_and(JsValue::to_boolean);
             let mut done = if ok {
                 DoneMessage::success(string_arg(args, 2), string_arg(args, 3).unwrap_or_default())
@@ -491,11 +517,7 @@ fn math_random(_this: &JsValue, _args: &[JsValue], context: &mut Context) -> JsR
 
 fn function(context: &mut Context, name: &str, length: usize, f: boa_engine::native_function::NativeFunctionPointer) -> JsObject {
     let realm = context.realm().clone();
-    FunctionObjectBuilder::new(&realm, NativeFunction::from_fn_ptr(f))
-        .name(JsString::from(name))
-        .length(length)
-        .build()
-        .into()
+    FunctionObjectBuilder::new(&realm, NativeFunction::from_fn_ptr(f)).name(JsString::from(name)).length(length).build().into()
 }
 
 fn js_string_value(text: &str) -> JsValue {
@@ -539,15 +561,14 @@ impl Vm {
         interrupt: Arc<AtomicBool>,
     ) -> Result<Vm, String> {
         let deterministic = data.deterministic;
-        let virtual_clock = deterministic.map(|d| {
-            Rc::new(VirtualClock { started_at: d.started_at, now: Cell::new(d.started_at) })
-        });
+        let virtual_clock = deterministic.map(|d| Rc::new(VirtualClock { started_at: d.started_at, now: Cell::new(d.started_at) }));
         let started = Instant::now();
         let executor = Rc::new(Executor::default());
         let mut context = Context::builder()
             .job_executor(executor.clone())
             .host_hooks(Rc::new(VmHooks {
                 utc: deterministic.is_some(),
+                timezone: data.timezone.as_deref().map(timezone_named),
                 max_buffer_size: data.memory_limit_bytes.unwrap_or(1_610_612_736),
             }))
             .clock(Rc::new(VmClock { virtual_clock: virtual_clock.clone(), started }))
@@ -566,13 +587,14 @@ impl Vm {
             issued: Cell::new(0),
             current: Cell::new(0),
             deterministic: deterministic.is_some(),
+            lossless_json: data.lossless_json,
             settled: Cell::new(false),
             ticks: Cell::new(0),
             budget: limits.interrupt_budget,
             stopped: Cell::new(None),
             virtual_clock: virtual_clock.clone(),
             started,
-            prng: deterministic.map(|d| Prng { state: Cell::new(d.seed ^ 0x9e37_79b9) }),
+            prng: deterministic.map(|d| Prng::new(d.seed)),
         });
 
         let setup = |context: &mut Context| -> JsResult<JsObject> {
@@ -585,11 +607,7 @@ impl Vm {
             let tick = function(context, "tick", 0, tick);
             global.define_property_or_throw(
                 JsString::from(super::instrument::TICK),
-                boa_engine::property::PropertyDescriptor::builder()
-                    .value(tick)
-                    .writable(false)
-                    .enumerable(false)
-                    .configurable(false),
+                boa_engine::property::PropertyDescriptor::builder().value(tick).writable(false).enumerable(false).configurable(false),
                 context,
             )?;
             if deterministic.is_some() {
@@ -603,13 +621,12 @@ impl Vm {
                 }
             }
             let prelude = context.eval(Source::from_bytes(PRELUDE_SOURCE.as_bytes()).with_path(Path::new("codemode-prelude.js")))?;
-            let prelude = prelude
-                .as_callable()
-                .ok_or_else(|| boa_engine::JsNativeError::typ().with_message("prelude is not a function"))?;
+            let prelude =
+                prelude.as_callable().ok_or_else(|| boa_engine::JsNativeError::typ().with_message("prelude is not a function"))?;
             let bridge = function(context, "bridge", 4, bridge);
             let tools = serde_json::to_string(&data.tools).unwrap_or_else(|_| "[]".into());
             let globals = serde_json::to_string(&data.globals).unwrap_or_else(|_| "[]".into());
-            let store = serde_json::to_string(&data.store).unwrap_or_else(|_| "{}".into());
+            let store = data.store_json.clone().unwrap_or_else(|| serde_json::to_string(&data.store).unwrap_or_else(|_| "{}".into()));
             let api = prelude.call(
                 &JsValue::undefined(),
                 &[bridge.into(), js_string_value(&tools), js_string_value(&globals), js_string_value(&store)],
@@ -633,11 +650,12 @@ impl Vm {
         let abandon = member("abandon", &mut context)?;
         let fingerprint = deterministic.map(|_| {
             format!(
-                "{ENGINE}, prelude {}, deterministic {DETERMINISTIC_VERSION}, stack {}, heap {}, budget {}",
+                "{ENGINE}, prelude {}, deterministic {DETERMINISTIC_VERSION}, stack {}, heap {}, budget {}{}",
                 *PRELUDE_HASH,
                 limits.recursion_limit,
                 data.memory_limit_bytes.map_or_else(|| "none".to_string(), |bytes| bytes.to_string()),
                 limits.interrupt_budget.map_or_else(|| "none".to_string(), |budget| budget.to_string()),
+                if data.lossless_json { ", UTF16 JSON 3" } else { "" },
             )
         });
         Ok(Vm {
@@ -666,15 +684,22 @@ impl Vm {
     }
 
     /// Evaluate the script and run it until it waits.
-    fn start(&mut self, code: &str) {
+    fn start(&mut self, data: &VmStartData) {
         if let Some(fingerprint) = self.fingerprint.clone() {
             self.send(WorkerToHostMessage::Started { fingerprint });
         }
         // The prefix shares the first line with the script so reported line numbers match the
         // script as written.
-        let wrapper = format!("(async (tools, console) => {{{code}\n}})");
-        let wrapper = super::instrument::instrument_loops(&wrapper).unwrap_or(wrapper);
-        let function = match self.context.eval(Source::from_bytes(wrapper.as_bytes()).with_path(Path::new("codemode.js"))) {
+        let wrapper = if let Some(code) = &data.code_utf16 {
+            let mut wrapper: Vec<u16> = "(async (tools, console) => {".encode_utf16().collect();
+            wrapper.extend_from_slice(code);
+            wrapper.extend("\n})".encode_utf16());
+            super::instrument::instrument_loops_utf16(&wrapper).unwrap_or(wrapper)
+        } else {
+            let wrapper = format!("(async (tools, console) => {{{}\n}})", data.code);
+            super::instrument::instrument_loops(&wrapper).unwrap_or(wrapper).encode_utf16().collect()
+        };
+        let function = match self.context.eval(Source::from_utf16(&wrapper).with_path(Path::new("codemode.js"))) {
             Ok(function) => function,
             Err(error) => {
                 if error.as_engine().is_some() {
@@ -773,15 +798,18 @@ impl Vm {
     }
 
     fn apply(&mut self, message: &HostToWorkerMessage) -> Result<(), ()> {
-        let HostToWorkerMessage::Result { id, ok, payload, properties, .. } = message;
+        let (id, ok, payload, properties) = match message {
+            HostToWorkerMessage::Result { id, ok, payload, properties, .. } => {
+                (*id, *ok, payload.as_deref().map_or_else(JsValue::undefined, js_string_value), properties)
+            }
+            HostToWorkerMessage::ResultUtf16 { id, ok, payload, properties, .. } => {
+                (*id, *ok, payload.as_ref().map_or_else(JsValue::undefined, |v| JsValue::from(JsString::from(v.as_slice()))), properties)
+            }
+        };
         let settle = self.settle.clone();
         let api: JsValue = self.api.clone().into();
-        let args = [
-            JsValue::from(*id as f64),
-            JsValue::from(*ok),
-            payload.as_deref().map_or_else(JsValue::undefined, js_string_value),
-            properties.as_deref().map_or_else(JsValue::undefined, js_string_value),
-        ];
+        let args =
+            [JsValue::from(id as f64), JsValue::from(ok), payload, properties.as_deref().map_or_else(JsValue::undefined, js_string_value)];
         if let Err(error) = settle.call(&api, &args, &mut self.context) {
             let fatal = self.classify(&error);
             self.fail(fatal);
@@ -798,9 +826,12 @@ impl Vm {
             let _ = self.apply(&message);
             return;
         };
-        let HostToWorkerMessage::Result { id, seq, .. } = &message;
+        let (id, seq) = match &message {
+            HostToWorkerMessage::Result { id, seq, .. } => (*id, *seq),
+            HostToWorkerMessage::ResultUtf16 { id, seq, .. } => (*id, Some(*seq)),
+        };
         let seq = match seq {
-            Some(seq) if *seq >= self.next_seq && !self.early.contains_key(seq) => *seq,
+            Some(seq) if seq >= self.next_seq && !self.early.contains_key(&seq) => seq,
             _ => {
                 let expected = self.next_seq;
                 let seq = seq.map_or_else(|| "undefined".to_string(), |seq| seq.to_string());
@@ -813,12 +844,15 @@ impl Vm {
         };
         self.early.insert(seq, message);
         while let Some(next) = self.early.remove(&self.next_seq) {
-            let HostToWorkerMessage::Result { now, .. } = &next;
+            let now = match &next {
+                HostToWorkerMessage::Result { now, .. } => *now,
+                HostToWorkerMessage::ResultUtf16 { now, .. } => Some(*now),
+            };
             // Never backwards: a resumed host's clock may be behind the one that started the run.
             if let Some(now) = now
                 && now.is_finite()
             {
-                clock.now.set(clock.now.get().max(*now));
+                clock.now.set(clock.now.get().max(now));
             }
             self.state().current.set(self.next_seq);
             if self.apply(&next).is_err() {
@@ -835,10 +869,9 @@ impl Vm {
     fn stop_fatal(&self, stop: Stop) -> Fatal {
         match stop {
             Stop::Halted => Fatal::Halted,
-            Stop::Exhausted => Fatal::Exhausted(format!(
-                "Execution exceeded its interrupt budget of {}",
-                self.limits.interrupt_budget.unwrap_or_default()
-            )),
+            Stop::Exhausted => {
+                Fatal::Exhausted(format!("Execution exceeded its interrupt budget of {}", self.limits.interrupt_budget.unwrap_or_default()))
+            }
         }
     }
 

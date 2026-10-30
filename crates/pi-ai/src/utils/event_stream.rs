@@ -7,7 +7,7 @@
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::time::Instant;
+use web_time::Instant;
 
 use futures::Stream;
 use parking_lot::Mutex;

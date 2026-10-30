@@ -48,7 +48,11 @@ impl ByteCompiler<'_> {
                     };
 
                     let names = bound_names(decl.declaration());
-                    if decl.declaration().is_const() {
+                    // Per-iteration copies are only emitted for a runtime scope. For all-local
+                    // bindings, inserting them here would allocate an extra persistent register
+                    // that is never written: it keeps whatever temporary last used it alive for
+                    // the rest of the frame (e.g. across an `await`).
+                    if decl.declaration().is_const() || scope_index.is_none() {
                     } else {
                         let mut indices = Vec::with_capacity(names.len());
                         for name in &names {

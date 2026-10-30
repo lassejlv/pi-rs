@@ -106,7 +106,7 @@ dir=$(dirname "$file")
   echo "$file"
   cat "$file"; echo
   ls -A "$dir" | tr '\n' ' '; echo
-  stat -c %a "$dir"
+  stat -c %a "$dir" 2>/dev/null || stat -f %Lp "$dir"
 } > "$capture"
 for arg; do
   [ "$arg" = "--fail" ] && exit 1

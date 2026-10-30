@@ -1,0 +1,258 @@
+{
+  "files": [
+    {
+      "reference": "packages/durable/test/codemode-bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/codemode.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Same workload (plain nested calls vs journaled codemode script, sequential and parallel, SQLite, commits per call counted at the storage). Native codemode runs on NativeSandbox with models disabled. Full N=100,1000; quick 20,50. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/document-append-bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/document_append.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Array document vs one family member per append on MemoryStorage; sizes 1000..32000, quick 200,1000. Native result shows the same shape (array cost grows, family flat). Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/nested-images-bench.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-durable/benches/nested_images.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Same script/read_image/classify workload, inline vs reference variants, SQLite and JSONL, counts 50,200 of 1 MiB base64 images; quick uses 10 x 256 KiB. Heap figures use a counting global allocator (live bytes) instead of V8 heap snapshots, so there is no GC-settling distinction; stored sizes, written bytes by type, nested task count and largest record are reported as upstream. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/nested-tools-bench.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-durable/benches/nested_tools.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Streaming (backend x 1/16 KiB x 2/50 ms x progress) and nesting (200/2000 calls, depth 1/2) matrices with 3 runs as upstream; quick uses 20/100 calls, 1 KiB, 2 runs. Heap is counting-allocator peak/held rather than sampled V8 heapUsed. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/scheduler-fanout-bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/scheduler_fanout.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "One model-issued fan tool with N parallel nested leaf calls on MemoryStorage; calls 250..4000, quick 50,100. Observation: native ms/call grows with N (5.9 ms at 50, 9.4 ms at 100), i.e. superlinear scheduler work worth a follow-up. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/scheduler-memory-bench.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-durable/benches/scheduler_memory.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Same parent/tool/conversation/inner-task cycles on SQLite with release-by-name; reports heap growth per cycle (counting allocator) and storage reads for a late message into an old conversation. The upstream assertion on SCHEDULER_INDEX_SIZES (settled=0, edges<=1) has no counterpart: the native scheduler exposes no ownership-index sizes. cycles 1000,10000; quick 100. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/session-document-cache-bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/session_document_cache.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Harness on SQLite, N conversations with a task writing pi.usage, retention infinite/10 min/50 ms/0; reports cached documents (Session cache_sizes), retained bytes per conversation (counting allocator) and old-document read time. N 1000,5000; quick 100 with 20 warmup cycles. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/storage.bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/storage.rs",
+        "crates/pi-durable/src/testing/storage_benchmark.rs"
+      ],
+      "note": "Uses the native shared scenarios (storage_read_benchmarks / storage_write_benchmarks / seed_*), validates each result against its expected value before timing, over memory, SQLite and JSONL, plus reopen-and-first-read on copies of seeded persistent stores. Iteration counts as upstream (read 10 + 3 warmup and 300 ms, write 20 + 5, reopen 20 + 3); quick uses 3 + 1. Plain std::time reporting (mean/min/p50); no vitest bench. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/tool-output-bench.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/tool_output.rs",
+        "crates/pi-durable/benches/support/mod.rs"
+      ],
+      "note": "Each scenario runs in a child process (the bench binary re-invoked with the scenario JSON) for its own peak RSS (getrusage). Rate (low/normal/high x head/tail x 1/4 tools), firehose (head/tail/repetitive), long 30 s round and bash cat scenarios across memory/SQLite/JSONL; live commits, op bytes, output sets, commit p50/p99, mid-round footprint, replay time on reopen, final footprint. Quick: 1 s rate rounds, 1 tool, 3 s long round, 16 MiB instead of 1 GiB. Quick mode: PI_DURABLE_BENCH_QUICK=1 (sizes also overridable with PI_DURABLE_BENCH_SIZES)."
+    },
+    {
+      "reference": "packages/durable/test/chat-support.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/harness.rs",
+        "crates/pi-durable/tests/generation_runtime.rs",
+        "crates/pi-durable/tests/compaction_runtime.rs",
+        "scripts/stock/durable-session-adapter.mjs",
+        "scripts/stock/durable-memory-adapter.mjs"
+      ],
+      "note": "Stock vitest runs execute this file unchanged against the native bridge (scripts/run-stock-durable-*.mjs). Native-only equivalents are per-test open() helpers (faux provider via pi_ai::providers::faux, HarnessOptions, Registry<NativeTool, NativeSection>) and the example support in crates/pi-durable/examples/ex_b_support/mod.rs (faux setup, transcript/answer helpers, held_answer for unanswered/blocked steps). No separate shared native chat-support module is needed."
+    },
+    {
+      "reference": "packages/durable/test/harness-support.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/tool_runtime.rs",
+        "crates/pi-durable/tests/harness.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs",
+        "scripts/stock/durable-builtin-adapter.mjs"
+      ],
+      "note": "Original file runs unchanged under the stock runners. Native equivalents: tool() -> NativeTool::new(ToolDeclaration::new(..), execute) as in tool_runtime.rs and the tool() helper in ex_b_support; openHarness -> Harness::open with HarnessOptions; message builders (user/assistant/toolResult/system) are plain serde_json values in the native tests; addTool/addTask/addHooks/addSection -> Extension{tools,tasks,hooks,sections} installed on a Registry."
+    },
+    {
+      "reference": "packages/durable/test/session-support.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/support/session_storage.rs",
+        "crates/pi-durable/tests/session.rs",
+        "scripts/stock/durable-session-adapter.mjs"
+      ],
+      "note": "ControlledStorage, Gate and fault injection are ported natively in tests/support/session_storage.rs (commit/find/submission/range gates, read/mint/close faults, head hook); openTestSession/createConversation/flush are the open()/conversation() helpers in tests/session.rs. The original file also runs unchanged in the stock Session runs."
+    },
+    {
+      "reference": "packages/durable/test/task-support.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/task_scheduler.rs",
+        "crates/pi-durable/tests/task_ownership.rs",
+        "crates/pi-durable/tests/worker_wake.rs",
+        "scripts/stock/durable-task-adapter.mjs"
+      ],
+      "note": "deferred/eventually/settled/aborted map to tokio oneshot/Notify and the local eventually() poller in tests (worker_wake.rs), openTasks to open() in task_scheduler.rs (TaskScheduler::open with a Registry of built tasks), completed/abortedWith to TaskOutcome literals, countingReader to a RegistryReader wrapper in the registry tests. The original runs unchanged in the stock task runs."
+    },
+    {
+      "reference": "packages/durable/test/storage-memory.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/storage/memory.rs",
+        "crates/pi-durable/tests/storage_conformance.rs",
+        "crates/pi-durable/examples/storage_conformance.rs",
+        "crates/pi-durable/src/testing/runner.rs",
+        "scripts/stock/durable-memory-adapter.mjs"
+      ],
+      "note": "The test-side MemoryStorage conformance fixtures are covered by the native MemoryStorage plus run_storage_conformance (testing/runner.rs) driving the same case set against memory, SQLite, JSONL and IndexedDB-style backends; the original file runs unchanged through the memory bridge in stock runs."
+    },
+    {
+      "reference": "packages/durable/test/setup-document-retention.ts",
+      "status": "verified",
+      "rust": [
+        "scripts/run-stock-durable-session.mjs",
+        "scripts/run-stock-durable-builtins.mjs",
+        "scripts/run-stock-durable-codecs.mjs",
+        "crates/pi-durable/src/harness/harness.rs"
+      ],
+      "note": "The stock runners set PI_DURABLE_DOCUMENT_RETENTION_MS to 600000 and 0 and keep the original setup file in the vitest setupFiles, so both retentions run. Native tests exercise both settings explicitly through HarnessOptions::default_document_retention_ms / HarnessSettings::document_retention_ms (e.g. the retention loops in tests/harness.rs, generation_runtime.rs and session_retention.rs). Native has no process-global default to override, by design."
+    },
+    {
+      "reference": "packages/durable/test/heap-retained.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/benches/support/mod.rs",
+        "crates/pi-durable/benches/session_document_cache.rs",
+        "crates/pi-durable/benches/scheduler_memory.rs"
+      ],
+      "note": "Ported as a counting global allocator in benches/support (live_bytes/peak_bytes/reset_peak). V8 heap snapshots have no native analogue; live allocated bytes is the native measure of what live objects retain."
+    },
+    {
+      "reference": "packages/durable/test/fixtures/delete-buffer.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/misc_upstream.rs"
+      ],
+      "note": "A Node-only preload that deletes globalThis.Buffer. Rust has no Buffer, so there is nothing to delete; the no-Buffer assertions run natively in counts_utf8_bytes_and_truncates_correctly_in_a_runtime_without_buffer. The stock builtin run still applies the original preload to the reference tests."
+    },
+    {
+      "reference": "packages/durable/test/fixtures/utf8-byte-length-without-buffer.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/tests/misc_upstream.rs",
+        "crates/pi-chord/src/output.rs"
+      ],
+      "note": "Same UTF-8 byte-length inputs (empty, ascii, e-acute, CJK, surrogate pair, lone surrogates, mixed, 2/3-byte boundaries) and the truncateHead('a\u00e9\ud83d\ude42\\nb', {maxBytes:7}) expectation are asserted natively against pi_chord::output::utf8_byte_length and the native truncate_head."
+    }
+  ],
+  "performance_notes": [
+    {
+      "topic": "typed whole-document updates (the Journal case)",
+      "status_text": "A typed document (DocumentState struct) is decoded and re-encoded in full on every update/read, so a typed append-only array costs O(n) per append: about 750 us/append at n=1000 and about 2.5 ms at n=3000 (upstream mutates the JS array in place: about 23 us, flat). Typed documents no longer round-trip through JSON text (pi-json direct serde Deserializer/Serializer, lone surrogates preserved through a private marker newtype), and the checkpoint predicate can skip the decode (DocDefinition::never_checkpoint, or raw_checkpoint on the stored JSON), but element-wise conversion remains linear.",
+      "recommended_shapes": [
+        "Append-only logs: one document-family member per item (DocFamilyDefinition, tx.doc_family): about 50 us/append, flat.",
+        "A single growing array: an untyped JsonObject document updated with DocDraft::apply_ops (Op::Splice/Append/Set): about 55 us/append, flat; read it with DocDraft::with_json instead of read().",
+        "Hot documents with large embedded values (pi.live): read with DocDraft::with_json, write explicit operations, decide checkpoints with DocDefinition::raw_checkpoint, and use live::update_fields to decode only the top-level fields an update touches."
+      ],
+      "measurements": {
+        "document_append n=1000 (us/append)": {
+          "upstream_array": 23,
+          "native_before": 1213,
+          "native_typed_now": 749,
+          "native_untyped_ops": 57,
+          "native_family": 50
+        },
+        "nested_images 10 x 1MiB sqlite inline/reference (ms)": {
+          "upstream": [
+            2287,
+            553
+          ],
+          "native_before": [
+            42341,
+            2179
+          ],
+          "native_now": [
+            1170,
+            290
+          ]
+        },
+        "scheduler_fanout ms per call at 50/100/200/400": {
+          "upstream": [
+            1.2,
+            0.53,
+            0.39,
+            0.34
+          ],
+          "native_before": [
+            5.88,
+            9.35
+          ],
+          "native_now": [
+            0.84,
+            0.94,
+            0.95,
+            0.72
+          ]
+        },
+        "final_quick_mode_run": {
+          "document_append n=200/1000 (us/append)": {
+            "typed_array": [
+              116,
+              402
+            ],
+            "untyped_ops": [
+              26,
+              28
+            ],
+            "family": [
+              28,
+              38
+            ]
+          },
+          "nested_images quick 10 x 256KiB (ms)": {
+            "sqlite_inline": 186,
+            "sqlite_reference": 66,
+            "jsonl_inline": 157,
+            "jsonl_reference": 71
+          },
+          "scheduler_fanout quick (ms per call at 50/100)": [
+            0.38,
+            0.3
+          ],
+          "stock_session_suites": "8/8 suites pass in both retention modes (4+12+27+5+14+22+20+21 cases each)"
+        }
+      }
+    }
+  ]
+}

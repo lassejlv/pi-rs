@@ -11,6 +11,6 @@ pub async fn sleep(ms: u64, signal: &CancellationToken) -> Result<(), SignalAbor
     }
     tokio::select! {
         _ = signal.cancelled() => Err(SignalAbortError),
-        _ = tokio::time::sleep(std::time::Duration::from_millis(ms)) => Ok(()),
+        _ = super::wasm::sleep(std::time::Duration::from_millis(ms)) => Ok(()),
     }
 }

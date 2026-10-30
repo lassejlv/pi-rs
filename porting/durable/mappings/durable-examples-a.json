@@ -1,0 +1,148 @@
+{
+  "files": [
+    {
+      "reference": "packages/durable/test/examples/00-conversation.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_00_conversation.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/01-documents.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_01_documents.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/02-forks.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_02_forks.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/03-owned-conversations.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_03_owned_conversations.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/04-watches.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_04_watches.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/05-harness.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_05_harness.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/06-configuration.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-durable/examples/ex_06_configuration.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "Upstream attaches an app-specific `snippet` field to its tool type and renders it in a tool_snippets section; NativeTool is a closed struct, so that section is not ported. Live settings are modelled with a HarnessOptions.settings closure over shared state."
+    },
+    {
+      "reference": "packages/durable/test/examples/07-harness-conversations.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_07_harness_conversations.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "No typed append_entry(token, ..)/typed data accessor: the Entry token only offers kind matching, so the payload is read back as JSON."
+    },
+    {
+      "reference": "packages/durable/test/examples/08-context.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_08_context.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "The request places the pi.system message first (as the native context implementation does); upstream example only prints the result."
+    },
+    {
+      "reference": "packages/durable/test/examples/09-registry-reload.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_09_registry_reload.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "NativeTool is not Clone, so the audit wrapper rebuilds the tool from its declaration and executor."
+    },
+    {
+      "reference": "packages/durable/test/examples/10-extension-state.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_10_extension_state.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/11-tasks.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_11_tasks.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "wait_for_task returns an untyped TaskRecord; the typed outcome is compared as JSON."
+    },
+    {
+      "reference": "packages/durable/test/examples/12-recovery.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_12_recovery.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "Uses open_native_sqlite_storage on a tempfile database; asserts memos survive close and every tick prints exactly once."
+    },
+    {
+      "reference": "packages/durable/test/examples/13-chat.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_13_chat.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/test/examples/14-system-prompt.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_14_system_prompt.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "Section tag format is newline-delimited (<key>\\n...\\n</key>) in the native implementation."
+    },
+    {
+      "reference": "packages/durable/test/examples/15-real-model.ts",
+      "status": "partial",
+      "rust": [
+        "crates/pi-durable/examples/ex_15_real_model.rs",
+        "crates/pi-durable/examples/ex_support/mod.rs"
+      ],
+      "note": "Real-provider path (OPENAI_API_KEY, OPENAI_MODEL override) compiles but is not exercised offline; the key-absent path prints a skip message and exits 0."
+    }
+  ]
+}

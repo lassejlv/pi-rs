@@ -7,21 +7,30 @@
 //!
 //! API-specific options are read from `StreamOptions.extra`: `reasoningEffort`,
 //! `reasoningSummary`, `serviceTier`, `textVerbosity`, `toolChoice`.
+// wasm32 compiles out the native-only transports and sources below.
+#![cfg_attr(target_arch = "wasm32", allow(unused_imports, unused_variables, unused_mut, dead_code))]
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use web_time::Instant;
 
 use base64::Engine;
 use futures::{FutureExt, SinkExt, StreamExt};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde_json::{Map, Value, json};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::tungstenite::Message as WsMessage;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tokio_util::sync::CancellationToken;
 
@@ -281,11 +290,11 @@ async fn sleep(ms: f64, signal: Option<&CancellationToken>) -> anyhow::Result<()
             }
             tokio::select! {
                 _ = signal.cancelled() => Err(aborted_error()),
-                _ = tokio::time::sleep(duration) => Ok(()),
+                _ = crate::utils::wasm::sleep(duration) => Ok(()),
             }
         }
         None => {
-            tokio::time::sleep(duration).await;
+            crate::utils::wasm::sleep(duration).await;
             Ok(())
         }
     }
@@ -960,9 +969,12 @@ fn compress_request_body_zstd(body_json: &str) -> Vec<u8> {
 // WebSocket transport
 // ============================================================================
 
+#[cfg(not(target_arch = "wasm32"))]
 trait AsyncIo: AsyncRead + AsyncWrite + Send + Unpin {}
+#[cfg(not(target_arch = "wasm32"))]
 impl<T: AsyncRead + AsyncWrite + Send + Unpin> AsyncIo for T {}
 
+#[cfg(not(target_arch = "wasm32"))]
 type WsStream = WebSocketStream<MaybeTlsStream<Box<dyn AsyncIo>>>;
 
 /// WebSocket transport statistics for one session (`OpenAICodexWebSocketDebugStats`).
@@ -991,6 +1003,7 @@ struct ContinuationState {
     last_response_items: Vec<Value>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct CachedConnection {
     socket: Option<WsStream>,
     busy: bool,
@@ -999,8 +1012,10 @@ struct CachedConnection {
     continuation: Option<ContinuationState>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 type CachedEntry = Arc<Mutex<CachedConnection>>;
 
+#[cfg(not(target_arch = "wasm32"))]
 static WEBSOCKET_SESSION_CACHE: Lazy<Mutex<HashMap<String, HashMap<String, CachedEntry>>>> =
     Lazy::new(Default::default);
 static WEBSOCKET_DEBUG_STATS: Lazy<Mutex<HashMap<String, OpenAICodexWebSocketDebugStats>>> =
@@ -1046,6 +1061,7 @@ pub fn reset_openai_codex_websocket_debug_stats(session_id: Option<&str>) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn close_websocket_silently(socket: WsStream, code: u16, reason: &str) {
     let reason = reason.to_string();
     let close = async move {
@@ -1054,13 +1070,17 @@ fn close_websocket_silently(socket: WsStream, code: u16, reason: &str) {
             code: CloseCode::from(code),
             reason: reason.into(),
         };
-        let _ = tokio::time::timeout(Duration::from_secs(5), socket.close(Some(frame))).await;
+        let _ = crate::utils::wasm::timeout(Duration::from_secs(5), socket.close(Some(frame))).await;
     };
     if let Ok(handle) = tokio::runtime::Handle::try_current() {
         handle.spawn(close);
     }
 }
 
+/// Close cached WebSocket connections: wasm32 has no WebSocket transport.
+#[cfg(target_arch = "wasm32")]
+pub fn close_openai_codex_websocket_sessions(_session_id: Option<&str>) {}
+#[cfg(not(target_arch = "wasm32"))]
 /// Close cached WebSocket connections for one session, or all sessions.
 pub fn close_openai_codex_websocket_sessions(session_id: Option<&str>) {
     let entries: Vec<CachedEntry> = {
@@ -1107,6 +1127,7 @@ fn record_websocket_failure(session_id: Option<&str>, error: &anyhow::Error) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Whether an idle socket is still open (no pending close or error).
 fn is_websocket_reusable(socket: &mut WsStream) -> bool {
     loop {
@@ -1118,6 +1139,7 @@ fn is_websocket_reusable(socket: &mut WsStream) -> bool {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn schedule_session_websocket_expiry(session_id: String, account_id: String, entry: CachedEntry) {
     let generation = {
         let mut guard = entry.lock();
@@ -1128,7 +1150,7 @@ fn schedule_session_websocket_expiry(session_id: String, account_id: String, ent
         return;
     };
     handle.spawn(async move {
-        tokio::time::sleep(Duration::from_millis(SESSION_WEBSOCKET_CACHE_TTL_MS)).await;
+        crate::utils::wasm::sleep(Duration::from_millis(SESSION_WEBSOCKET_CACHE_TTL_MS)).await;
         let socket = {
             let mut guard = entry.lock();
             if guard.busy || guard.idle_generation != generation {
@@ -1143,6 +1165,7 @@ fn schedule_session_websocket_expiry(session_id: String, account_id: String, ent
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn remove_cached_entry(session_id: &str, account_id: &str, entry: &CachedEntry) {
     let mut cache = WEBSOCKET_SESSION_CACHE.lock();
     if let Some(accounts) = cache.get_mut(session_id) {
@@ -1158,6 +1181,7 @@ fn remove_cached_entry(session_id: &str, account_id: &str, entry: &CachedEntry) 
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn websocket_error_message(error: &tokio_tungstenite::tungstenite::Error) -> String {
     use tokio_tungstenite::tungstenite::Error;
     match error {
@@ -1175,6 +1199,7 @@ fn websocket_error_message(error: &tokio_tungstenite::tungstenite::Error) -> Str
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn close_error(frame: Option<&CloseFrame>) -> WebSocketCloseError {
     let code = frame.map(|f| u16::from(f.code));
     let reason = frame
@@ -1194,6 +1219,7 @@ fn close_error(frame: Option<&CloseFrame>) -> WebSocketCloseError {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Open a TCP connection to `host:port`, tunneling through an HTTP proxy when configured.
 async fn open_tcp(
     target_url: &url::Url,
@@ -1255,6 +1281,7 @@ async fn open_tcp(
     Ok(Box::new(stream))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn percent_decode(value: &str) -> String {
     url::form_urlencoded::parse(format!("x={value}").as_bytes())
         .next()
@@ -1262,6 +1289,7 @@ fn percent_decode(value: &str) -> String {
         .unwrap_or_else(|| value.to_string())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn connect_websocket(
     url: &str,
     headers: &HeaderList,
@@ -1287,7 +1315,7 @@ async fn connect_websocket(
     };
     let timeout = async {
         if connect_timeout_ms > 0 {
-            tokio::time::sleep(Duration::from_millis(connect_timeout_ms)).await;
+            crate::utils::wasm::sleep(Duration::from_millis(connect_timeout_ms)).await;
         } else {
             std::future::pending::<()>().await;
         }
@@ -1308,6 +1336,7 @@ async fn connect_websocket(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 enum Release {
     /// Close the socket when done.
     OneShot,
@@ -1319,6 +1348,7 @@ enum Release {
     },
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct AcquiredSocket {
     socket: WsStream,
     entry: Option<CachedEntry>,
@@ -1326,6 +1356,7 @@ struct AcquiredSocket {
     release: Release,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl AcquiredSocket {
     fn release(self, keep: bool) {
         match self.release {
@@ -1353,6 +1384,7 @@ impl AcquiredSocket {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn acquire_websocket(
     url: &str,
     headers: &HeaderList,
@@ -1488,6 +1520,7 @@ fn get_cached_websocket_input_delta(
     Some(current[baseline.len()..].to_vec())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn build_cached_websocket_request_body(entry: &CachedEntry, body: &Value) -> Value {
     let mut guard = entry.lock();
     let Some(continuation) = guard.continuation.clone() else {
@@ -1511,12 +1544,14 @@ fn build_cached_websocket_request_body(entry: &CachedEntry, body: &Value) -> Val
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Read one parsed message from the socket, honoring abort and idle timeout.
 enum SocketRead {
     Event(Value),
     Closed(Option<CloseFrame>),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn read_websocket_event(
     socket: &mut WsStream,
     signal: Option<&CancellationToken>,
@@ -1526,7 +1561,7 @@ async fn read_websocket_event(
         let next = socket.next();
         let timeout = async {
             match idle_timeout_ms.filter(|t| *t > 0) {
-                Some(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
+                Some(ms) => crate::utils::wasm::sleep(Duration::from_millis(ms)).await,
                 None => std::future::pending::<()>().await,
             }
         };
@@ -1566,6 +1601,7 @@ async fn read_websocket_event(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
 async fn process_websocket_stream(
     url: &str,
@@ -1753,7 +1789,7 @@ async fn send_sse_request(
         .send();
     let timeout = async {
         match http_timeout_ms.filter(|t| *t > 0) {
-            Some(ms) => tokio::time::sleep(Duration::from_millis(ms)).await,
+            Some(ms) => crate::utils::wasm::sleep(Duration::from_millis(ms)).await,
             None => std::future::pending::<()>().await,
         }
     };
@@ -1856,6 +1892,7 @@ async fn run_stream(
             record_websocket_sse_fallback(cache_session_id.as_deref());
         }
 
+#[cfg(not(target_arch = "wasm32"))]
         if transport != Transport::Sse && !websocket_disabled {
             let mut retried_connection_limit = false;
             let mut retried_missing_continuation = false;
@@ -2111,7 +2148,7 @@ pub fn stream(
     options: StreamOptions,
 ) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

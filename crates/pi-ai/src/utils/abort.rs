@@ -73,7 +73,7 @@ pub fn combine_abort_signals(signals: &[Option<CancellationToken>]) -> Option<Ca
                 return Some(combined);
             }
             let target = combined.clone();
-            tokio::spawn(async move {
+            crate::utils::wasm::spawn(async move {
                 let waits = active.iter().map(|s| Box::pin(s.cancelled())).collect::<Vec<_>>();
                 tokio::select! {
                     _ = futures::future::select_all(waits) => target.cancel(),
@@ -97,7 +97,7 @@ mod tests {
         let combined = combine_abort_signals(&[Some(a.clone()), None, Some(b.clone())]).unwrap();
         assert!(!combined.is_cancelled());
         b.cancel();
-        tokio::time::timeout(std::time::Duration::from_secs(1), combined.cancelled()).await.unwrap();
+        crate::utils::wasm::timeout(std::time::Duration::from_secs(1), combined.cancelled()).await.unwrap();
         let err = race_with_abort_signal(async { Ok::<_, anyhow::Error>(1) }, &a).await.unwrap();
         assert_eq!(err, 1);
     }
@@ -118,7 +118,7 @@ mod tests {
 
         let pending = CancellationToken::new();
         let trigger = pending.clone();
-        let raced = tokio::spawn(async move { race_with_abort_signal(std::future::pending::<anyhow::Result<()>>(), &pending).await });
+        let raced = crate::utils::wasm::spawn(async move { race_with_abort_signal(std::future::pending::<anyhow::Result<()>>(), &pending).await });
         trigger.cancel();
         assert_eq!(raced.await.unwrap().unwrap_err().to_string(), "This operation was aborted");
 

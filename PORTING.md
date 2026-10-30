@@ -19,6 +19,8 @@ Never copy TypeScript into this repository.
 
 | TS package                      | Rust crate                  | Notes |
 |---------------------------------|-----------------------------|-------|
+| `packages/chord` durable subset  | `crates/pi-chord`            | JSON revisions, context, watches, output and SQLite contracts |
+| `packages/durable`               | `crates/pi-durable`          | In progress; pinned scope and parity ledger in `porting/durable/` |
 | `packages/ai`                   | `crates/pi-ai`              | Providers, model catalog, streaming, OAuth |
 | `packages/telemetry`            | `crates/pi-telemetry`       | |
 | `packages/agent`                | `crates/pi-agent`           | Agent loop |

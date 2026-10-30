@@ -89,6 +89,7 @@ function createContext(contextObject = {}, options = {}) {
   if (contexts.has(contextObject)) return contextObject;
   if (options !== undefined && (options === null || typeof options !== "object")) throw invalidArgType("options", "of type object", options);
   const { proxy, target, state } = makeGlobal(contextObject);
+  if (internal.exposeGcInContexts === true && typeof globalThis.gc === "function") target.gc = globalThis.gc;
   const realm = ops.vmCreateRealm(proxy, target);
   state.init = false;
   contexts.set(contextObject, realm);

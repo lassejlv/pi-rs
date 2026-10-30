@@ -117,10 +117,9 @@ xsum = ["dep:xsum"]
 
 [lib]
 name = "boa_engine"
-crate-type = [
-    "cdylib",
-    "lib",
-]
+# The workspace embeds Boa through its Rust API. A cdylib also makes rustc emit
+# an unhashed rlib, which collides between dependency feature configurations.
+crate-type = ["lib"]
 path = "src/lib.rs"
 bench = false
 
@@ -380,6 +379,7 @@ features = [
 
 [dependencies.serde_json]
 version = "1.0.151"
+features = ["raw_value"]
 
 [dependencies.small_btree]
 version = "~0.1.0"

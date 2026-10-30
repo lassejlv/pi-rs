@@ -147,6 +147,18 @@ impl Loader {
     }
 
     pub(crate) fn resolve(&self, ctx: &mut Context, spec: &str, base_dir: &Path, kind: Kind) -> Result<Resolved, Error> {
+        let resolved = self.resolve_spec(ctx, spec, base_dir, kind)?;
+        // An alias keyed by an absolute file path redirects every import resolving to that file.
+        if let Resolved::File(path) = &resolved {
+            let target = self.shared.aliases.read().get(&*path.to_string_lossy()).cloned();
+            if let Some(target) = target {
+                return self.resolve_spec(ctx, &target, base_dir, kind);
+            }
+        }
+        Ok(resolved)
+    }
+
+    fn resolve_spec(&self, ctx: &mut Context, spec: &str, base_dir: &Path, kind: Kind) -> Result<Resolved, Error> {
         let spec = self.apply_alias(spec);
         if self.shared.virtual_modules.read().contains_key(&spec) {
             return Ok(Resolved::Virtual(spec));
@@ -351,7 +363,11 @@ impl Loader {
     // -----------------------------------------------------------------------
 
     fn prepare_file(&self, ctx: &mut Context, path: &Path) -> Result<Prepared, Error> {
-        let text = std::fs::read_to_string(path).map_err(|e| Error::host(format!("cannot read {}: {e}", path.display())))?;
+        let source = self.shared.file_sources.read().get(path).cloned();
+        let text = match source {
+            Some(text) => text,
+            None => std::fs::read_to_string(path).map_err(|e| Error::host(format!("cannot read {}: {e}", path.display())))?,
+        };
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let in_node_modules = path.components().any(|c| c.as_os_str() == "node_modules");
         match ext {
@@ -707,8 +723,15 @@ pub(crate) fn normalize(p: &Path) -> PathBuf {
     out
 }
 
+/// Builtins that, as in Node, exist only under the `node:` scheme (`sqlite` is an npm package).
+const PREFIX_ONLY_BUILTINS: &[&str] = &["sqlite"];
+
 fn builtin_name(ctx: &mut Context, spec: &str) -> Option<String> {
-    let name = spec.strip_prefix("node:").unwrap_or(spec);
+    let name = match spec.strip_prefix("node:") {
+        Some(name) => name,
+        None if PREFIX_ONLY_BUILTINS.contains(&spec) => return None,
+        None => spec,
+    };
     let has = internal(ctx).get(js_string!("hasBuiltin"), ctx).ok()?.as_function()?;
     let r = has.call(&JsValue::undefined(), &[js_str(name)], ctx).ok()?;
     if r.to_boolean() { Some(name.to_string()) } else { None }

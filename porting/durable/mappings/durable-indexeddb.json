@@ -1,0 +1,392 @@
+{
+ "files": [
+  {
+   "reference": "packages/durable/src/storage/indexeddb.ts",
+   "status": "verified",
+   "rust": [
+    "crates/pi-durable/src/storage/indexeddb/mod.rs",
+    "crates/pi-durable/src/storage/indexeddb/backend.rs",
+    "crates/pi-durable/src/storage/indexeddb/key.rs",
+    "crates/pi-durable/src/storage/indexeddb/schema.rs",
+    "crates/pi-durable/src/storage/indexeddb/memory.rs",
+    "crates/pi-durable/src/storage/indexeddb/web.rs"
+   ],
+   "note": "Transaction/record logic (mod.rs) is written once against the IdbBackend/IdbTransaction traits. memory.rs is a host IndexedDB model (key ordering, compound indexes, snapshot+creation-order transactions, atomic readwrite); web.rs binds web-sys IndexedDB (wasm32, feature `indexeddb`). Store/index names, key paths and row shapes are the upstream on-disk format, verified against reference-written rows. pi-durable builds for wasm32-unknown-unknown (`cargo check -p pi-durable --target wasm32-unknown-unknown --no-default-features --features indexeddb`; layout documented in crates/pi-durable/Cargo.toml): only tools, images, the native env and native SQLite are native-only (OS access); the harness, scheduler, code mode and pi-ai (reqwest fetch backend) build there too, and the browser suite runs with all of them linked in. tests/indexeddb_browser/run.sh builds a cdylib from the crate itself and runs, in headless Chrome 155: the reference conformance traces against IndexedDbStorage<WebIdbConnection> (26 plain + 26 across reopen, all pass), 2297 browser-vs-host-model differential scans/gets, transaction semantics, and row interchange both ways with the reference. IndexedDbStorageOptions.indexedDB maps to WebIdbFactory::new(factory); open/delete map to IndexedDbStorage::{open,open_with,delete} (wasm32 only). Runtime on wasm32: tasks and timers go through pi_chord::rt / pi_ai::utils::wasm (microtask queue, setTimeout, JS clock; tokio re-exports natively), enforced by tests/wasm32_gate/check.sh (wasm32 clippy with disallowed-methods). The browser suite also runs a Session (concurrent commits, reopen) and a full Harness turn with the faux provider (tool call, timer-paced stream, durable receipt, close/reopen transcript) over IndexedDbStorage in headless Chrome. The same faux Harness turn runs in workerd over Durable Object SQLite with an eviction between submit and resume (tests/workerd/harness.test.ts); a browser regression asserts that dropped wasm sleeps clear their setTimeout (an armed timer blocked Durable Object eviction)."
+  },
+  {
+   "reference": "packages/durable/test/indexeddb-storage.test.ts",
+   "status": "verified",
+   "rust": [
+    "crates/pi-durable/tests/indexeddb_storage.rs",
+    "crates/pi-durable/tests/fixtures/storage-indexeddb.json",
+    "crates/pi-durable/tests/fixtures/storage-indexeddb-reopen.json",
+    "crates/pi-durable/tests/fixtures/indexeddb-interchange.json",
+    "crates/pi-durable/tests/fixtures/indexeddb/generate.mjs",
+    "crates/pi-durable/tests/indexeddb_browser/run.sh"
+   ],
+   "cases": [
+    {
+     "name": "IndexedDbStorage > reserves ID 1 for the immutable root conversation",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::reserves_id_1_for_the_immutable_root_conversation",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > adopts a durable commit once before resolving, and never a failed one",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::adopts_a_durable_commit_once_before_resolving_and_never_a_failed_one",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > commits mixed table writes atomically and rolls all of them back on failure",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::commits_mixed_table_writes_atomically_and_rolls_all_of_them_back_on_failure",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > detaches retained writes and every returned record",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::detaches_retained_writes_and_every_returned_record",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > detaches prototype-like JSON keys without changing object prototypes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::detaches_prototype_like_json_keys_without_changing_object_prototypes",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > indexes entries committed out of ID order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::indexes_entries_committed_out_of_id_order",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > continues an entry cursor below its last item after a newer commit",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::continues_an_entry_cursor_below_its_last_item_after_a_newer_commit",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > paginates conversations by opaque cursor in ascending ID order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::paginates_conversations_by_opaque_cursor_in_ascending_id_order",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > filters and pages conversations by durable owner edges",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::filters_and_pages_conversations_by_durable_owner_edges",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > scans deep fork history newest-first through every ancestor cap",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::scans_deep_fork_history_newest_first_through_every_ancestor_cap",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > scans tables in either ID order and continues a cursor in its order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::scans_tables_in_either_id_order_and_continues_a_cursor_in_its_order",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > replaces complete task records and pages filtered task scans",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::replaces_complete_task_records_and_pages_filtered_task_scans",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > stores owners and scans waiting and completing tasks by status",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::stores_owners_and_scans_waiting_and_completing_tasks_by_status",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > stores and scans sleeping tasks by status",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::stores_and_scans_sleeping_tasks_by_status",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > indexes request IDs per conversation and replaces complete submission records",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::indexes_request_ids_per_conversation_and_replaces_complete_submission_records",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > stores passive write submissions without input-only lifecycle states",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::stores_passive_write_submissions_without_input_only_lifecycle_states",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > reconstructs rewindable documents and preserves half-open incarnations",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::reconstructs_rewindable_documents_and_preserves_half_open_incarnations",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > streams long document tails across root replacement deltas",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::streams_long_document_tails_across_root_replacement_deltas",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > copies stored document bases independently and rejects ambiguous sources",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::copies_stored_document_bases_independently_and_rejects_ambiguous_sources",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > uses bases for version transitions and rejects historical reads of current-only documents",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::uses_bases_for_version_transitions_and_rejects_historical_reads_of_current_only_documents",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > indexes logical addresses and exact-scope scans independently",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::indexes_logical_addresses_and_exact_scope_scans_independently",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > keeps document lifecycle failures atomic and gives create-plus-retire an empty lifetime",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::keeps_document_lifecycle_failures_atomic_and_gives_create_plus_retire_an_empty_lifetime",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > rolls back record tables and secondary indexes when a document command fails",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::rolls_back_record_tables_and_secondary_indexes_when_a_document_command_fails",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > keeps indexed string identities lossless",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::keeps_indexed_string_identities_lossless",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > keeps one global record ID namespace and rejects exhausted ID minting",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::keeps_one_global_record_id_namespace_and_rejects_exhausted_id_minting",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage > rejects every operation after close",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance::rejects_every_operation_after_close",
+     "note": "Replays the reference IndexedDbStorage's own trace (fake-indexeddb 6.2.5) of this conformance case against IndexedDbStorage over the host IndexedDB model; exact values, error names/messages and adoption. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > reserves ID 1 for the immutable root conversation",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::reserves_id_1_for_the_immutable_root_conversation",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > adopts a durable commit once before resolving, and never a failed one",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::adopts_a_durable_commit_once_before_resolving_and_never_a_failed_one",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > commits mixed table writes atomically and rolls all of them back on failure",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::commits_mixed_table_writes_atomically_and_rolls_all_of_them_back_on_failure",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > detaches retained writes and every returned record",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::detaches_retained_writes_and_every_returned_record",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > detaches prototype-like JSON keys without changing object prototypes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::detaches_prototype_like_json_keys_without_changing_object_prototypes",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > indexes entries committed out of ID order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::indexes_entries_committed_out_of_id_order",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > continues an entry cursor below its last item after a newer commit",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::continues_an_entry_cursor_below_its_last_item_after_a_newer_commit",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > paginates conversations by opaque cursor in ascending ID order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::paginates_conversations_by_opaque_cursor_in_ascending_id_order",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > filters and pages conversations by durable owner edges",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::filters_and_pages_conversations_by_durable_owner_edges",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > scans deep fork history newest-first through every ancestor cap",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::scans_deep_fork_history_newest_first_through_every_ancestor_cap",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > scans tables in either ID order and continues a cursor in its order",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::scans_tables_in_either_id_order_and_continues_a_cursor_in_its_order",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > replaces complete task records and pages filtered task scans",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::replaces_complete_task_records_and_pages_filtered_task_scans",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > stores owners and scans waiting and completing tasks by status",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::stores_owners_and_scans_waiting_and_completing_tasks_by_status",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > stores and scans sleeping tasks by status",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::stores_and_scans_sleeping_tasks_by_status",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > indexes request IDs per conversation and replaces complete submission records",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::indexes_request_ids_per_conversation_and_replaces_complete_submission_records",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > stores passive write submissions without input-only lifecycle states",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::stores_passive_write_submissions_without_input_only_lifecycle_states",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > reconstructs rewindable documents and preserves half-open incarnations",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::reconstructs_rewindable_documents_and_preserves_half_open_incarnations",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > streams long document tails across root replacement deltas",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::streams_long_document_tails_across_root_replacement_deltas",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > copies stored document bases independently and rejects ambiguous sources",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::copies_stored_document_bases_independently_and_rejects_ambiguous_sources",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > uses bases for version transitions and rejects historical reads of current-only documents",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::uses_bases_for_version_transitions_and_rejects_historical_reads_of_current_only_documents",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > indexes logical addresses and exact-scope scans independently",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::indexes_logical_addresses_and_exact_scope_scans_independently",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > keeps document lifecycle failures atomic and gives create-plus-retire an empty lifetime",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::keeps_document_lifecycle_failures_atomic_and_gives_create_plus_retire_an_empty_lifetime",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > rolls back record tables and secondary indexes when a document command fails",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::rolls_back_record_tables_and_secondary_indexes_when_a_document_command_fails",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > keeps indexed string identities lossless",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::keeps_indexed_string_identities_lossless",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > keeps one global record ID namespace and rejects exhausted ID minting",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::keeps_one_global_record_id_namespace_and_rejects_exhausted_id_minting",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "IndexedDbStorage across reopen > rejects every operation after close",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::conformance_across_reopen::rejects_every_operation_after_close",
+     "note": "Same, with the reference ReopeningStorage wrapper ported: close and reopen after every commit; trace recorded from the reference across-reopen run. Also replayed in headless Chrome against real IndexedDB (tests/indexeddb_browser)."
+    },
+    {
+     "name": "persists minted IDs across reopen",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::persists_minted_ids_across_reopen",
+     "note": "mintId persists nextId in the meta store through a readwrite transaction, as upstream."
+    },
+    {
+     "name": "rolls back table writes when a later document copy fails",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::rolls_back_table_writes_when_a_later_document_copy_fails",
+     "note": ""
+    },
+    {
+     "name": "scans entries and head markers through fork ancestry",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::scans_entries_and_head_markers_through_fork_ancestry",
+     "note": ""
+    },
+    {
+     "name": "keeps one readwrite transaction active through many mixed writes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::keeps_one_readwrite_transaction_active_through_many_mixed_writes",
+     "note": "Host model has no auto-commit; the transaction-active-across-awaits property is checked against real Chrome IndexedDB by tests/indexeddb_browser (300 awaited requests in one readwrite transaction through the web-sys adapter)."
+    },
+    {
+     "name": "(port) declares the reference object stores and indexes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::interchange::declares_the_reference_object_stores_and_indexes",
+     "note": "Store keyPaths and every index keyPath equal what reference createSchema() produced (dumped from fake-indexeddb)."
+    },
+    {
+     "name": "(port) writes the rows the reference writes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::interchange::writes_the_rows_the_reference_writes",
+     "note": "Same request trace as the reference leaves row-for-row identical object stores (meta, record_ids, all tables, revisions), before and after a continue phase."
+    },
+    {
+     "name": "(port) reads and continues a database the reference wrote",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::interchange::reads_and_continues_a_database_the_reference_wrote",
+     "note": "Loads reference-written rows, replays the reference's read results exactly, then continues writing; final stores equal the reference's."
+    },
+    {
+     "name": "(port) rejects a database without durable metadata",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/indexeddb_storage.rs::interchange::rejects_a_database_without_durable_metadata",
+     "note": ""
+    }
+   ],
+   "note": "All 56 upstream cases (26 conformance cases in each of 2 registrations, plus 4 standalone) ported and passing on the host IndexedDB model, which stands in for fake-indexeddb. The 52 conformance cases also pass in headless Chrome against real IndexedDB through the crate (tests/indexeddb_browser/run.sh; not part of cargo test, needs Chrome and playwright-core). Fixtures are recorded from the unmodified reference IndexedDbStorage over fake-indexeddb 6.2.5 (upstream pins 6.2.6) by fixtures/indexeddb/generate.mjs; `--check` reproduces them byte-for-byte."
+  }
+ ]
+}

@@ -35,7 +35,9 @@ use super::protocol::{DoneMessage, HostToWorkerMessage, VmGlobal, VmStartData, V
 use crate::abort::AbortSignal;
 use crate::identifier::{is_identifier, to_codemode_identifier};
 use crate::js;
+use crate::json_run::{self, *};
 use crate::types::*;
+use pi_json::strict::{self, JsonString, Value as JsonValue};
 
 /// Default deadline of an execution in ms.
 pub const DEFAULT_TIMEOUT_MS: f64 = 300_000.0;
@@ -159,12 +161,7 @@ fn parse_script_error(json: &str) -> Result<CodemodeError, BridgeError> {
         }
     };
     let Some(Value::String(message)) = object.get("message") else { return Err(malformed()) };
-    Ok(CodemodeError {
-        kind: CodemodeErrorKind::Script,
-        name: optional("name")?,
-        message: message.clone(),
-        stack: optional("stack")?,
-    })
+    Ok(CodemodeError { kind: CodemodeErrorKind::Script, name: optional("name")?, message: message.clone(), stack: optional("stack")? })
 }
 
 /// Checks global names: identifiers or `namespace.member`, not shadowing a built-in global or each
@@ -192,6 +189,26 @@ pub(crate) fn check_globals<'a>(names: impl IntoIterator<Item = &'a str>) -> Res
     Ok(())
 }
 
+fn legacy_vm_tools(tools: &[CodemodeDeclaredTool]) -> Vec<VmTool> {
+    tools
+        .iter()
+        .map(|tool| VmTool {
+            name: tool.name.clone().into(),
+            js_name: tool.js_name.clone().unwrap_or_else(|| to_codemode_identifier(&tool.name)).into(),
+            description: tool.description.clone().unwrap_or_default().into(),
+        })
+        .collect()
+}
+fn json_vm_tools(tools: &[CodemodeJsonDeclaredTool]) -> Vec<VmTool> {
+    tools
+        .iter()
+        .map(|tool| VmTool {
+            name: tool.name.clone(),
+            js_name: tool.js_name.clone().unwrap_or_else(|| crate::to_json_codemode_identifier(&tool.name).into()),
+            description: tool.description.clone().unwrap_or_default(),
+        })
+        .collect()
+}
 fn serialize_store(store: Option<&Map<String, Value>>) -> IndexMap<String, String> {
     let mut serialized = IndexMap::new();
     if let Some(store) = store {
@@ -219,9 +236,15 @@ struct PendingCall {
 
 /// Callbacks of a host-controlled run: its calls go to the caller, which answers with `deliver()`.
 #[derive(Clone)]
+enum CallHandler {
+    Typed(OnCall),
+    Json(OnJsonCall),
+}
+
+#[derive(Clone)]
 struct Control {
     on_started: Option<OnStarted>,
-    on_call: OnCall,
+    on_call: CallHandler,
     on_idle: Option<OnIdle>,
 }
 
@@ -233,14 +256,17 @@ struct Executors {
 
 struct ExecutionOptions {
     code: String,
-    tools: Vec<CodemodeDeclaredTool>,
+    code_utf16: Option<Vec<u16>>,
+    tools: Vec<VmTool>,
     globals: Vec<CodemodeDeclaredGlobal>,
     executors: Executors,
     timeout_ms: f64,
     signal: Option<AbortSignal>,
     memory_limit_bytes: Option<u64>,
     store: IndexMap<String, String>,
+    store_json: Option<String>,
     deterministic: Option<super::protocol::VmDeterministic>,
+    timezone: Option<String>,
     control: Option<Control>,
     launcher: Arc<dyn VmLauncher>,
 }
@@ -250,8 +276,8 @@ struct ExecState {
     channel: Option<Arc<dyn VmChannel>>,
     unsent: Vec<HostToWorkerMessage>,
     delivered: HashSet<u64>,
-    output: Vec<CodemodeOutputItem>,
-    calls: Vec<CodemodeCall>,
+    output: Vec<JsonValue>,
+    calls: Vec<json_run::JsonCallRecord>,
     pending: HashMap<u64, PendingCall>,
     finished: bool,
 }
@@ -262,7 +288,7 @@ pub(crate) struct Execution {
     executors: Executors,
     control: Option<Control>,
     finished: AtomicBool,
-    result_tx: Mutex<Option<oneshot::Sender<CodemodeResult>>>,
+    result_tx: Mutex<Option<oneshot::Sender<JsonValue>>>,
     /// Cancelled when the execution has its outcome; stops the host loop.
     ended: CancellationToken,
     /// Cancelled once the result has been resolved.
@@ -271,7 +297,7 @@ pub(crate) struct Execution {
 }
 
 impl Execution {
-    fn start(options: ExecutionOptions) -> (Arc<Execution>, oneshot::Receiver<CodemodeResult>) {
+    fn start(options: ExecutionOptions) -> (Arc<Execution>, oneshot::Receiver<JsonValue>) {
         let runtime = tokio::runtime::Handle::current();
         let (result_tx, result_rx) = oneshot::channel();
         let execution = Arc::new(Execution {
@@ -294,19 +320,15 @@ impl Execution {
 
         let data = VmStartData {
             code: options.code,
-            tools: options
-                .tools
-                .iter()
-                .map(|tool| VmTool {
-                    name: tool.name.clone(),
-                    js_name: tool.js_name.clone().unwrap_or_else(|| to_codemode_identifier(&tool.name)),
-                    description: tool.description.clone().unwrap_or_default(),
-                })
-                .collect(),
+            code_utf16: options.code_utf16,
+            tools: options.tools,
             globals: options.globals.iter().map(|global| VmGlobal { name: global.name.clone(), spread: global.spread }).collect(),
             memory_limit_bytes: options.memory_limit_bytes,
             store: options.store,
+            store_json: options.store_json,
+            lossless_json: execution.control.as_ref().is_some_and(|c| matches!(c.on_call, CallHandler::Json(_))),
             deterministic: options.deterministic,
+            timezone: options.timezone,
         };
         let (tx, rx) = mpsc::unbounded_channel();
         let events = VmEvents { tx };
@@ -386,10 +408,7 @@ impl Execution {
         self.finish(
             Err(CodemodeError::new(
                 CodemodeErrorKind::Sandbox,
-                format!(
-                    "Sandbox bridge broken: {}. The script may have modified built-ins such as a prototype's toJSON.",
-                    error.0
-                ),
+                format!("Sandbox bridge broken: {}. The script may have modified built-ins such as a prototype's toJSON.", error.0),
             )),
             None,
         );
@@ -403,6 +422,25 @@ impl Execution {
             WorkerToHostMessage::Output { item } => {
                 let mut state = self.state.lock();
                 if !state.finished {
+                    state.output.push(json_run::encoded(&item));
+                }
+            }
+            WorkerToHostMessage::OutputUtf16 { kind, data, mime_type } => {
+                if !self.control.as_ref().is_some_and(|c| matches!(c.on_call, CallHandler::Json(_))) {
+                    return Err(BridgeError("unknown message from the worker".into()));
+                }
+                let mut item = JsonValue::Object(Default::default());
+                let image = kind == "image";
+                json_run::put(&mut item, "type", if image { "image" } else { "text" });
+                json_run::put(&mut item, if image { "data" } else { "text" }, JsonValue::String(JsonString::from_utf16(data)));
+                if image {
+                    json_run::put(&mut item, "mimeType", JsonValue::String(JsonString::from_utf16(mime_type)));
+                }
+                if kind == "console" {
+                    json_run::put(&mut item, "console", JsonValue::Bool(true));
+                }
+                let mut state = self.state.lock();
+                if !state.finished {
                     state.output.push(item);
                 }
             }
@@ -411,11 +449,25 @@ impl Execution {
                     return Err(BridgeError(format!("duplicate call id {id}")));
                 }
                 match self.control.clone() {
-                    Some(control) => self.forward_call(id, target, name, args, &control)?,
+                    Some(control) => self.forward_call(id, target, name.into(), args, &control)?,
                     None => self.handle_call(id, target, name, args),
                 }
             }
+            WorkerToHostMessage::CallUtf16 { id, target, name, args } => {
+                if self.state.lock().pending.contains_key(&id) {
+                    return Err(BridgeError(format!("duplicate call id {id}")));
+                }
+                let Some(control) = self.control.clone().filter(|c| matches!(c.on_call, CallHandler::Json(_))) else {
+                    return Err(BridgeError("unexpected UTF16 call in an ordinary run".into()));
+                };
+                self.forward_call(id, target, JsonString::from_utf16(name), args, &control)?;
+            }
             WorkerToHostMessage::Started { fingerprint } => {
+                if self.control.as_ref().is_some_and(|c| matches!(c.on_call, CallHandler::Json(_)))
+                    && !fingerprint.ends_with(", UTF16 JSON 3")
+                {
+                    return Err(BridgeError("the sandbox does not support lossless JSON runs".into()));
+                }
                 if let Some(on_started) = self.control.as_ref().and_then(|control| control.on_started.clone()) {
                     on_started(&fingerprint);
                 }
@@ -426,14 +478,17 @@ impl Execution {
                 }
             }
             WorkerToHostMessage::Done(done) => self.handle_done(done)?,
-            WorkerToHostMessage::Crash { message } => {
-                self.finish(Err(CodemodeError::new(CodemodeErrorKind::Sandbox, message)), None)
-            }
+            WorkerToHostMessage::Crash { message } => self.finish(Err(CodemodeError::new(CodemodeErrorKind::Sandbox, message)), None),
         }
         Ok(())
     }
 
     fn handle_done(&self, done: DoneMessage) -> Result<(), BridgeError> {
+        if self.control.as_ref().is_some_and(|c| matches!(c.on_call, CallHandler::Json(_))) {
+            let result = json_run::done_json(&done).map_err(BridgeError)?;
+            self.finish_json(result, done.during);
+            return Ok(());
+        }
         // Decode everything before finish(), which must not fail once it starts.
         if !done.ok {
             let error = parse_script_error(done.error.as_deref().unwrap_or("undefined"))?;
@@ -455,24 +510,49 @@ impl Execution {
         self: &Arc<Self>,
         id: u64,
         target: CodemodeCallTarget,
-        name: String,
+        name: JsonString,
         args: Option<String>,
         control: &Control,
     ) -> Result<(), BridgeError> {
-        let args = match &args {
-            Some(args) => Some(parse_bridge_json(args, "call arguments")?),
-            None => None,
+        enum Prepared {
+            Typed(OnCall, CodemodeHostCall),
+            Json(OnJsonCall, CodemodeJsonHostCall),
+        }
+        let prepared = match &control.on_call {
+            CallHandler::Typed(callback) => Prepared::Typed(
+                callback.clone(),
+                CodemodeHostCall {
+                    id,
+                    target,
+                    name: name.to_string_checked().map_err(|_| BridgeError("call name cannot be represented as UTF8".into()))?,
+                    args: args.as_ref().map(|v| parse_bridge_json(v, "call arguments")).transpose()?,
+                },
+            ),
+            CallHandler::Json(callback) => Prepared::Json(
+                callback.clone(),
+                CodemodeJsonHostCall {
+                    id,
+                    target,
+                    name: name.clone(),
+                    args: args
+                        .as_ref()
+                        .map(|v| strict::parse(v).map_err(|_| BridgeError("call arguments is not valid JSON".into())))
+                        .transpose()?,
+                },
+            ),
         };
         {
             let mut state = self.state.lock();
             let record = (target == CodemodeCallTarget::Tool).then(|| {
-                state.calls.push(CodemodeCall { name: name.clone(), status: CodemodeCallStatus::Cancelled, duration_ms: 0.0 });
+                state.calls.push(json_run::JsonCallRecord { name: name.clone(), status: CodemodeCallStatus::Cancelled, duration_ms: 0.0 });
                 state.calls.len() - 1
             });
             state.pending.insert(id, PendingCall { record, started_at: Instant::now(), token: CancellationToken::new() });
         }
-        let handle = CodemodeRunHandle::new(self.clone());
-        (control.on_call)(CodemodeHostCall { id, target, name, args }, handle);
+        match prepared {
+            Prepared::Typed(callback, call) => callback(call, CodemodeRunHandle::new(self.clone())),
+            Prepared::Json(callback, call) => callback(call, CodemodeJsonRunHandle::new(self.clone())),
+        };
         Ok(())
     }
 
@@ -482,7 +562,11 @@ impl Execution {
         {
             let mut state = self.state.lock();
             let record = is_tool.then(|| {
-                state.calls.push(CodemodeCall { name: name.clone(), status: CodemodeCallStatus::Cancelled, duration_ms: 0.0 });
+                state.calls.push(json_run::JsonCallRecord {
+                    name: name.clone().into(),
+                    status: CodemodeCallStatus::Cancelled,
+                    duration_ms: 0.0,
+                });
                 state.calls.len() - 1
             });
             state.pending.insert(id, PendingCall { record, started_at: Instant::now(), token: token.clone() });
@@ -549,6 +633,10 @@ impl Execution {
     }
 
     fn finish(&self, outcome: Result<CodemodeSuccess, CodemodeError>, during: Option<CodemodeDuring>) {
+        let result = json_run::encoded(&CodemodeResult { outcome, output: vec![], calls: vec![], during });
+        self.finish_json(result, during);
+    }
+    fn finish_json(&self, mut result: JsonValue, during: Option<CodemodeDuring>) {
         let mut state = self.state.lock();
         if state.finished {
             return;
@@ -565,12 +653,11 @@ impl Execution {
             }
         }
         state.unsent.clear();
-        let result = CodemodeResult {
-            outcome,
-            output: std::mem::take(&mut state.output),
-            calls: std::mem::take(&mut state.calls),
-            during,
-        };
+        json_run::put(&mut result, "output", JsonValue::Array(std::mem::take(&mut state.output).into()));
+        json_run::put(&mut result, "calls", json_run::encoded(&std::mem::take(&mut state.calls)));
+        if let Some(during) = during {
+            json_run::put(&mut result, "during", json_run::encoded(&during));
+        }
         let channel = state.channel.clone();
         drop(state);
         self.ended.cancel();
@@ -626,7 +713,9 @@ impl RunControl for Execution {
             return Err(format!("Call {id} is not waiting for a result"));
         }
         let (ok, payload, properties) = match outcome {
-            CodemodeOutcome::Ok { value } => (true, value.map(|value| serde_json::to_string(&value).unwrap_or_else(|_| "null".into())), None),
+            CodemodeOutcome::Ok { value } => {
+                (true, value.map(|value| serde_json::to_string(&value).unwrap_or_else(|_| "null".into())), None)
+            }
             CodemodeOutcome::Err { message, properties } => {
                 let properties = match properties {
                     None => None,
@@ -644,6 +733,35 @@ impl RunControl for Execution {
             record.duration_ms = pending.started_at.elapsed().as_secs_f64() * 1000.0;
         }
         Self::post(&mut state, HostToWorkerMessage::Result { id, ok, payload, seq: Some(seq), now: Some(now), properties });
+        Ok(())
+    }
+    fn deliver_json(&self, seq: u64, now: f64, id: u64, outcome: CodemodeJsonOutcome) -> Result<(), String> {
+        let mut state = self.state.lock();
+        if state.finished {
+            return Ok(());
+        }
+        if !now.is_finite() {
+            return Err(format!("The clock value of result {seq} is not a finite number"));
+        }
+        if seq < 1 || state.delivered.contains(&seq) {
+            return Err(format!("Result number {seq} is not a positive integer used once"));
+        }
+        if !state.pending.contains_key(&id) {
+            return Err(format!("Call {id} is not waiting for a result"));
+        }
+        let (ok, payload, properties) = match outcome {
+            CodemodeJsonOutcome::Ok { value } => (true, value.map(|v| v.to_string().encode_utf16().collect()), None),
+            CodemodeJsonOutcome::Err { message, properties } => {
+                (false, Some(message.units().to_vec()), properties.map(|v| JsonValue::Object(v.into()).to_string()))
+            }
+        };
+        state.delivered.insert(seq);
+        let pending = state.pending.remove(&id).expect("pending call");
+        if let Some(index) = pending.record {
+            state.calls[index].status = if ok { CodemodeCallStatus::Ok } else { CodemodeCallStatus::Error };
+            state.calls[index].duration_ms = pending.started_at.elapsed().as_secs_f64() * 1000.0;
+        }
+        Self::post(&mut state, HostToWorkerMessage::ResultUtf16 { id, ok, payload, seq, now, properties });
         Ok(())
     }
 }
@@ -815,9 +933,14 @@ impl CodemodeSandbox {
         };
         let (execution, result) = Execution::start(ExecutionOptions {
             code: code.to_string(),
+            code_utf16: None,
             tools: tools
                 .iter()
-                .map(|tool| CodemodeDeclaredTool { name: tool.name.clone(), js_name: None, description: tool.description.clone() })
+                .map(|tool| VmTool {
+                    name: tool.name.clone().into(),
+                    js_name: to_codemode_identifier(&tool.name).into(),
+                    description: tool.description.clone().unwrap_or_default().into(),
+                })
                 .collect(),
             globals: self
                 .inner
@@ -830,12 +953,15 @@ impl CodemodeSandbox {
             signal: options.signal,
             memory_limit_bytes: self.inner.memory_limit_bytes,
             store: serialize_store(options.store.as_ref()),
+            store_json: None,
             deterministic: None,
+            timezone: options.timezone,
             control: None,
             launcher: self.inner.launcher.clone(),
         });
         let _guard = self.register(execution);
-        result.await.map_err(|_| CodemodeSandboxError("The execution ended without a result".into()))
+        let result = result.await.map_err(|_| CodemodeSandboxError("The execution ended without a result".into()))?;
+        json_run::decode_result(result).map_err(CodemodeSandboxError)
     }
 
     /// Run `code` deterministically, with the caller answering its calls: the same script, start
@@ -848,48 +974,33 @@ impl CodemodeSandbox {
     /// The sandbox's own tools and globals are not used: the run declares its own, and every call
     /// goes to `options.on_call`. Must be called within a tokio runtime.
     pub fn start(&self, code: &str, options: CodemodeRunOptions) -> Result<CodemodeRun, CodemodeSandboxError> {
-        if self.inner.closed.load(Ordering::SeqCst) {
-            return Err(CodemodeSandboxError("Sandbox is closed".into()));
-        }
-        if tokio::runtime::Handle::try_current().is_err() {
-            return Err(CodemodeSandboxError("start() must be called within a tokio runtime".into()));
-        }
-        if !options.started_at.is_finite() || options.started_at < 0.0 {
-            return Err(CodemodeSandboxError(
-                "startedAt must be a non-negative number of milliseconds since the epoch".into(),
-            ));
-        }
-        let names: HashSet<&str> = options.tools.iter().map(|tool| tool.name.as_str()).collect();
-        if names.len() != options.tools.len() {
-            return Err(CodemodeSandboxError("Tool names must be unique".into()));
-        }
-        let script_names: HashSet<String> = options
-            .tools
-            .iter()
-            .map(|tool| tool.js_name.clone().unwrap_or_else(|| to_codemode_identifier(&tool.name)))
-            .collect();
-        if script_names.len() != options.tools.len() {
-            return Err(CodemodeSandboxError("Tool script names must be unique".into()));
-        }
-        check_globals(options.globals.iter().map(|global| global.name.as_str()))?;
+        let tools = legacy_vm_tools(&options.tools);
+        self.check_start(options.started_at, &tools, &options.globals)?;
         let (execution, result) = Execution::start(ExecutionOptions {
             code: code.to_string(),
-            tools: options.tools,
+            code_utf16: None,
+            tools,
             globals: options.globals,
             executors: Executors::default(),
             timeout_ms: options.timeout_ms.unwrap_or(f64::INFINITY),
             signal: options.signal,
             memory_limit_bytes: self.inner.memory_limit_bytes,
             store: serialize_store(options.store.as_ref()),
+            store_json: None,
             deterministic: Some(super::protocol::VmDeterministic { started_at: options.started_at, seed: options.seed }),
-            control: Some(Control { on_started: options.on_started, on_call: options.on_call, on_idle: options.on_idle }),
+            timezone: None,
+            control: Some(Control {
+                on_started: options.on_started,
+                on_call: CallHandler::Typed(options.on_call),
+                on_idle: options.on_idle,
+            }),
             launcher: self.inner.launcher.clone(),
         });
         let guard = self.register(execution.clone());
         let result = async move {
             let result = result.await;
             drop(guard);
-            result.unwrap_or_else(|_| CodemodeResult {
+            result.ok().and_then(|value| json_run::decode_result(value).ok()).unwrap_or_else(|| CodemodeResult {
                 outcome: Err(CodemodeError::new(CodemodeErrorKind::Sandbox, "The execution ended without a result")),
                 output: Vec::new(),
                 calls: Vec::new(),
@@ -897,6 +1008,82 @@ impl CodemodeSandbox {
             })
         };
         Ok(CodemodeRun { result: Box::pin(result), control: execution })
+    }
+
+    fn check_start(&self, started_at: f64, tools: &[VmTool], globals: &[CodemodeDeclaredGlobal]) -> Result<(), CodemodeSandboxError> {
+        if self.inner.closed.load(Ordering::SeqCst) {
+            return Err(CodemodeSandboxError("Sandbox is closed".into()));
+        }
+        if tokio::runtime::Handle::try_current().is_err() {
+            return Err(CodemodeSandboxError("start() must be called within a tokio runtime".into()));
+        }
+        if !started_at.is_finite() || started_at < 0.0 {
+            return Err(CodemodeSandboxError("startedAt must be a non-negative number of milliseconds since the epoch".into()));
+        }
+        let names: HashSet<&JsonString> = tools.iter().map(|tool| &tool.name).collect();
+        if names.len() != tools.len() {
+            return Err(CodemodeSandboxError("Tool names must be unique".into()));
+        }
+        let script_names: HashSet<&JsonString> = tools.iter().map(|tool| &tool.js_name).collect();
+        if script_names.len() != tools.len() {
+            return Err(CodemodeSandboxError("Tool script names must be unique".into()));
+        }
+        check_globals(globals.iter().map(|global| global.name.as_str()))?;
+        Ok(())
+    }
+    /// Deterministic execution with lossless JavaScript JSON values.
+    pub fn start_json(&self, code: &str, options: CodemodeJsonRunOptions) -> Result<CodemodeJsonRun, CodemodeSandboxError> {
+        self.start_json_utf16(&code.encode_utf16().collect::<Vec<_>>(), options)
+    }
+
+    /// Deterministic JSON execution preserving every source-text code unit.
+    pub fn start_json_utf16(&self, code: &[u16], options: CodemodeJsonRunOptions) -> Result<CodemodeJsonRun, CodemodeSandboxError> {
+        let tools = json_vm_tools(&options.tools);
+        self.check_start(options.started_at, &tools, &options.globals)?;
+        let (code, code_utf16) = match String::from_utf16(code) {
+            Ok(code) => (code, None),
+            Err(_) => (String::new(), Some(code.to_vec())),
+        };
+        let store_json = options.store.as_ref().map(|store| {
+            JsonValue::Object(
+                store.iter().map(|(key, value)| (key.clone(), JsonValue::String(value.to_string().into()))).collect::<strict::Map>().into(),
+            )
+            .to_string()
+        });
+        let (execution, result) = Execution::start(ExecutionOptions {
+            code,
+            code_utf16,
+            tools,
+            globals: options.globals,
+            executors: Executors::default(),
+            timeout_ms: options.timeout_ms.unwrap_or(f64::INFINITY),
+            signal: options.signal,
+            memory_limit_bytes: self.inner.memory_limit_bytes,
+            store: IndexMap::new(),
+            store_json,
+            deterministic: Some(super::protocol::VmDeterministic { started_at: options.started_at, seed: options.seed }),
+            timezone: None,
+            control: Some(Control {
+                on_started: options.on_started,
+                on_call: CallHandler::Json(options.on_call),
+                on_idle: options.on_idle,
+            }),
+            launcher: self.inner.launcher.clone(),
+        });
+        let guard = self.register(execution.clone());
+        let result = async move {
+            let value = result.await;
+            drop(guard);
+            value.unwrap_or_else(|_| {
+                json_run::encoded(&CodemodeResult {
+                    outcome: Err(CodemodeError::new(CodemodeErrorKind::Sandbox, "The execution ended without a result")),
+                    output: vec![],
+                    calls: vec![],
+                    during: None,
+                })
+            })
+        };
+        Ok(CodemodeJsonRun { result: Box::pin(result), handle: CodemodeJsonRunHandle::new(execution) })
     }
 
     /// Aborts in-flight executions (they resolve with `kind: "aborted"`) and rejects new ones.

@@ -1,0 +1,153 @@
+{
+ "files": [
+  {
+   "reference": "packages/durable/test/env-truncate.test.ts",
+   "cases": [
+    {
+     "name": "truncate utilities > reports UTF-8 byte counts in truncation results",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::reports_utf8_byte_counts_in_truncation_results",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > counts UTF-8 bytes and truncates correctly in a runtime without Buffer",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::counts_utf8_bytes_and_truncates_correctly_in_a_runtime_without_buffer",
+     "note": "Same inputs incl. lone surrogates via UTF-16 units; the no-Buffer subprocess is JS-specific, Rust has no Buffer."
+    },
+    {
+     "name": "truncate utilities > does not count a trailing newline as an extra line",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::does_not_count_a_trailing_newline_as_an_extra_line",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > truncates head by line limits",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::truncates_head_by_line_limits",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > reports bytes when only a trailing newline exceeds limits at the line cap",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::reports_bytes_when_only_a_trailing_newline_exceeds_limits_at_the_line_cap",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > truncates head on UTF-8 byte limits without partial lines",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::truncates_head_on_utf8_byte_limits_without_partial_lines",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > reports head truncation when the first line exceeds the byte limit",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::reports_head_truncation_when_the_first_line_exceeds_the_byte_limit",
+     "note": ""
+    },
+    {
+     "name": "truncate utilities > formats sizes",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::formats_sizes",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/spec-usage.test.ts",
+   "cases": [
+    {
+     "name": "compiles the spec's usage examples",
+     "class": "n/a",
+     "rust": null,
+     "note": "Compile-only type check of TS spec examples; the Rust compiler enforces the native API and examples are built by cargo (crates/pi-durable/examples). No runtime assertion beyond expectTypeOf/typeof."
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/types.test.ts",
+   "cases": [
+    {
+     "name": "brands numeric IDs by record kind and carries task result types",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::brands_numeric_ids_by_record_kind_and_carries_task_result_types",
+     "note": "Runtime assertions (numeric serialization) ported; branding/@ts-expect-error cases are compile-time, enforced by distinct Rust newtypes."
+    },
+    {
+     "name": "encodes discriminator-dependent fields",
+     "class": "n/a",
+     "rust": null,
+     "note": "Purely type-level (satisfies/expectTypeOf/@ts-expect-error); Rust enums encode discriminated unions and the compiler enforces them. No runtime assertions."
+    },
+    {
+     "name": "types submissions, task waits, compaction, and tasks erased into extensions",
+     "class": "n/a",
+     "rust": null,
+     "note": "Purely type-level generics checks; no runtime assertions (typedWaits/compileTimeFailures are never executed)."
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/storage-runtime-boundary.test.ts",
+   "cases": [
+    {
+     "name": "durable storage runtime boundaries > keeps the package root limited to portable core storage",
+     "class": "embedded-only",
+     "rust": null,
+     "note": "Source import-graph check of JS module entry points; Rust uses crate/feature boundaries enforced by Cargo."
+    },
+    {
+     "name": "durable storage runtime boundaries > keeps the portable SQLite subpath free of Node imports",
+     "class": "embedded-only",
+     "rust": null,
+     "note": "JS package subpath/Node import hygiene."
+    },
+    {
+     "name": "durable storage runtime boundaries > keeps the portable environment subpath free of Node imports",
+     "class": "embedded-only",
+     "rust": null,
+     "note": "JS package subpath/Node import hygiene."
+    },
+    {
+     "name": "durable storage runtime boundaries > keeps the portable JSONL subpath free of Node imports",
+     "class": "embedded-only",
+     "rust": null,
+     "note": "JS package subpath/Node import hygiene."
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/harness-telemetry-options.test.ts",
+   "cases": [
+    {
+     "name": "HarnessOptions.telemetry > accepts one adapter with optional propagation and metrics capabilities",
+     "class": "native",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::harness_options_telemetry_accepts_one_adapter_and_defaults_to_noop",
+     "note": "Runtime: adapter identity retained, omitted defaults to noop. Optional-capability and @ts-expect-error parts are type-level (ContextRef trait object requires span-starting context)."
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/provider-session-cache-e2e.test.ts",
+   "cases": [
+    {
+     "name": "Durable provider session cache e2e > reuses the Codex prompt cache across Durable turns",
+     "class": "n/a",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::forwards_the_provider_session_id_every_turn_and_leads_requests_with_the_system_message",
+     "note": "Upstream is skipIf no ~/.pi/agent/auth.json Codex credentials and hits the live API; it does not run offline. Offline native analog asserts the sessionId forwarded each turn equals the conversation's ProviderDoc sessionId. Live cache-hit rates are not reproducible offline."
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/system-order-cache-e2e.test.ts",
+   "cases": [
+    {
+     "name": "Durable system message order e2e > keeps the prompt cache across a tool change only when the system message leads",
+     "class": "n/a",
+     "rust": "crates/pi-durable/tests/misc_upstream.rs::forwards_the_provider_session_id_every_turn_and_leads_requests_with_the_system_message",
+     "note": "Upstream is skipIf no Anthropic credentials and measures live cache reads; not offline. Offline native analog asserts the system message is first in every request. Legacy-order hook comparison and cache ratios need the live provider."
+    }
+   ]
+  }
+ ]
+}

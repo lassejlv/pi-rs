@@ -7,7 +7,7 @@ use std::time::Duration;
 use futures::future::BoxFuture;
 use parking_lot::Mutex;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use crate::utils::wasm::net::{TcpListener, TcpStream};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
@@ -335,7 +335,7 @@ pub async fn start_oauth_callback_server<T: Clone + Send + Sync + 'static>(
     let state = options.state.clone();
     let provider_name = options.provider_name.clone();
     let complete = options.complete.clone();
-    tokio::spawn(async move {
+    crate::utils::wasm::spawn(async move {
         loop {
             let accepted = tokio::select! {
                 accepted = listener.accept() => accepted,
@@ -344,7 +344,7 @@ pub async fn start_oauth_callback_server<T: Clone + Send + Sync + 'static>(
             let Some(accepted) = accepted else { return };
             match accepted {
                 Ok(socket) => {
-                    tokio::spawn(handle_connection(
+                    crate::utils::wasm::spawn(handle_connection(
                         socket,
                         accept_shared.clone(),
                         path.clone(),
@@ -363,7 +363,7 @@ pub async fn start_oauth_callback_server<T: Clone + Send + Sync + 'static>(
 
     if let Some(signal) = options.signal.clone() {
         let abort_shared = shared.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             tokio::select! {
                 _ = signal.cancelled() => abort_shared.finish(Err("Login cancelled".into())),
                 _ = abort_shared.shutdown.cancelled() => {}
@@ -373,9 +373,9 @@ pub async fn start_oauth_callback_server<T: Clone + Send + Sync + 'static>(
     if let Some(timeout_ms) = options.timeout_ms {
         let timer_shared = shared.clone();
         let provider_name = options.provider_name.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(timeout_ms)) => {
+                _ = crate::utils::wasm::sleep(Duration::from_millis(timeout_ms)) => {
                     timer_shared.finish(Err(format!("{provider_name} sign-in timed out")));
                 }
                 _ = timer_shared.shutdown.cancelled() => {}

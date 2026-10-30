@@ -206,7 +206,7 @@ pub fn sse_reader(
     response: reqwest::Response,
     signal: Option<CancellationToken>,
 ) -> SseReader<impl Stream<Item = Result<Bytes, reqwest::Error>> + Unpin> {
-    SseReader::new(Box::pin(response.bytes_stream()), signal)
+    SseReader::new(Box::pin(crate::utils::wasm::assert_send(response.bytes_stream())), signal)
 }
 
 #[cfg(test)]

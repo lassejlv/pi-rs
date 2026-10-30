@@ -6,6 +6,7 @@ license.workspace = true
 description = "Embedded pure-Rust JavaScript runtime (Boa + oxc) used by pi extensions and code mode"
 
 [dependencies]
+jiff.workspace = true
 boa_engine.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
@@ -85,6 +86,7 @@ tokio-tungstenite.workspace = true
 h2 = "0.4"
 socket2 = { version = "0.6", features = ["all"] }
 http = "1"
+rusqlite.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

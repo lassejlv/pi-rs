@@ -206,14 +206,18 @@ async fn timers_work() {
             r#"
             new Promise((resolve) => {
                 const order = [];
-                setTimeout(() => order.push('t20'), 20);
+                // Resolve once the interval's third tick and t20 have both run, not on a fixed
+                // deadline: a starved loop (parallel tests) would otherwise fire a 60 ms resolve
+                // before the rescheduled interval ticks, in Node as here.
+                let t20 = false;
+                let n = 0;
+                const done = () => { if (t20 && n === 3) setImmediate(() => resolve(order)); };
+                setTimeout(() => { order.push('t20'); t20 = true; done(); }, 20);
                 const t = setTimeout(() => order.push('cancelled'), 5);
                 clearTimeout(t);
                 setImmediate(() => order.push('immediate'));
                 queueMicrotask(() => order.push('micro'));
-                let n = 0;
-                const iv = setInterval(() => { order.push('iv' + (++n)); if (n === 3) clearInterval(iv); }, 2);
-                setTimeout(() => resolve(order), 60).unref();
+                const iv = setInterval(() => { order.push('iv' + (++n)); if (n === 3) { clearInterval(iv); done(); } }, 2);
             })
             "#,
         )
@@ -368,7 +372,8 @@ async fn runaway_scripts_are_contained() {
     let err = rt.eval("let i = 0; while (true) { i++; }").await.unwrap_err();
     assert!(err.to_string().to_lowercase().contains("loop"), "{err}");
     let err = rt.eval("function f(n) { return f(n + 1) + 1; } f(0)").await.unwrap_err();
-    assert!(err.to_string().contains("recursive"), "{err}");
+    // Node's stack overflow error (vendor/boa_engine/PATCH.md: catchable, as in V8).
+    assert!(err.to_string().contains("Maximum call stack size exceeded"), "{err}");
     // The runtime is still usable afterwards.
     assert_eq!(rt.eval("1 + 1").await.unwrap(), json!(2));
 }

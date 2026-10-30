@@ -340,6 +340,17 @@ fn canonical_numeric_index_string(argument: &JsString) -> Option<f64> {
         return Some(-0.0);
     }
 
+    // Not in the spec: ToString of a Number starts with a digit, `-`, `I` (Infinity) or `N` (NaN),
+    // so any other string fails step 3. Method and property names (`set`, `length`, `subarray`)
+    // reach here on every typed array access; skip their ToNumber/ToString round trip.
+    match argument.iter().next() {
+        Some(c) if (u16::from(b'0')..=u16::from(b'9')).contains(&c)
+            || c == u16::from(b'-')
+            || c == u16::from(b'I')
+            || c == u16::from(b'N') => {}
+        _ => return None,
+    }
+
     // 2. Let n be ! ToNumber(argument).
     let n = argument.to_number();
 

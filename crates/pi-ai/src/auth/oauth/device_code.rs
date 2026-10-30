@@ -34,7 +34,7 @@ pub async fn abortable_sleep(
     }
     tokio::select! {
         _ = signal.cancelled() => anyhow::bail!("{cancel_message}"),
-        _ = tokio::time::sleep(Duration::from_millis(ms.max(0.0) as u64)) => Ok(()),
+        _ = crate::utils::wasm::sleep(Duration::from_millis(ms.max(0.0) as u64)) => Ok(()),
     }
 }
 
@@ -47,8 +47,8 @@ pub struct OAuthDeviceCodePollOptions {
 }
 
 /// Milliseconds since `origin` on tokio's clock (so paused test time applies).
-fn elapsed_ms(origin: tokio::time::Instant) -> f64 {
-    tokio::time::Instant::now()
+fn elapsed_ms(origin: crate::utils::wasm::Instant) -> f64 {
+    crate::utils::wasm::Instant::now()
         .saturating_duration_since(origin)
         .as_secs_f64()
         * 1000.0
@@ -63,7 +63,7 @@ where
     F: FnMut() -> Fut,
     Fut: Future<Output = anyhow::Result<OAuthDeviceCodePollResult<T>>>,
 {
-    let origin = tokio::time::Instant::now();
+    let origin = crate::utils::wasm::Instant::now();
     let now_ms = || elapsed_ms(origin);
     let deadline = match options.expires_in_seconds {
         Some(seconds) => seconds * 1000.0,

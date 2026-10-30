@@ -1,0 +1,336 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "runner": {
+    "sourceAliases": "@earendil-works/pi-ai[/*] and @earendil-works/pi-telemetry[/*] resolve to the pinned packages/{ai,telemetry}/src/<sub>.ts (else <sub>/index.ts), the stock resolver plugin rule; git status of those src trees must be clean before and after each run (report: sourceAliases). context.test.ts imports @earendil-works/pi-telemetry through it.",
+    "childCounters": "node-mode children write native counters to PI_DURABLE_EMBEDDED_COUNTERS_DIR; the parent sums them (report: native.children, native.childMethods)."
+  },
+  "files": [
+    {
+      "test": "packages/chord/test/json.test.ts",
+      "sha256": "75382fb561a4ac66388d4694975048468df50e15291af05dd25ab4eed5fc885d",
+      "passed": 5,
+      "failed": 0,
+      "total": 5,
+      "nativeCalls": 5,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "copyJson > optionally omits undefined object properties without normalizing arrays",
+          "status": "passed"
+        },
+        {
+          "name": "copyJson > rejects cycles and non-strict container properties",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/context.test.ts",
+      "sha256": "3c761d9bd45bba93732a7d55ed153a30a7253c9ce0c808fec38ce86c40cce34c",
+      "passed": 7,
+      "failed": 0,
+      "total": 7,
+      "nativeCalls": 56,
+      "success": true,
+      "embeddedOnly": [],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta.test.ts",
+      "sha256": "de120d2970e8ddf4628321917b48018d523963506bc31df6b06cc78a9fa343c1",
+      "passed": 41,
+      "failed": 0,
+      "total": 41,
+      "nativeCalls": 968,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "operation application and validation > validates immutable operations before traversing the target",
+          "status": "passed"
+        },
+        {
+          "name": "immutable application ownership > adopts a mutable replacement payload rather than copying it",
+          "status": "passed"
+        },
+        {
+          "name": "path and prototype safety > does not run inherited setters",
+          "status": "passed"
+        },
+        {
+          "name": "path and prototype safety > imports own properties without invoking inherited setters",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta-clone.test.ts",
+      "sha256": "a437d92130fe9a67223b2438266d58ee8a69de0fa39b983666794dde4bad2692",
+      "passed": 4,
+      "failed": 0,
+      "total": 4,
+      "nativeCalls": 3,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "tracker ownership > preserves null prototypes in an alias-free owned root",
+          "status": "passed"
+        },
+        {
+          "name": "tracker ownership > does not traverse a trusted root while taking ownership",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta-diff.test.ts",
+      "sha256": "94579bffe2d9e035a97fd923e7f4a43b66e8bc090fbb09d25be11a20713a0d58",
+      "passed": 29,
+      "failed": 0,
+      "total": 29,
+      "nativeCalls": 327,
+      "success": true,
+      "embeddedOnly": [],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta-apply-immutable.test.ts",
+      "sha256": "81480b4eae8adbeebe473837be66cf50fc31db6f371887b966f1e8c6ae000344",
+      "passed": 8,
+      "failed": 0,
+      "total": 8,
+      "nativeCalls": 2878,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "immutable application complexity > copies a wide object once rather than once per repeated write",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta-tracker/tracker.test.ts",
+      "sha256": "ab2b57ed6bf5fdf45ed1cc36fdf0ff0bd1ce8d77e83690f4e78426ca5322d5fc",
+      "passed": 70,
+      "failed": 0,
+      "total": 70,
+      "nativeCalls": 269228,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "delta tracker transactional overlay lifecycle > allows Promise resolution to inspect a settled draft without reporting a false failure",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > supports native reads, descriptors, keys, iteration, map, and JSON",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > keeps native coercion side effects and string operation forms",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > forwards borrowed mutators to ordinary generic array receivers",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > matches native structural coercion ordering for splice, fill, and copyWithin",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > does not report inherited methods as own array properties",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > keeps repeated identical writes instead of reverting their pending override",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > supports optional deletion, explicit null length growth, shrinking, and default sort",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > enumerates wide objects without duplicate keys",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker policy view > uses one proxy identity per accessed container",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker by-value placements > clones property, index, push, unshift, splice, fill, and copyWithin placements",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker by-value placements > rejects non-strict JSON placements before changing the draft",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > matches native splice with zero or one argument",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > supports all structural mutators and native return values",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > tracks held handles after reindex and suppresses detached writes",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > replays introduced, moved, then edited array descendants",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > keeps comparator writes and structurally reentrant appends",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > normalizes duplicate entries created by structurally reentrant sort callbacks",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker piece arrays > supports self-overlapping fill and copyWithin by value",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/delta-tracker/retention.test.ts",
+      "sha256": "3bb2287b0e1229ade82630cbec5125f931454ba33e5fde158539b84a20f2baac",
+      "passed": 14,
+      "failed": 0,
+      "total": 14,
+      "nativeCalls": 600115,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "delta tracker retention across GC jobs > validates draft-proxies retention semantics",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-settled-proxy retention semantics",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-large-settled-proxy retention semantics",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-large-placement-proxies retention semantics",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates same-job-fast-cleanup retention semantics",
+          "status": "passed"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates same-job-folded-ops-cleanup retention semantics",
+          "status": "passed"
+        }
+      ],
+      "failures": [],
+      "nativeChildren": 14,
+      "notes": [
+        "Every case runs in a child `process.execPath --expose-gc retention.worker.ts <scenario>` (runner node mode, routed to the embedded modules); the children's native counters are summed into the parent report (native.children=14).",
+        "obsolete-revisions was a Boa bug, fixed in vendor/boa_engine (bytecompiler/statement/loop.rs): a `for (let …)` loop with all-local bindings allocated an extra persistent register that was never written and kept the `new WeakRef(t.value.rows)` argument alive across `await`. Regression: crates/pi-jsrt/tests/boa_patches.rs::for_let_loop_does_not_keep_a_dead_temporary_alive_across_await (red before the fix, green after)."
+      ]
+    },
+    {
+      "test": "packages/chord/test/output.test.ts",
+      "sha256": "0dd8827bb95c13f650d7cce335bcbfc825e1773219898a9d5f9109b2335f16c2",
+      "passed": 21,
+      "failed": 0,
+      "total": 21,
+      "nativeCalls": 55182,
+      "success": true,
+      "embeddedOnly": [],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/output-skip.test.ts",
+      "sha256": "2adc9961db3ee819deff8303b06d30f195a4e1681a99f9bd93a2875ec45f576a",
+      "passed": 4,
+      "failed": 0,
+      "total": 4,
+      "nativeCalls": 277284,
+      "success": true,
+      "embeddedOnly": [],
+      "failures": []
+    },
+    {
+      "test": "packages/chord/test/watch.test.ts",
+      "sha256": "aaea8319deedf2a3aaacdafd54b3ce4bb7f4401ed76520ef6fb4dbe07151cf4d",
+      "passed": 24,
+      "failed": 0,
+      "total": 24,
+      "nativeCalls": 143,
+      "success": true,
+      "embeddedOnly": [
+        {
+          "name": "Watch ends > wraps a thrown non-Error in an Error",
+          "status": "passed"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "reference": "packages/chord/src/delta/draft.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable-jsrt/js/internal/chord/delta/tracker.js",
+        "crates/pi-durable-jsrt/js/chord/delta/index.js",
+        "crates/pi-durable-jsrt/src/dispatch/chord/delta.rs",
+        "crates/pi-chord/src/delta/tracker.rs"
+      ],
+      "evidence": [
+        "crates/pi-durable-jsrt/examples/embedded_stock.rs --suite=packages/chord/test/delta-tracker/tracker.test.ts",
+        "crates/pi-durable-jsrt/examples/embedded_stock.rs --suite=packages/chord/test/delta.test.ts",
+        "crates/pi-durable-jsrt/examples/embedded_stock.rs --suite=packages/chord/test/delta-clone.test.ts",
+        "crates/pi-durable-jsrt/examples/embedded_stock.rs --suite=packages/chord/test/delta-tracker/retention.test.ts"
+      ],
+      "note": "Type-only: `Draft<T>` (re-exported from delta/index.ts) is the static type of a tracker's mutable view and has no runtime code. The embedded tracker port (tracker.js, types stripped) produces those drafts, with native validation via the delta.* host methods; the four suites above exercise drafts and pass embedded (70/70, 41/41, 4/4, 14/14)."
+    },
+    {
+      "reference": "packages/chord/src/delta/revision-validator.ts",
+      "status": "partial",
+      "rust": [],
+      "note": "Not ported: JsonRevisionValidator is not exported by any @earendil-works/pi-chord entry point (delta/index.ts does not re-export it) and no upstream src or test imports it; its only user is test/delta-traversal.bench.ts, a benchmark the runner does not run. So no embedded package can reach it and no test case covers it. Its checks (strict JSON values, no cycles, dense arrays, plain objects) are the same ones the native delta/json validation enforces for tracker placements and copyJson (delta.test.ts, json.test.ts), but there is no validator class or skip-validated-containers cache to map it to."
+    }
+  ],
+  "summary": {
+    "files": 11,
+    "passed": 227,
+    "total": 227,
+    "embeddedOnlyPassed": 35,
+    "embeddedOnlyTotal": 35,
+    "note": "The plan counted 36 embedded-only Chord cases; delta-diff 'combines removals, append, and a shared-subtree survivor edit' became native when the identity-guided native diff landed (chord-b.json), leaving 35.",
+    "sourceFiles": {
+      "note": "Two source-file entries (status/rust/evidence) follow the 11 test files in `files`; they are not counted in files/passed/total.",
+      "verified": [
+        "packages/chord/src/delta/draft.ts"
+      ],
+      "partial": [
+        "packages/chord/src/delta/revision-validator.ts"
+      ]
+    }
+  },
+  "design": {
+    "context": "JS Context objects own a native pi_chord Context (values stored natively as handles, toString native, caller cancellation mirrored into a native AbortController); JS AbortSignal/telemetry span identities stay JS. `pi-durable:internal/chord/context` exports nativeContext(context) for durable glue. Rust receives it with pi_durable_jsrt::dispatch::chord::context_from(&HostValue) (tests/chord_embedded.rs::a_js_context_crosses_to_rust_with_its_cancellation).",
+    "watch": "JS lifecycle (pi-durable:internal/src/chord/watch): delivery on the JS job queue is the contract; native sources feed advance/retire/end.",
+    "json": "copyJson: JS structural check (prototypes, descriptors, cycles) + native json.copy; isJsonValue: JS structural check.",
+    "delta": "Op/wire/path validation, overlap, Encoder/Decoder and diffRevisions are native (payload slots never cross; diff receives an identity graph so JS references become shared Arcs). apply/applyImmutable(Batches) are JS copy-on-write over native validation because untouched-subtree and payload identity are asserted.",
+    "tracker": "Port of upstream tracker.ts (types stripped) in pi-durable:internal/chord/delta/tracker; native touchpoints are copyJson (json.copy) per placement, overlap, and natively validated applyImmutable. Native emission cannot keep the asserted JS identities, proxies, held handles or GC retention (see report to lead).",
+    "sqlite": "validateSqliteSchemaPrefix native; applySqliteMigrations JS over any SqliteDatabase; NodeSqliteDatabase is the upstream adapter over pi-jsrt's native node:sqlite (it must wrap a caller's DatabaseSync); DurableObjectSqliteDatabase wraps a caller's ctx.storage.",
+    "engine": "vendor/boa_engine: Array::set_length fast path no longer skips truncation (boa_patches.rs::splice_truncates_elements_added_by_a_coercion); for-let all-local bindings no longer allocate a dead persistent register (boa_patches.rs::for_let_loop_does_not_keep_a_dead_temporary_alive_across_await); both recorded in vendor/boa_engine/PATCH.md. pi-jsrt node:v8 setFlagsFromString('--expose-gc') exposes gc in later node:vm contexts (vm.rs::expose_gc_flag_reaches_new_vm_contexts)."
+  },
+  "differential": {
+    "test": "crates/pi-durable-jsrt/tests/tracker_differential.rs::js_and_native_trackers_emit_identical_batches",
+    "what": "11 edit scripts (scalar/nested sets, delete, string append, array append, upstream removals-then-inserts, cancelled insert, reverse, parity sort, move+edit, remove/permute/insert, queue shift/push) run through the embedded JS tracker (Proxy draft and its mutators) and the native pi_chord Tracker (state() edits, splice, permute); op batches must be identical. Covers verbs a, d, m, p, s.",
+    "notExpressible": "Native has no held-handle, proxy-identity, comparator re-entrancy, fill/copyWithin, dense-region or reserved-key-fold API, so those emission paths are covered only by the upstream tracker.test.ts cases."
+  }
+}

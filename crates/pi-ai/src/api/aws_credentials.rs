@@ -656,7 +656,7 @@ async fn sts_request(
         if !retryable || attempt >= max || !quota.acquire(throttling) {
             return Err(error);
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     }
 }
@@ -763,6 +763,12 @@ async fn assume_role_with_web_identity(
 
 /// Run a `credential_process` command and parse its JSON output (`resolveProcessCredentials`).
 /// Callers turn every failure into a chain-continuing `CredentialsProviderError`.
+/// wasm32 cannot run processes; the chain continues past this source.
+#[cfg(target_arch = "wasm32")]
+pub async fn from_process(_command: &str, _profile_name: &str, _profile: &Profile) -> anyhow::Result<AwsCredentials> {
+    anyhow::bail!("credential_process is not available on wasm32")
+}
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn from_process(command: &str, profile_name: &str, profile: &Profile) -> anyhow::Result<AwsCredentials> {
     let output = if cfg!(windows) {
         tokio::process::Command::new("cmd").arg("/d").arg("/s").arg("/c").arg(command).output().await
@@ -988,7 +994,7 @@ async fn send_aws_sdk_request(
         if !retryable || attempt >= max || !quota.acquire(throttling) {
             return outcome;
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     }
 }
@@ -1157,7 +1163,13 @@ fn signin_endpoint(region: &str) -> String {
     format!("https://{region}.{suffix}")
 }
 
+/// wasm32 has no ring; AWS login token refresh needs a native host.
+#[cfg(target_arch = "wasm32")]
+fn dpop_proof(_dpop_key_pem: &str, _method: &str, _endpoint: &str) -> anyhow::Result<String> {
+    Err(terminal("Failed to generate Dpop proof: not available on wasm32"))
+}
 /// A DPoP proof (ES256 JWT) for the refresh request.
+#[cfg(not(target_arch = "wasm32"))]
 fn dpop_proof(dpop_key_pem: &str, method: &str, endpoint: &str) -> anyhow::Result<String> {
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -1193,6 +1205,7 @@ fn dpop_proof(dpop_key_pem: &str, method: &str, endpoint: &str) -> anyhow::Resul
 }
 
 /// Wrap a SEC1 `ECPrivateKey` (P-256) in a PKCS#8 `PrivateKeyInfo`.
+#[cfg(not(target_arch = "wasm32"))]
 fn sec1_to_pkcs8(sec1: &[u8]) -> Vec<u8> {
     fn der_len(len: usize) -> Vec<u8> {
         if len < 0x80 {
@@ -1291,7 +1304,7 @@ async fn from_login(profile: &Profile, context: &CredentialContext) -> anyhow::R
         if !retryable || attempt >= max || !quota.acquire(throttling) {
             break result;
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     };
     let fresh_unexpired = |error: String| -> anyhow::Result<AwsCredentials> {
@@ -1414,10 +1427,10 @@ fn credential_source_provider<'a>(
     // Each source's credentials are attributed to the named provider (`setNamedProvider`).
     let named = |credentials: AwsCredentials| credentials.with_feature("CREDENTIALS_PROFILE_NAMED_PROVIDER", "p");
     Ok(match source {
-        "EcsContainer" => Box::pin(async move {
+        "EcsContainer" => crate::utils::wasm::boxed(async move {
             from_container(&context.client).await.map(named).map_err(|e| provider_error(e.to_string()))
         }),
-        "Ec2InstanceMetadata" => Box::pin(async move {
+        "Ec2InstanceMetadata" => crate::utils::wasm::boxed(async move {
             from_imds(&context.client).await.map(named).map_err(|e| provider_error(e.to_string()))
         }),
         "Environment" => Box::pin(async move { env_provider().map(named) }),
@@ -1439,7 +1452,7 @@ fn resolve_profile<'a>(
     assume_role_recursive: bool,
     top: &'a str,
 ) -> futures::future::BoxFuture<'a, anyhow::Result<AwsCredentials>> {
-    Box::pin(async move {
+    crate::utils::wasm::boxed(async move {
         let data = shared.profile(name);
         if let Some(profile) = data
             && !visited.is_empty()

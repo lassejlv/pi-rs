@@ -15,6 +15,8 @@ async fn run(source: &str) -> Value {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn zlib_one_shot_callback_promise_and_errors() {
+    // Independently checked with Node's gzipSync on macOS; the existing fixture is Linux.
+    let gzip_hex=if cfg!(target_os="macos") { "1f8b08000000000000134b4c4a0600c241243503000000" } else { "1f8b08000000000000034b4c4a0600c241243503000000" };
     let v = run(r#"
         import zlib from "node:zlib";
         import { promisify } from "node:util";
@@ -47,7 +49,7 @@ async fn zlib_one_shot_callback_promise_and_errors() {
             "roundTrips": {"deflate/inflate": true, "gzip/gunzip": true, "deflateRaw/inflateRaw": true, "gzip/unzip": true, "deflate/unzip": true, "brotliCompress/brotliDecompress": true},
             "viaCallback": true, "viaPromise": "promised",
             "hex": "789c4b4c4a0600024d0127",
-            "gzipHex": "1f8b08000000000000034b4c4a0600c241243503000000",
+            "gzipHex": gzip_hex,
             "badHeader": ["incorrect header check", "Z_DATA_ERROR", -3],
             "truncated": ["unexpected end of file", "Z_BUF_ERROR", -5],
             "badArg": ["The \"buffer\" argument must be of type string or an instance of Buffer, TypedArray, DataView, or ArrayBuffer. Received type number (42)", "ERR_INVALID_ARG_TYPE", null],

@@ -201,10 +201,10 @@ where
             Some(signal) if signal.is_cancelled() => true,
             Some(signal) => tokio::select! {
                 _ = signal.cancelled() => true,
-                _ = tokio::time::sleep(std::time::Duration::from_millis(delay)) => false,
+                _ = crate::utils::wasm::sleep(std::time::Duration::from_millis(delay)) => false,
             },
             None => {
-                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                crate::utils::wasm::sleep(std::time::Duration::from_millis(delay)).await;
                 false
             }
         };

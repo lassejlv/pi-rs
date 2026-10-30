@@ -676,9 +676,12 @@ import { RpcClient } from "@earendil-works/pi-coding-agent";
 export default function (pi) {
     pi.on("session_start", async (_event, ctx) => {
         const agentDir = mkdtempSync(join(tmpdir(), "rpc-agent-"));
+        // Provider keys in the developer's environment would make a reasoning model available and change the
+        // default thinking level; the child must start with no model.
+        const blanked = Object.fromEntries(Object.keys(process.env).filter((k) => /API_KEY|TOKEN|SECRET/.test(k)).map((k) => [k, ""]));
         const client = new RpcClient({
             cliPath: PI_BIN, cwd: ctx.cwd, args: ["--no-session"],
-            env: { PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1" },
+            env: { ...blanked, PI_CODING_AGENT_DIR: agentDir, PI_OFFLINE: "1" },
         });
         await t("notStarted", () => client.getState());
         await client.start();

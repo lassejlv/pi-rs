@@ -1,0 +1,2861 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "fakeIndexedDb": "6.2.5",
+  "phases": {
+    "write": [
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 1
+              }
+            }
+          ]
+        ],
+        "adopted": [
+          1
+        ],
+        "value": 1
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 2
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 3
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 4
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 5
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 6
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 7
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 8
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 9
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 10
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 11
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 12
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 13
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 14
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 15
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 16
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 17
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "entry",
+              "value": {
+                "id": 2,
+                "conversationId": 1,
+                "kind": "message",
+                "data": {
+                  "text": "a\ud800b",
+                  "n": 1.5
+                }
+              }
+            },
+            {
+              "type": "entry",
+              "value": {
+                "id": 3,
+                "conversationId": 1,
+                "kind": "marker",
+                "head": 2
+              }
+            },
+            {
+              "type": "task",
+              "value": {
+                "id": 4,
+                "conversationId": 1,
+                "kind": "task.\ud800",
+                "version": 1,
+                "input": {
+                  "value": 3
+                },
+                "state": {
+                  "status": "pending",
+                  "checkpoint": {
+                    "phase": "ready"
+                  }
+                },
+                "background": false,
+                "abortRequested": false
+              }
+            },
+            {
+              "type": "task",
+              "value": {
+                "id": 5,
+                "conversationId": 1,
+                "kind": "test.background",
+                "version": 2,
+                "input": null,
+                "state": {
+                  "status": "running",
+                  "checkpoint": {
+                    "step": 1
+                  }
+                },
+                "background": true,
+                "abortRequested": true
+              }
+            },
+            {
+              "type": "submission",
+              "value": {
+                "id": 9,
+                "conversationId": 1,
+                "requestId": "request-\ud800",
+                "type": "input",
+                "status": "queued"
+              }
+            },
+            {
+              "type": "submission",
+              "value": {
+                "id": 10,
+                "conversationId": 1,
+                "type": "input",
+                "status": "queued"
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 11,
+                "kind": "notes",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 1
+                },
+                "history": "rewindable",
+                "fork": "asOf"
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {
+                  "items": [
+                    "a"
+                  ],
+                  "nested": {
+                    "count": 1
+                  }
+                }
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 12,
+                "kind": "latest",
+                "key": "k",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 1
+                },
+                "history": "latest",
+                "fork": "current"
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {
+                  "v": 1
+                }
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 13,
+                "kind": "session.settings",
+                "key": "\ud800",
+                "scope": {
+                  "kind": "session"
+                }
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {
+                  "\ud800": "\ud800"
+                }
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 14,
+                "kind": "task.state",
+                "scope": {
+                  "kind": "task",
+                  "taskId": 4
+                }
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {}
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 15,
+                "kind": "retired",
+                "scope": {
+                  "kind": "session"
+                }
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {
+                  "gone": true
+                }
+              }
+            },
+            {
+              "type": "document.create",
+              "record": {
+                "id": 16,
+                "kind": "brief",
+                "scope": {
+                  "kind": "session"
+                }
+              },
+              "content": {
+                "kind": "base",
+                "version": 1,
+                "value": {}
+              }
+            },
+            {
+              "type": "document.retire",
+              "id": 16
+            }
+          ]
+        ],
+        "adopted": [
+          2
+        ],
+        "value": 2
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "document.change",
+              "id": 11,
+              "content": {
+                "kind": "delta",
+                "version": 1,
+                "ops": [
+                  [
+                    "p",
+                    [
+                      "items"
+                    ],
+                    1,
+                    0,
+                    [
+                      "b"
+                    ]
+                  ],
+                  [
+                    "s",
+                    [
+                      "nested",
+                      "count"
+                    ],
+                    2
+                  ]
+                ]
+              }
+            },
+            {
+              "type": "document.change",
+              "id": 12,
+              "content": {
+                "kind": "base",
+                "version": 2,
+                "value": {
+                  "v": 2
+                }
+              }
+            },
+            {
+              "type": "document.retire",
+              "id": 15
+            },
+            {
+              "type": "conversation",
+              "value": {
+                "id": 6,
+                "owner": {
+                  "conversationId": 1,
+                  "taskId": 4
+                }
+              }
+            },
+            {
+              "type": "conversation",
+              "value": {
+                "id": 7,
+                "parent": {
+                  "conversationId": 1,
+                  "at": 3
+                }
+              }
+            },
+            {
+              "type": "task",
+              "value": {
+                "id": 4,
+                "conversationId": 1,
+                "kind": "task.\ud800",
+                "version": 1,
+                "input": {
+                  "value": 3
+                },
+                "state": {
+                  "status": "terminal",
+                  "outcome": {
+                    "status": "completed",
+                    "result": {
+                      "ok": true
+                    }
+                  }
+                },
+                "background": false,
+                "abortRequested": false
+              }
+            }
+          ]
+        ],
+        "adopted": [
+          3
+        ],
+        "value": 3
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "entry",
+              "value": {
+                "id": 8,
+                "conversationId": 7,
+                "kind": "child"
+              }
+            },
+            {
+              "type": "document.change",
+              "id": 11,
+              "content": {
+                "kind": "delta",
+                "version": 1,
+                "ops": [
+                  [
+                    "s",
+                    [
+                      "nested",
+                      "count"
+                    ],
+                    3
+                  ]
+                ]
+              }
+            }
+          ]
+        ],
+        "adopted": [
+          4
+        ],
+        "value": 4
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "document.copy",
+              "record": {
+                "id": 17,
+                "kind": "notes",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "rewindable",
+                "fork": "asOf"
+              },
+              "source": {
+                "id": 11,
+                "at": 3
+              }
+            }
+          ]
+        ],
+        "adopted": [
+          5
+        ],
+        "value": 5
+      },
+      {
+        "method": "close",
+        "args": [],
+        "adopted": [],
+        "missing": true
+      }
+    ],
+    "read": [
+      {
+        "method": "conversation",
+        "args": [
+          6
+        ],
+        "adopted": [],
+        "value": {
+          "id": 6,
+          "owner": {
+            "conversationId": 1,
+            "taskId": 4
+          }
+        }
+      },
+      {
+        "method": "conversation",
+        "args": [
+          7
+        ],
+        "adopted": [],
+        "value": {
+          "id": 7,
+          "parent": {
+            "conversationId": 1,
+            "at": 3
+          }
+        }
+      },
+      {
+        "method": "scanConversations",
+        "args": [
+          {},
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 1
+            },
+            {
+              "id": 6,
+              "owner": {
+                "conversationId": 1,
+                "taskId": 4
+              }
+            },
+            {
+              "id": 7,
+              "parent": {
+                "conversationId": 1,
+                "at": 3
+              }
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanConversations",
+        "args": [
+          {
+            "ownerTaskId": 4
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 6,
+              "owner": {
+                "conversationId": 1,
+                "taskId": 4
+              }
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanConversations",
+        "args": [
+          {
+            "ownerConversationId": 1,
+            "order": "descending"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 6,
+              "owner": {
+                "conversationId": 1,
+                "taskId": 4
+              }
+            }
+          ]
+        }
+      },
+      {
+        "method": "entry",
+        "args": [
+          2
+        ],
+        "adopted": [],
+        "value": {
+          "entry": {
+            "id": 2,
+            "conversationId": 1,
+            "kind": "message",
+            "data": {
+              "text": "a\ud800b",
+              "n": 1.5
+            }
+          },
+          "commitSeq": 2
+        }
+      },
+      {
+        "method": "entry",
+        "args": [
+          7,
+          2
+        ],
+        "adopted": [],
+        "value": {
+          "entry": {
+            "id": 2,
+            "conversationId": 1,
+            "kind": "message",
+            "data": {
+              "text": "a\ud800b",
+              "n": 1.5
+            }
+          },
+          "commitSeq": 2
+        }
+      },
+      {
+        "method": "entry",
+        "args": [
+          7,
+          8
+        ],
+        "adopted": [],
+        "value": {
+          "entry": {
+            "id": 8,
+            "conversationId": 7,
+            "kind": "child"
+          },
+          "commitSeq": 4
+        }
+      },
+      {
+        "method": "findLatestHeadMarker",
+        "args": [
+          7,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "id": 3,
+          "conversationId": 1,
+          "kind": "marker",
+          "head": 2
+        }
+      },
+      {
+        "method": "findLatestHeadMarker",
+        "args": [
+          1,
+          2
+        ],
+        "adopted": [],
+        "missing": true
+      },
+      {
+        "method": "scanEntries",
+        "args": [
+          {
+            "conversationId": 7
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 8,
+              "conversationId": 7,
+              "kind": "child"
+            },
+            {
+              "id": 3,
+              "conversationId": 1,
+              "kind": "marker",
+              "head": 2
+            },
+            {
+              "id": 2,
+              "conversationId": 1,
+              "kind": "message",
+              "data": {
+                "text": "a\ud800b",
+                "n": 1.5
+              }
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanEntries",
+        "args": [
+          {
+            "conversationId": 7,
+            "order": "ascending"
+          },
+          1,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 2,
+              "conversationId": 1,
+              "kind": "message",
+              "data": {
+                "text": "a\ud800b",
+                "n": 1.5
+              }
+            }
+          ],
+          "next": {
+            "after": 2,
+            "order": "ascending"
+          }
+        }
+      },
+      {
+        "method": "scanEntries",
+        "args": [
+          {
+            "conversationId": 7,
+            "order": "ascending"
+          },
+          10,
+          {
+            "after": 2,
+            "order": "ascending"
+          }
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 3,
+              "conversationId": 1,
+              "kind": "marker",
+              "head": 2
+            },
+            {
+              "id": 8,
+              "conversationId": 7,
+              "kind": "child"
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanEntries",
+        "args": [
+          {
+            "conversationId": 1,
+            "minEntryId": 3
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 3,
+              "conversationId": 1,
+              "kind": "marker",
+              "head": 2
+            }
+          ]
+        }
+      },
+      {
+        "method": "task",
+        "args": [
+          4
+        ],
+        "adopted": [],
+        "value": {
+          "id": 4,
+          "conversationId": 1,
+          "kind": "task.\ud800",
+          "version": 1,
+          "input": {
+            "value": 3
+          },
+          "state": {
+            "status": "terminal",
+            "outcome": {
+              "status": "completed",
+              "result": {
+                "ok": true
+              }
+            }
+          },
+          "background": false,
+          "abortRequested": false
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {},
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 4,
+              "conversationId": 1,
+              "kind": "task.\ud800",
+              "version": 1,
+              "input": {
+                "value": 3
+              },
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": {
+                    "ok": true
+                  }
+                }
+              },
+              "background": false,
+              "abortRequested": false
+            },
+            {
+              "id": 5,
+              "conversationId": 1,
+              "kind": "test.background",
+              "version": 2,
+              "input": null,
+              "state": {
+                "status": "running",
+                "checkpoint": {
+                  "step": 1
+                }
+              },
+              "background": true,
+              "abortRequested": true
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {
+            "status": "terminal"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 4,
+              "conversationId": 1,
+              "kind": "task.\ud800",
+              "version": 1,
+              "input": {
+                "value": 3
+              },
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": {
+                    "ok": true
+                  }
+                }
+              },
+              "background": false,
+              "abortRequested": false
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {
+            "kind": "task.\ud800"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 4,
+              "conversationId": 1,
+              "kind": "task.\ud800",
+              "version": 1,
+              "input": {
+                "value": 3
+              },
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": {
+                    "ok": true
+                  }
+                }
+              },
+              "background": false,
+              "abortRequested": false
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {
+            "abortRequested": true
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 5,
+              "conversationId": 1,
+              "kind": "test.background",
+              "version": 2,
+              "input": null,
+              "state": {
+                "status": "running",
+                "checkpoint": {
+                  "step": 1
+                }
+              },
+              "background": true,
+              "abortRequested": true
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {
+            "background": false,
+            "order": "descending"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 4,
+              "conversationId": 1,
+              "kind": "task.\ud800",
+              "version": 1,
+              "input": {
+                "value": 3
+              },
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": {
+                    "ok": true
+                  }
+                }
+              },
+              "background": false,
+              "abortRequested": false
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanTasks",
+        "args": [
+          {
+            "conversationId": 1,
+            "background": true
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 5,
+              "conversationId": 1,
+              "kind": "test.background",
+              "version": 2,
+              "input": null,
+              "state": {
+                "status": "running",
+                "checkpoint": {
+                  "step": 1
+                }
+              },
+              "background": true,
+              "abortRequested": true
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanSubmissions",
+        "args": [
+          {},
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 9,
+              "conversationId": 1,
+              "requestId": "request-\ud800",
+              "type": "input",
+              "status": "queued"
+            },
+            {
+              "id": 10,
+              "conversationId": 1,
+              "type": "input",
+              "status": "queued"
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanSubmissions",
+        "args": [
+          {
+            "status": "queued",
+            "conversationId": 1
+          },
+          1,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 9,
+              "conversationId": 1,
+              "requestId": "request-\ud800",
+              "type": "input",
+              "status": "queued"
+            }
+          ],
+          "next": {
+            "after": 9,
+            "order": "ascending"
+          }
+        }
+      },
+      {
+        "method": "submissionByRequest",
+        "args": [
+          1,
+          "request-\ud800"
+        ],
+        "adopted": [],
+        "value": {
+          "id": 9,
+          "conversationId": 1,
+          "requestId": "request-\ud800",
+          "type": "input",
+          "status": "queued"
+        }
+      },
+      {
+        "method": "submissionByRequest",
+        "args": [
+          1,
+          "missing"
+        ],
+        "adopted": [],
+        "missing": true
+      },
+      {
+        "method": "findDocument",
+        "args": [
+          {
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            }
+          },
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "id": 11,
+          "kind": "notes",
+          "scope": {
+            "kind": "conversation",
+            "conversationId": 1
+          },
+          "history": "rewindable",
+          "fork": "asOf",
+          "createdAt": 2
+        }
+      },
+      {
+        "method": "findDocument",
+        "args": [
+          {
+            "kind": "session.settings",
+            "key": "\ud800",
+            "scope": {
+              "kind": "session"
+            }
+          },
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "id": 13,
+          "kind": "session.settings",
+          "key": "\ud800",
+          "scope": {
+            "kind": "session"
+          },
+          "createdAt": 2
+        }
+      },
+      {
+        "method": "findDocument",
+        "args": [
+          {
+            "kind": "retired",
+            "scope": {
+              "kind": "session"
+            }
+          },
+          "current"
+        ],
+        "adopted": [],
+        "missing": true
+      },
+      {
+        "method": "findDocument",
+        "args": [
+          {
+            "kind": "retired",
+            "scope": {
+              "kind": "session"
+            }
+          },
+          2
+        ],
+        "adopted": [],
+        "value": {
+          "id": 15,
+          "kind": "retired",
+          "scope": {
+            "kind": "session"
+          },
+          "createdAt": 2,
+          "retiredAt": 3
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          11,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 3
+            }
+          },
+          "deltasSinceBase": 2
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          11,
+          2
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {
+            "items": [
+              "a"
+            ],
+            "nested": {
+              "count": 1
+            }
+          },
+          "deltasSinceBase": 0
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          11,
+          3
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 2
+            }
+          },
+          "deltasSinceBase": 1
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          12,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 12,
+            "kind": "latest",
+            "key": "k",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "latest",
+            "fork": "current",
+            "createdAt": 2
+          },
+          "version": 2,
+          "value": {
+            "v": 2
+          },
+          "deltasSinceBase": 0
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          13,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 13,
+            "kind": "session.settings",
+            "key": "\ud800",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {
+            "\ud800": "\ud800"
+          },
+          "deltasSinceBase": 0
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          14,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 14,
+            "kind": "task.state",
+            "scope": {
+              "kind": "task",
+              "taskId": 4
+            },
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {},
+          "deltasSinceBase": 0
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          15,
+          "current"
+        ],
+        "adopted": [],
+        "missing": true
+      },
+      {
+        "method": "document",
+        "args": [
+          17,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 17,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 7
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 5
+          },
+          "version": 1,
+          "value": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 2
+            }
+          },
+          "deltasSinceBase": 0
+        }
+      },
+      {
+        "method": "scanDocuments",
+        "args": [
+          {
+            "scope": {
+              "kind": "session"
+            },
+            "at": "current"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 13,
+              "kind": "session.settings",
+              "key": "\ud800",
+              "scope": {
+                "kind": "session"
+              },
+              "createdAt": 2
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanDocuments",
+        "args": [
+          {
+            "scope": {
+              "kind": "session"
+            },
+            "at": 2
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 13,
+              "kind": "session.settings",
+              "key": "\ud800",
+              "scope": {
+                "kind": "session"
+              },
+              "createdAt": 2
+            },
+            {
+              "id": 15,
+              "kind": "retired",
+              "scope": {
+                "kind": "session"
+              },
+              "createdAt": 2,
+              "retiredAt": 3
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanDocuments",
+        "args": [
+          {
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "at": "current",
+            "kind": "notes"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 11,
+              "kind": "notes",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 1
+              },
+              "history": "rewindable",
+              "fork": "asOf",
+              "createdAt": 2
+            }
+          ]
+        }
+      },
+      {
+        "method": "scanDocuments",
+        "args": [
+          {
+            "scope": {
+              "kind": "task",
+              "taskId": 4
+            },
+            "at": "current"
+          },
+          10,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "items": [
+            {
+              "id": 14,
+              "kind": "task.state",
+              "scope": {
+                "kind": "task",
+                "taskId": 4
+              },
+              "createdAt": 2
+            }
+          ]
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          12,
+          2
+        ],
+        "adopted": [],
+        "error": {
+          "message": "Document 12 does not retain historical content",
+          "name": "StorageRequestError"
+        }
+      }
+    ],
+    "continue": [
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 18
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "entry",
+              "value": {
+                "id": 18,
+                "conversationId": 7,
+                "kind": "continued",
+                "head": 8
+              }
+            },
+            {
+              "type": "document.change",
+              "id": 11,
+              "content": {
+                "kind": "delta",
+                "version": 1,
+                "ops": [
+                  [
+                    "s",
+                    [
+                      "nested",
+                      "count"
+                    ],
+                    4
+                  ]
+                ]
+              }
+            },
+            {
+              "type": "document.retire",
+              "id": 12
+            }
+          ]
+        ],
+        "adopted": [
+          6
+        ],
+        "value": 6
+      },
+      {
+        "method": "findLatestHeadMarker",
+        "args": [
+          7,
+          null
+        ],
+        "adopted": [],
+        "value": {
+          "id": 18,
+          "conversationId": 7,
+          "kind": "continued",
+          "head": 8
+        }
+      },
+      {
+        "method": "document",
+        "args": [
+          11,
+          "current"
+        ],
+        "adopted": [],
+        "value": {
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          },
+          "version": 1,
+          "value": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 4
+            }
+          },
+          "deltasSinceBase": 3
+        }
+      },
+      {
+        "method": "findDocument",
+        "args": [
+          {
+            "kind": "latest",
+            "key": "k",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            }
+          },
+          "current"
+        ],
+        "adopted": [],
+        "missing": true
+      },
+      {
+        "method": "commit",
+        "args": [
+          [
+            {
+              "type": "entry",
+              "value": {
+                "id": 18,
+                "conversationId": 1,
+                "kind": "duplicate"
+              }
+            }
+          ]
+        ],
+        "adopted": [],
+        "error": {
+          "message": "ID 18 already belongs to entry",
+          "name": "Error"
+        }
+      },
+      {
+        "method": "mintId",
+        "args": [],
+        "adopted": [],
+        "value": 19
+      },
+      {
+        "method": "close",
+        "args": [],
+        "adopted": [],
+        "missing": true
+      }
+    ]
+  },
+  "stores": {
+    "conversations": {
+      "keyPath": "id",
+      "indexes": {
+        "conversations_by_owner_conversation": [
+          "ownerConversationId",
+          "id"
+        ],
+        "conversations_by_owner_task": [
+          "ownerTaskId",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "record": {
+            "id": 1
+          }
+        },
+        {
+          "id": 6,
+          "ownerConversationId": 1,
+          "ownerTaskId": 4,
+          "record": {
+            "id": 6,
+            "owner": {
+              "conversationId": 1,
+              "taskId": 4
+            }
+          }
+        },
+        {
+          "id": 7,
+          "record": {
+            "id": 7,
+            "parent": {
+              "conversationId": 1,
+              "at": 3
+            }
+          }
+        }
+      ]
+    },
+    "document_revisions": {
+      "keyPath": [
+        "documentId",
+        "seq"
+      ],
+      "indexes": {
+        "document_revisions_by_kind": [
+          "documentId",
+          "kind",
+          "seq"
+        ]
+      },
+      "rows": [
+        {
+          "documentId": 11,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "items": [
+              "a"
+            ],
+            "nested": {
+              "count": 1
+            }
+          }
+        },
+        {
+          "documentId": 11,
+          "seq": 3,
+          "kind": "delta",
+          "version": 1,
+          "content": [
+            [
+              "p",
+              [
+                "items"
+              ],
+              1,
+              0,
+              [
+                "b"
+              ]
+            ],
+            [
+              "s",
+              [
+                "nested",
+                "count"
+              ],
+              2
+            ]
+          ]
+        },
+        {
+          "documentId": 11,
+          "seq": 4,
+          "kind": "delta",
+          "version": 1,
+          "content": [
+            [
+              "s",
+              [
+                "nested",
+                "count"
+              ],
+              3
+            ]
+          ]
+        },
+        {
+          "documentId": 12,
+          "seq": 3,
+          "kind": "base",
+          "version": 2,
+          "content": {
+            "v": 2
+          }
+        },
+        {
+          "documentId": 13,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "\ud800": "\ud800"
+          }
+        },
+        {
+          "documentId": 14,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {}
+        },
+        {
+          "documentId": 17,
+          "seq": 5,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 2
+            }
+          }
+        }
+      ]
+    },
+    "documents": {
+      "keyPath": "id",
+      "indexes": {
+        "documents_by_address": [
+          "kind",
+          "scopeKind",
+          "ownerId",
+          "family",
+          "keyValue",
+          "createdAt",
+          "id"
+        ],
+        "documents_by_scope": [
+          "scopeKind",
+          "ownerId",
+          "id"
+        ],
+        "documents_by_scope_kind": [
+          "scopeKind",
+          "ownerId",
+          "kind",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 11,
+          "kind": "notes",
+          "scopeKind": "conversation",
+          "ownerId": 1,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 12,
+          "kind": "latest",
+          "scopeKind": "conversation",
+          "ownerId": 1,
+          "family": 1,
+          "keyValue": "k",
+          "createdAt": 2,
+          "record": {
+            "id": 12,
+            "kind": "latest",
+            "key": "k",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "latest",
+            "fork": "current",
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 13,
+          "kind": "session.settings",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 1,
+          "keyValue": "\ud800",
+          "createdAt": 2,
+          "record": {
+            "id": 13,
+            "kind": "session.settings",
+            "key": "\ud800",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 14,
+          "kind": "task.state",
+          "scopeKind": "task",
+          "ownerId": 4,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 14,
+            "kind": "task.state",
+            "scope": {
+              "kind": "task",
+              "taskId": 4
+            },
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 15,
+          "kind": "retired",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 15,
+            "kind": "retired",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2,
+            "retiredAt": 3
+          },
+          "retiredAt": 3
+        },
+        {
+          "id": 16,
+          "kind": "brief",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "retiredAt": 2,
+          "record": {
+            "id": 16,
+            "kind": "brief",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2,
+            "retiredAt": 2
+          }
+        },
+        {
+          "id": 17,
+          "kind": "notes",
+          "scopeKind": "conversation",
+          "ownerId": 7,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 5,
+          "record": {
+            "id": 17,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 7
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 5
+          }
+        }
+      ]
+    },
+    "entries": {
+      "keyPath": "id",
+      "indexes": {
+        "entries_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "entry_heads_by_conversation": [
+          "headConversationId",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 2,
+          "conversationId": 1,
+          "commitSeq": 2,
+          "record": {
+            "id": 2,
+            "conversationId": 1,
+            "kind": "message",
+            "data": {
+              "text": "a\ud800b",
+              "n": 1.5
+            }
+          }
+        },
+        {
+          "id": 3,
+          "conversationId": 1,
+          "headConversationId": 1,
+          "commitSeq": 2,
+          "record": {
+            "id": 3,
+            "conversationId": 1,
+            "kind": "marker",
+            "head": 2
+          }
+        },
+        {
+          "id": 8,
+          "conversationId": 7,
+          "commitSeq": 4,
+          "record": {
+            "id": 8,
+            "conversationId": 7,
+            "kind": "child"
+          }
+        }
+      ]
+    },
+    "meta": {
+      "keyPath": "key",
+      "indexes": {},
+      "rows": [
+        {
+          "key": "state",
+          "nextId": 18,
+          "nextSeq": 6
+        }
+      ]
+    },
+    "record_ids": {
+      "keyPath": "id",
+      "indexes": {},
+      "rows": [
+        {
+          "id": 1,
+          "recordType": "conversation"
+        },
+        {
+          "id": 2,
+          "recordType": "entry"
+        },
+        {
+          "id": 3,
+          "recordType": "entry"
+        },
+        {
+          "id": 4,
+          "recordType": "task"
+        },
+        {
+          "id": 5,
+          "recordType": "task"
+        },
+        {
+          "id": 6,
+          "recordType": "conversation"
+        },
+        {
+          "id": 7,
+          "recordType": "conversation"
+        },
+        {
+          "id": 8,
+          "recordType": "entry"
+        },
+        {
+          "id": 9,
+          "recordType": "submission"
+        },
+        {
+          "id": 10,
+          "recordType": "submission"
+        },
+        {
+          "id": 11,
+          "recordType": "document"
+        },
+        {
+          "id": 12,
+          "recordType": "document"
+        },
+        {
+          "id": 13,
+          "recordType": "document"
+        },
+        {
+          "id": 14,
+          "recordType": "document"
+        },
+        {
+          "id": 15,
+          "recordType": "document"
+        },
+        {
+          "id": 16,
+          "recordType": "document"
+        },
+        {
+          "id": 17,
+          "recordType": "document"
+        }
+      ]
+    },
+    "submissions": {
+      "keyPath": "id",
+      "indexes": {
+        "submissions_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "submissions_by_request": [
+          "conversationId",
+          "requestId"
+        ],
+        "submissions_by_status": [
+          "status",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 9,
+          "conversationId": 1,
+          "requestId": "request-\ud800",
+          "status": "queued",
+          "record": {
+            "id": 9,
+            "conversationId": 1,
+            "requestId": "request-\ud800",
+            "type": "input",
+            "status": "queued"
+          }
+        },
+        {
+          "id": 10,
+          "conversationId": 1,
+          "status": "queued",
+          "record": {
+            "id": 10,
+            "conversationId": 1,
+            "type": "input",
+            "status": "queued"
+          }
+        }
+      ]
+    },
+    "tasks": {
+      "keyPath": "id",
+      "indexes": {
+        "tasks_by_abort_requested": [
+          "abortRequested",
+          "id"
+        ],
+        "tasks_by_background": [
+          "background",
+          "id"
+        ],
+        "tasks_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "tasks_by_kind": [
+          "kind",
+          "id"
+        ],
+        "tasks_by_status": [
+          "status",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 4,
+          "conversationId": 1,
+          "kind": "task.\ud800",
+          "status": "terminal",
+          "abortRequested": 0,
+          "background": 0,
+          "record": {
+            "id": 4,
+            "conversationId": 1,
+            "kind": "task.\ud800",
+            "version": 1,
+            "input": {
+              "value": 3
+            },
+            "state": {
+              "status": "terminal",
+              "outcome": {
+                "status": "completed",
+                "result": {
+                  "ok": true
+                }
+              }
+            },
+            "background": false,
+            "abortRequested": false
+          }
+        },
+        {
+          "id": 5,
+          "conversationId": 1,
+          "kind": "test.background",
+          "status": "running",
+          "abortRequested": 1,
+          "background": 1,
+          "record": {
+            "id": 5,
+            "conversationId": 1,
+            "kind": "test.background",
+            "version": 2,
+            "input": null,
+            "state": {
+              "status": "running",
+              "checkpoint": {
+                "step": 1
+              }
+            },
+            "background": true,
+            "abortRequested": true
+          }
+        }
+      ]
+    }
+  },
+  "finalStores": {
+    "conversations": {
+      "keyPath": "id",
+      "indexes": {
+        "conversations_by_owner_conversation": [
+          "ownerConversationId",
+          "id"
+        ],
+        "conversations_by_owner_task": [
+          "ownerTaskId",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 1,
+          "record": {
+            "id": 1
+          }
+        },
+        {
+          "id": 6,
+          "ownerConversationId": 1,
+          "ownerTaskId": 4,
+          "record": {
+            "id": 6,
+            "owner": {
+              "conversationId": 1,
+              "taskId": 4
+            }
+          }
+        },
+        {
+          "id": 7,
+          "record": {
+            "id": 7,
+            "parent": {
+              "conversationId": 1,
+              "at": 3
+            }
+          }
+        }
+      ]
+    },
+    "document_revisions": {
+      "keyPath": [
+        "documentId",
+        "seq"
+      ],
+      "indexes": {
+        "document_revisions_by_kind": [
+          "documentId",
+          "kind",
+          "seq"
+        ]
+      },
+      "rows": [
+        {
+          "documentId": 11,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "items": [
+              "a"
+            ],
+            "nested": {
+              "count": 1
+            }
+          }
+        },
+        {
+          "documentId": 11,
+          "seq": 3,
+          "kind": "delta",
+          "version": 1,
+          "content": [
+            [
+              "p",
+              [
+                "items"
+              ],
+              1,
+              0,
+              [
+                "b"
+              ]
+            ],
+            [
+              "s",
+              [
+                "nested",
+                "count"
+              ],
+              2
+            ]
+          ]
+        },
+        {
+          "documentId": 11,
+          "seq": 4,
+          "kind": "delta",
+          "version": 1,
+          "content": [
+            [
+              "s",
+              [
+                "nested",
+                "count"
+              ],
+              3
+            ]
+          ]
+        },
+        {
+          "documentId": 11,
+          "seq": 6,
+          "kind": "delta",
+          "version": 1,
+          "content": [
+            [
+              "s",
+              [
+                "nested",
+                "count"
+              ],
+              4
+            ]
+          ]
+        },
+        {
+          "documentId": 13,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "\ud800": "\ud800"
+          }
+        },
+        {
+          "documentId": 14,
+          "seq": 2,
+          "kind": "base",
+          "version": 1,
+          "content": {}
+        },
+        {
+          "documentId": 17,
+          "seq": 5,
+          "kind": "base",
+          "version": 1,
+          "content": {
+            "items": [
+              "a",
+              "b"
+            ],
+            "nested": {
+              "count": 2
+            }
+          }
+        }
+      ]
+    },
+    "documents": {
+      "keyPath": "id",
+      "indexes": {
+        "documents_by_address": [
+          "kind",
+          "scopeKind",
+          "ownerId",
+          "family",
+          "keyValue",
+          "createdAt",
+          "id"
+        ],
+        "documents_by_scope": [
+          "scopeKind",
+          "ownerId",
+          "id"
+        ],
+        "documents_by_scope_kind": [
+          "scopeKind",
+          "ownerId",
+          "kind",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 11,
+          "kind": "notes",
+          "scopeKind": "conversation",
+          "ownerId": 1,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 11,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 12,
+          "kind": "latest",
+          "scopeKind": "conversation",
+          "ownerId": 1,
+          "family": 1,
+          "keyValue": "k",
+          "createdAt": 2,
+          "record": {
+            "id": 12,
+            "kind": "latest",
+            "key": "k",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 1
+            },
+            "history": "latest",
+            "fork": "current",
+            "createdAt": 2,
+            "retiredAt": 6
+          },
+          "retiredAt": 6
+        },
+        {
+          "id": 13,
+          "kind": "session.settings",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 1,
+          "keyValue": "\ud800",
+          "createdAt": 2,
+          "record": {
+            "id": 13,
+            "kind": "session.settings",
+            "key": "\ud800",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 14,
+          "kind": "task.state",
+          "scopeKind": "task",
+          "ownerId": 4,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 14,
+            "kind": "task.state",
+            "scope": {
+              "kind": "task",
+              "taskId": 4
+            },
+            "createdAt": 2
+          }
+        },
+        {
+          "id": 15,
+          "kind": "retired",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "record": {
+            "id": 15,
+            "kind": "retired",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2,
+            "retiredAt": 3
+          },
+          "retiredAt": 3
+        },
+        {
+          "id": 16,
+          "kind": "brief",
+          "scopeKind": "session",
+          "ownerId": 0,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 2,
+          "retiredAt": 2,
+          "record": {
+            "id": 16,
+            "kind": "brief",
+            "scope": {
+              "kind": "session"
+            },
+            "createdAt": 2,
+            "retiredAt": 2
+          }
+        },
+        {
+          "id": 17,
+          "kind": "notes",
+          "scopeKind": "conversation",
+          "ownerId": 7,
+          "family": 0,
+          "keyValue": "",
+          "createdAt": 5,
+          "record": {
+            "id": 17,
+            "kind": "notes",
+            "scope": {
+              "kind": "conversation",
+              "conversationId": 7
+            },
+            "history": "rewindable",
+            "fork": "asOf",
+            "createdAt": 5
+          }
+        }
+      ]
+    },
+    "entries": {
+      "keyPath": "id",
+      "indexes": {
+        "entries_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "entry_heads_by_conversation": [
+          "headConversationId",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 2,
+          "conversationId": 1,
+          "commitSeq": 2,
+          "record": {
+            "id": 2,
+            "conversationId": 1,
+            "kind": "message",
+            "data": {
+              "text": "a\ud800b",
+              "n": 1.5
+            }
+          }
+        },
+        {
+          "id": 3,
+          "conversationId": 1,
+          "headConversationId": 1,
+          "commitSeq": 2,
+          "record": {
+            "id": 3,
+            "conversationId": 1,
+            "kind": "marker",
+            "head": 2
+          }
+        },
+        {
+          "id": 8,
+          "conversationId": 7,
+          "commitSeq": 4,
+          "record": {
+            "id": 8,
+            "conversationId": 7,
+            "kind": "child"
+          }
+        },
+        {
+          "id": 18,
+          "conversationId": 7,
+          "headConversationId": 7,
+          "commitSeq": 6,
+          "record": {
+            "id": 18,
+            "conversationId": 7,
+            "kind": "continued",
+            "head": 8
+          }
+        }
+      ]
+    },
+    "meta": {
+      "keyPath": "key",
+      "indexes": {},
+      "rows": [
+        {
+          "key": "state",
+          "nextId": 20,
+          "nextSeq": 7
+        }
+      ]
+    },
+    "record_ids": {
+      "keyPath": "id",
+      "indexes": {},
+      "rows": [
+        {
+          "id": 1,
+          "recordType": "conversation"
+        },
+        {
+          "id": 2,
+          "recordType": "entry"
+        },
+        {
+          "id": 3,
+          "recordType": "entry"
+        },
+        {
+          "id": 4,
+          "recordType": "task"
+        },
+        {
+          "id": 5,
+          "recordType": "task"
+        },
+        {
+          "id": 6,
+          "recordType": "conversation"
+        },
+        {
+          "id": 7,
+          "recordType": "conversation"
+        },
+        {
+          "id": 8,
+          "recordType": "entry"
+        },
+        {
+          "id": 9,
+          "recordType": "submission"
+        },
+        {
+          "id": 10,
+          "recordType": "submission"
+        },
+        {
+          "id": 11,
+          "recordType": "document"
+        },
+        {
+          "id": 12,
+          "recordType": "document"
+        },
+        {
+          "id": 13,
+          "recordType": "document"
+        },
+        {
+          "id": 14,
+          "recordType": "document"
+        },
+        {
+          "id": 15,
+          "recordType": "document"
+        },
+        {
+          "id": 16,
+          "recordType": "document"
+        },
+        {
+          "id": 17,
+          "recordType": "document"
+        },
+        {
+          "id": 18,
+          "recordType": "entry"
+        }
+      ]
+    },
+    "submissions": {
+      "keyPath": "id",
+      "indexes": {
+        "submissions_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "submissions_by_request": [
+          "conversationId",
+          "requestId"
+        ],
+        "submissions_by_status": [
+          "status",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 9,
+          "conversationId": 1,
+          "requestId": "request-\ud800",
+          "status": "queued",
+          "record": {
+            "id": 9,
+            "conversationId": 1,
+            "requestId": "request-\ud800",
+            "type": "input",
+            "status": "queued"
+          }
+        },
+        {
+          "id": 10,
+          "conversationId": 1,
+          "status": "queued",
+          "record": {
+            "id": 10,
+            "conversationId": 1,
+            "type": "input",
+            "status": "queued"
+          }
+        }
+      ]
+    },
+    "tasks": {
+      "keyPath": "id",
+      "indexes": {
+        "tasks_by_abort_requested": [
+          "abortRequested",
+          "id"
+        ],
+        "tasks_by_background": [
+          "background",
+          "id"
+        ],
+        "tasks_by_conversation": [
+          "conversationId",
+          "id"
+        ],
+        "tasks_by_kind": [
+          "kind",
+          "id"
+        ],
+        "tasks_by_status": [
+          "status",
+          "id"
+        ]
+      },
+      "rows": [
+        {
+          "id": 4,
+          "conversationId": 1,
+          "kind": "task.\ud800",
+          "status": "terminal",
+          "abortRequested": 0,
+          "background": 0,
+          "record": {
+            "id": 4,
+            "conversationId": 1,
+            "kind": "task.\ud800",
+            "version": 1,
+            "input": {
+              "value": 3
+            },
+            "state": {
+              "status": "terminal",
+              "outcome": {
+                "status": "completed",
+                "result": {
+                  "ok": true
+                }
+              }
+            },
+            "background": false,
+            "abortRequested": false
+          }
+        },
+        {
+          "id": 5,
+          "conversationId": 1,
+          "kind": "test.background",
+          "status": "running",
+          "abortRequested": 1,
+          "background": 1,
+          "record": {
+            "id": 5,
+            "conversationId": 1,
+            "kind": "test.background",
+            "version": 2,
+            "input": null,
+            "state": {
+              "status": "running",
+              "checkpoint": {
+                "step": 1
+              }
+            },
+            "background": true,
+            "abortRequested": true
+          }
+        }
+      ]
+    }
+  }
+}

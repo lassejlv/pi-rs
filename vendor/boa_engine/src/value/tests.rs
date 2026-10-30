@@ -753,7 +753,7 @@ mod cyclic_conversions {
                 JSON.stringify(a)
             "#},
             JsNativeErrorKind::Type,
-            "cyclic object value",
+            "Converting circular structure to JSON",
         )]);
     }
 

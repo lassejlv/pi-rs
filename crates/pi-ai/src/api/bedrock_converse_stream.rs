@@ -43,7 +43,7 @@ use crate::utils::identity::{ClientIdentity, UserAgentMode, UserAgentNamed, get_
 use crate::utils::json_parse::{parse_streaming_json_object, parse_tool_call_arguments};
 use crate::utils::provider_env::get_provider_env_value;
 use crate::utils::sanitize_unicode::sanitize_surrogates;
-use crate::utils::text::get_system_message_text;
+use crate::utils::text::{get_system_message_text, get_system_message_text_is_empty};
 use crate::utils::transcript::{collapse_system_messages, get_current_tools, get_initial_system_message, without_initial_system_message};
 
 /// Version of `@aws-sdk/client-bedrock-runtime` whose request shape this module reproduces.
@@ -269,7 +269,7 @@ fn cache_point(retention: CacheRetention) -> Value {
 // ---------------------------------------------------------------------------
 
 fn build_system_prompt(prompt: Option<&str>, model: &Model, retention: CacheRetention, env: Option<&ProviderEnv>) -> Option<Value> {
-    let prompt = prompt.filter(|p| !p.is_empty())?;
+    let prompt = prompt?;
     let mut blocks = vec![json!({ "text": sanitize_surrogates(prompt) })];
     if retention != CacheRetention::None && supports_prompt_caching(model, env) {
         blocks.push(cache_point(retention));
@@ -589,7 +589,8 @@ pub fn build_command_input(model: &Model, context: &TranscriptContext, options: 
     let retention = resolve_cache_retention(options.cache_retention, options.env.as_ref());
     let max_tokens = options.max_tokens.or_else(|| is_anthropic_claude_model(model).then_some(model.max_tokens));
     let initial = get_initial_system_message(&context.messages);
-    let prompt = initial.map(get_system_message_text);
+    // `if (!systemPrompt)` sees the text before `sanitizeSurrogates`.
+    let prompt = initial.filter(|m| !get_system_message_text_is_empty(m)).map(get_system_message_text);
     let supports_strict = model.compat.as_ref().and_then(|c| c.supports_strict_mode).unwrap_or(false);
     let mut input = Map::new();
     input.insert("modelId".into(), json!(model.id));
@@ -935,7 +936,7 @@ async fn send_with_retries(
                     return Err(error);
                 }
                 let delay = super::aws_credentials::sdk_retry_delay_ms(attempt - 1, throttling, retry_after);
-                let sleep = tokio::time::sleep(Duration::from_millis(delay));
+                let sleep = crate::utils::wasm::sleep(Duration::from_millis(delay));
                 match signal {
                     Some(signal) => tokio::select! {
                         _ = sleep => {},
@@ -1120,6 +1121,7 @@ fn handle_item(item: &Value, model: &Model, output: &mut AssistantMessage, sende
                         thinking: String::new(),
                         thinking_signature: Some(String::new()),
                         redacted: None,
+                        ..Default::default()
                     }));
                     state.index.push(Some(block_index));
                     sender.push(AssistantMessageEvent::ThinkingStart { content_index: output.content.len() - 1, partial: output.clone() });
@@ -1256,6 +1258,9 @@ async fn run_stream(model: Model, context: TranscriptContext, options: StreamOpt
         let endpoint = config.endpoint.clone().unwrap_or_else(|| default_endpoint(&region));
         let model_id = input.get("modelId").and_then(Value::as_str).unwrap_or(&model.id).to_string();
         let url = url::Url::parse(&format!("{}/model/{}/converse-stream", endpoint.trim_end_matches('/'), escape_uri(&model_id)))?;
+        #[cfg(target_arch = "wasm32")]
+        let client = reqwest::Client::builder().build()?; // The host's `fetch` owns proxies and HTTP versions.
+        #[cfg(not(target_arch = "wasm32"))]
         let client = {
             let proxy = crate::utils::node_http_proxy::resolve_http_proxy_url_for_target(&model.base_url, options.env.as_ref())?;
             let mut builder = reqwest::Client::builder().no_proxy();
@@ -1319,7 +1324,7 @@ async fn run_stream(model: Model, context: TranscriptContext, options: StreamOpt
             on_response(ProviderResponse { status: response.status().as_u16(), headers: headers_to_record(response.headers()) }, model.clone()).await;
         }
         let mut reader = ConverseEventReader {
-            body: Box::pin(response.bytes_stream()),
+            body: Box::pin(crate::utils::wasm::assert_send(response.bytes_stream())),
             decoder: EventStreamDecoder::new(),
             queue: Default::default(),
             done: false,
@@ -1362,7 +1367,7 @@ async fn run_stream(model: Model, context: TranscriptContext, options: StreamOpt
 /// Stream a Bedrock Converse response.
 pub fn stream(model: &Model, context: &TranscriptContext, options: StreamOptions) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

@@ -283,6 +283,6 @@ impl ProviderClassifier for OpenAIDecisionsApi {
         context: &ClassifierContext,
         options: StreamOptions,
     ) -> ClassifierResult {
-        classify(model, context, options).await
+        crate::utils::wasm::assert_send(classify(model, context, options)).await
     }
 }

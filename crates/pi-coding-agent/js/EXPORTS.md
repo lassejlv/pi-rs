@@ -6,7 +6,7 @@ stripping and are not listed). Regenerate the lists by extracting the runtime ex
 `index.ts` files and comparing them with the glue modules in this directory.
 
 Legend: `[x]` implemented, `[~]` host-only (constructing it inside an extension is not meaningful
-in pi-rs; the reason is given), `[ ]` missing (none).
+in pi-rs; the reason is given), `[ ]` missing (only the Chord APIs outside the durable subset; the reason is given).
 
 | Package | Runtime exports | Implemented | Host-only | Missing |
 | --- | ---: | ---: | ---: | ---: |
@@ -17,6 +17,37 @@ in pi-rs; the reason is given), `[ ]` missing (none).
 | `@earendil-works/pi-ai/models` | 11 | 11 | 0 | 0 |
 | `@earendil-works/pi-ai/providers/all` | 12 | 12 | 0 | 0 |
 | `@earendil-works/pi-agent-core` | 9 | 9 | 0 | 0 |
+| `@earendil-works/pi-durable` | 43 | 43 | 0 | 0 |
+| `@earendil-works/pi-durable/env` | 11 | 11 | 0 | 0 |
+| `@earendil-works/pi-durable/env/node` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/codemode` | 6 | 6 | 0 | 0 |
+| `@earendil-works/pi-durable/tool-search` | 4 | 4 | 0 | 0 |
+| `@earendil-works/pi-durable/tools` | 8 | 8 | 0 | 0 |
+| `@earendil-works/pi-durable/images` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/images/node` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/images/cloudflare` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/memory` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/indexeddb` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/jsonl` | 3 | 3 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/jsonl/node` | 2 | 2 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/sqlite` | 4 | 4 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/sqlite/cloudflare` | 2 | 2 | 0 | 0 |
+| `@earendil-works/pi-durable/storage/sqlite/node` | 3 | 3 | 0 | 0 |
+| `@earendil-works/pi-durable/testing` | 12 | 12 | 0 | 0 |
+| `@earendil-works/pi-durable/package.json` | 1 | 1 | 0 | 0 |
+| `@earendil-works/chord` | 27 | 8 | 0 | 19 |
+| `@earendil-works/chord/context` | 10 | 10 | 0 | 0 |
+| `@earendil-works/chord/output` | 7 | 7 | 0 | 0 |
+| `@earendil-works/chord/delta` | 16 | 16 | 0 | 0 |
+| `@earendil-works/chord/node` | 5 | 0 | 0 | 5 |
+| `@earendil-works/chord/telemetry-sqlite` | 1 | 0 | 0 | 1 |
+| `@earendil-works/chord/sqlite` | 2 | 2 | 0 | 0 |
+| `@earendil-works/chord/sqlite/node` | 2 | 2 | 0 | 0 |
+| `@earendil-works/chord/sqlite/cloudflare` | 1 | 1 | 0 | 0 |
+| `@earendil-works/chord/package.json` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-telemetry` | 7 | 7 | 0 | 0 |
+| `@earendil-works/pi-telemetry/render` | 1 | 1 | 0 | 0 |
+| `@earendil-works/pi-telemetry/testing` | 1 | 0 | 0 | 1 |
 
 ## How the modules are provided
 
@@ -27,6 +58,8 @@ in pi-rs; the reason is given), `[ ]` missing (none).
 | `@earendil-works/pi-agent-core` | `pi-agent-core.js` | `Agent`, `agentLoop`, `runAgentLoop`, `runToolCall`, `streamProxy` ported to JS over the pi-ai glue; default stream function is pi-ai's compat `streamSimple` (as pi's SDK installs). |
 | `@earendil-works/pi-tui` | `pi-tui.js` | JS components (Container, Box, Text, SelectList, SettingsList, Image, stacks, ScrollView, MouseRegion, autocomplete, StdinBuffer, KeybindingsManager); Input/Editor/Markdown/Loader backed by Rust components; colors, terminal images, latex, program status, width/wrapping utilities backed by `pi_tui`. `Marked` is the real marked 18.0.11 (`scripts/vendor-marked.mjs`). Mouse events reach JS components (`handleMouse`, routed by Container/Box like TS). |
 | `@earendil-works/pi-coding-agent` | `pi-coding-agent.js` | Tool factories over the Rust built-in tools; truncation, frontmatter, compaction (`compact`, summaries, cut points), session-tree, skills, diff, shell, CLI parsing, image and event-bus helpers backed by Rust; theme helpers over the live Rust theme; `CustomEditor` backed by the Rust CustomEditor. |
+| `@earendil-works/pi-durable[/…]`, `@earendil-works/chord[/…]` | `crates/pi-durable-jsrt/js/**` (installed by `pi_durable_jsrt::install` in the extension runtime) | Native pi-durable and pi-chord: Session/Tx/documents/storage (memory, JSONL, SQLite, IndexedDB), Harness/registry/tasks, environments, built-in tools, images (native Photon), code mode, tool search, conformance drivers, Chord context/output/delta/sqlite. JS keeps only what must stay JS: definition callbacks, tool `execute`/render/hook callbacks, the delta `track` draft proxy, error classes. `tests/extensions_durable.rs` runs a Session commit/read and a faux Harness turn from an extension. The TS reference test files run unchanged against the same modules (`porting/durable/mappings/embedded-*.json`). |
+| `@earendil-works/pi-telemetry` (+ `/render`) | `crates/pi-durable-jsrt/js/pi-telemetry/*` | `InMemoryTelemetryContext` and `renderTrace` over the native pi-telemetry crate (spans, carriers, links, events, statuses, measurements, store queries; the JS clocks drive its timestamps); the no-op capabilities and schema helpers are the TS reference's JS. Served with the embedded packages so they need nothing from `node_modules`. |
 
 ## Notes on behavior
 
@@ -563,3 +596,281 @@ in pi-rs; the reason is given), `[ ]` missing (none).
 - [x] `setDefaultStreamFn`
 - [x] `streamProxy`
 
+## `@earendil-works/pi-durable`
+
+- [x] `AgentDoc`
+- [x] `AssistantEntry`
+- [x] `CompactionEntry`
+- [x] `CompactionTask`
+- [x] `ConversationBusy`
+- [x] `DEFAULT_COMPACTION_POLICY`
+- [x] `DEFAULT_HARNESS_IDENTITY`
+- [x] `DEFAULT_PROGRESS_POLICY`
+- [x] `DEFAULT_RESTART_LIMIT`
+- [x] `DEFAULT_RETRY_POLICY`
+- [x] `DURABLE_TELEMETRY_SCHEMA`
+- [x] `GenerationTask`
+- [x] `Harness`
+- [x] `InboxDoc`
+- [x] `LiveDoc`
+- [x] `MemoryStorage`
+- [x] `NestedCallDoc`
+- [x] `ProviderDoc`
+- [x] `ROOT_CONVERSATION_ID`
+- [x] `ReadAfterWrite`
+- [x] `ReadOnlySession`
+- [x] `ResetEntry`
+- [x] `SessionFailed`
+- [x] `StorageRequestError`
+- [x] `SystemEntry`
+- [x] `ToolResultEntry`
+- [x] `ToolTask`
+- [x] `UsageDoc`
+- [x] `UserEntry`
+- [x] `configure`
+- [x] `createRegistry`
+- [x] `createSession`
+- [x] `defineDoc`
+- [x] `defineDocFamily`
+- [x] `defineEntry`
+- [x] `defineExtension`
+- [x] `defineTask`
+- [x] `defineTool`
+- [x] `hook`
+- [x] `section`
+- [x] `watchEvents`
+- [x] `wrapSection`
+- [x] `wrapTool`
+
+## `@earendil-works/pi-durable/env`
+
+- [x] `ExecutionError`
+- [x] `FileError`
+- [x] `LineScanner`
+- [x] `StreamDecoder`
+- [x] `err`
+- [x] `getOrThrow`
+- [x] `getOrUndefined`
+- [x] `ok`
+- [x] `rangeDecoder`
+- [x] `startsWithBom`
+- [x] `toError`
+
+## `@earendil-works/pi-durable/env/node`
+
+- [x] `NodeExecutionEnv`
+
+## `@earendil-works/pi-durable/codemode`
+
+- [x] `CODEMODE_MODULE_VERSION`
+- [x] `CODEMODE_TOOL_NAME`
+- [x] `CodemodeStoreDoc`
+- [x] `DEFAULT_CODEMODE_INLINE_BUDGET`
+- [x] `createCodemodeExtension`
+- [x] `createCodemodeTool`
+
+## `@earendil-works/pi-durable/tool-search`
+
+- [x] `DEFAULT_TOOL_SEARCH_LIMIT`
+- [x] `TOOL_SEARCH_TOOL_NAME`
+- [x] `createToolSearchExtension`
+- [x] `createToolSearchTool`
+
+## `@earendil-works/pi-durable/tools`
+
+- [x] `CodingTools`
+- [x] `DEFAULT_IMAGE_LIMITS`
+- [x] `createBashTool`
+- [x] `createCodingTools`
+- [x] `createEditTool`
+- [x] `createPowerShellTool`
+- [x] `createReadTool`
+- [x] `createWriteTool`
+
+## `@earendil-works/pi-durable/images`
+
+- [x] `createPhotonImages`: native Photon; the WebAssembly module argument is accepted and not needed
+
+## `@earendil-works/pi-durable/images/node`
+
+- [x] `createNodePhotonImages`
+
+## `@earendil-works/pi-durable/images/cloudflare`
+
+- [x] `createCloudflarePhotonImages`: the same native Photon processor (no Workers runtime: structural)
+
+## `@earendil-works/pi-durable/storage/memory`
+
+- [x] `MemoryStorage`
+
+## `@earendil-works/pi-durable/storage/indexeddb`
+
+- [x] `IndexedDbStorage`
+
+## `@earendil-works/pi-durable/storage/jsonl`
+
+- [x] `JsonlCorruptionError`
+- [x] `JsonlStorage`
+- [x] `JsonlStoragePoisonedError`
+
+## `@earendil-works/pi-durable/storage/jsonl/node`
+
+- [x] `JsonlStorage`
+- [x] `openNodeJsonlStorage`
+
+## `@earendil-works/pi-durable/storage/sqlite`
+
+- [x] `CURRENT_SQLITE_SCHEMA_VERSION`
+- [x] `SQLITE_MIGRATIONS`
+- [x] `SqliteStorage`
+- [x] `applySqliteMigrations`
+
+## `@earendil-works/pi-durable/storage/sqlite/cloudflare`
+
+- [x] `DurableObjectSqliteDatabase`
+- [x] `openDurableObjectSqliteStorage`
+
+## `@earendil-works/pi-durable/storage/sqlite/node`
+
+- [x] `NodeSqliteDatabase`
+- [x] `openNodeSqliteDatabase`
+- [x] `openNodeSqliteStorage`
+
+## `@earendil-works/pi-durable/testing`
+
+- [x] `STORAGE_MEMORY_SCALES`
+- [x] `STORAGE_READ_BENCHMARKS`
+- [x] `STORAGE_WRITE_BENCHMARKS`
+- [x] `TIMING_SCALE`
+- [x] `createEnvConformance`
+- [x] `createExpectAssertions`
+- [x] `createStorageConformance`
+- [x] `registerEnvConformance`
+- [x] `registerStorageConformance`
+- [x] `seedStorageBenchmark`
+- [x] `seedStorageWriteBenchmark`
+- [x] `storageBenchmarkPrimaryRecordCount`
+
+## `@earendil-works/pi-durable/package.json`
+
+- [x] `default`
+
+## `@earendil-works/chord`
+
+- [x] `ChordError`
+- [x] `NativeWatch`
+- [ ] `PACK_THRESHOLD`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `PROTOCOL_VERSION`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [x] `Watch`
+- [ ] `acceptWebSockets`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `bind`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [x] `copyJson`
+- [ ] `coverage`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `createHost`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `defineFacet`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `defineRegistry`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [x] `forbidden`
+- [ ] `hostFamily`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `hostNamed`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `inflateMessage`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [x] `invalid`
+- [ ] `ipcLink`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [x] `isChordError`
+- [x] `isJsonValue`
+- [ ] `local`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `memoryLinkPair`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `method`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `opaque`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `remote`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `replicatedState`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+- [ ] `webSocketLink`: Chord host/contract/link/facet/replicated-state API, outside the durable subset (EMBEDDED-PLAN.md section 2); not exported by the embedded module
+
+## `@earendil-works/chord/context`
+
+- [x] `BACKGROUND_CONTEXT`
+- [x] `TODO_CONTEXT`
+- [x] `awaitWithContext`
+- [x] `createContextKey`
+- [x] `traceIn`
+- [x] `withAbortSignal`
+- [x] `withCancel`
+- [x] `withContextValue`
+- [x] `withTelemetry`
+- [x] `withoutAbortSignal`
+
+## `@earendil-works/chord/output`
+
+- [x] `OutputBuffer`
+- [x] `PROGRESS_BYTES_PER_SECOND`
+- [x] `Progress`
+- [x] `boundOutput`
+- [x] `characterEnd`
+- [x] `sanitizeOutput`
+- [x] `utf8ByteLength`
+
+## `@earendil-works/chord/delta`
+
+- [x] `PathError`
+- [x] `RESERVED_SEGMENTS`
+- [x] `UnsafePathError`
+- [x] `apply`
+- [x] `applyImmutable`
+- [x] `applyImmutableBatches`
+- [x] `assertSafePath`
+- [x] `assertValidOp`
+- [x] `assertValidWireOp`
+- [x] `decoder`
+- [x] `diffRevisions`
+- [x] `encoder`
+- [x] `isBase`
+- [x] `isReplace`
+- [x] `overlap`
+- [x] `track`
+
+## `@earendil-works/chord/node`
+
+- [ ] `childControl`: host manager (createHostManager, forkDriver, processLock, nodeLoader, childControl) is outside the durable subset; the subpath is not served
+- [ ] `createHostManager`: host manager (createHostManager, forkDriver, processLock, nodeLoader, childControl) is outside the durable subset; the subpath is not served
+- [ ] `forkDriver`: host manager (createHostManager, forkDriver, processLock, nodeLoader, childControl) is outside the durable subset; the subpath is not served
+- [ ] `nodeLoader`: host manager (createHostManager, forkDriver, processLock, nodeLoader, childControl) is outside the durable subset; the subpath is not served
+- [ ] `processLock`: host manager (createHostManager, forkDriver, processLock, nodeLoader, childControl) is outside the durable subset; the subpath is not served
+
+## `@earendil-works/chord/telemetry-sqlite`
+
+- [ ] `createSqliteTelemetry`: no SQLite telemetry store natively (pi-telemetry has memory/no-op stores); the subpath is not served
+
+## `@earendil-works/chord/sqlite`
+
+- [x] `applySqliteMigrations`
+- [x] `validateSqliteSchemaPrefix`
+
+## `@earendil-works/chord/sqlite/node`
+
+- [x] `NodeSqliteDatabase`
+- [x] `openNodeSqliteDatabase`
+
+## `@earendil-works/chord/sqlite/cloudflare`
+
+- [x] `DurableObjectSqliteDatabase`
+
+## `@earendil-works/chord/package.json`
+
+- [x] `default`
+
+## `@earendil-works/pi-telemetry`
+
+- [x] `InMemoryTelemetryContext`: native recorder
+- [x] `NOOP_TELEMETRY_CONTEXT`
+- [x] `NOOP_TELEMETRY_METRICS`
+- [x] `NOOP_TELEMETRY_PROPAGATION`
+- [x] `createTypedMetrics`
+- [x] `createTypedSpanStarter`
+- [x] `defineTelemetrySchema`
+
+## `@earendil-works/pi-telemetry/render`
+
+- [x] `renderTrace`: native `render_trace`
+
+## `@earendil-works/pi-telemetry/testing`
+
+- [ ] `createTelemetryAdapterConformance`: not served; no durable or chord code or test imports it (the native suite is `pi_telemetry::testing::create_telemetry_adapter_conformance`)

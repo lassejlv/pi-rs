@@ -39,9 +39,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 
-use super::execution::{
-    CodemodeSandbox, CodemodeSandboxBaseOptions, CodemodeSandboxError, VmChannel, VmEvent, VmEvents, VmLauncher,
-};
+use super::execution::{CodemodeSandbox, CodemodeSandboxBaseOptions, CodemodeSandboxError, VmChannel, VmEvent, VmEvents, VmLauncher};
 use super::host::start_thread_vm;
 use super::protocol::{HostToWorkerMessage, VmStartData, WorkerToHostMessage};
 use super::vm::{DEFAULT_LOOP_ITERATION_LIMIT, DEFAULT_RECURSION_LIMIT, VmHandle, VmLimits};
@@ -177,14 +175,14 @@ pub struct CodemodeServeOptions {
     pub max_memory_limit_bytes: Option<u64>,
     /// Maximum JS call depth. Default: [`DEFAULT_RECURSION_LIMIT`].
     pub recursion_limit: Option<usize>,
+    /// The timezone the VMs' `Date` uses (IANA name or POSIX `TZ` string), the serving host's
+    /// own; `None`: this process's `TZ`.
+    pub timezone: Option<String>,
 }
 
 /// Start `future` and poll it once right away, so its synchronous part runs now (in order with
 /// the caller's other calls); spawn the rest.
-fn start_now<T: Send + 'static>(
-    mut future: BoxFuture<'static, T>,
-    then: impl FnOnce(T) + Send + 'static,
-) {
+fn start_now<T: Send + 'static>(mut future: BoxFuture<'static, T>, then: impl FnOnce(T) + Send + 'static) {
     let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
     if let std::task::Poll::Ready(value) = future.as_mut().poll(&mut cx) {
         then(value);
@@ -276,10 +274,21 @@ impl Server {
                     self.send(batch);
                 }
             }
+            message @ WorkerToHostMessage::OutputUtf16 { .. } => {
+                if let WorkerToHostMessage::OutputUtf16 { data, .. } = &message {
+                    state.buffered_chars += data.len();
+                }
+                state.buffered.push(CodemodeRemoteMessage::Vm(message));
+                if state.buffered.len() >= FLUSH_ITEMS || state.buffered_chars >= FLUSH_CHARS {
+                    let batch = Self::take_buffer(&mut state);
+                    drop(state);
+                    self.send(batch);
+                }
+            }
             message @ WorkerToHostMessage::Started { .. } => state.buffered.push(CodemodeRemoteMessage::Vm(message)),
             // Sent at once: a host replaying a script waits for it to see that the script issued no
             // further call.
-            message @ (WorkerToHostMessage::Call { .. } | WorkerToHostMessage::Idle { .. }) => {
+            message @ (WorkerToHostMessage::Call { .. } | WorkerToHostMessage::CallUtf16 { .. } | WorkerToHostMessage::Idle { .. }) => {
                 let mut batch = Self::take_buffer(&mut state);
                 batch.push(CodemodeRemoteMessage::Vm(message));
                 drop(state);
@@ -309,7 +318,7 @@ pub async fn serve_codemode_remote(request: CodemodeRemoteRequest, exchange: Cod
         (Some(requested), None) => Some(requested),
         (Some(requested), Some(max)) => Some(requested.min(max)),
     };
-    let data = VmStartData { memory_limit_bytes, ..request.data };
+    let data = VmStartData { memory_limit_bytes, timezone: options.timezone.clone(), ..request.data };
 
     let server = Arc::new(Server {
         state: Mutex::new(ServerState { handle: None, ended: false, buffered: Vec::new(), buffered_chars: 0 }),
@@ -401,11 +410,8 @@ pub struct RemoteLauncher {
 
 impl VmLauncher for RemoteLauncher {
     fn launch(&self, data: VmStartData, events: VmEvents) -> BoxFuture<'static, Result<Box<dyn VmChannel>, String>> {
-        let state = Arc::new(ClientState {
-            stopped: AtomicBool::new(false),
-            settled: AtomicBool::new(false),
-            waiting: Mutex::new(HashMap::new()),
-        });
+        let state =
+            Arc::new(ClientState { stopped: AtomicBool::new(false), settled: AtomicBool::new(false), waiting: Mutex::new(HashMap::new()) });
         let exchange_state = state.clone();
         let exchange_events = events.clone();
         let exchange: CodemodeRemoteExchange = Arc::new(move |messages: Vec<CodemodeRemoteMessage>| {
@@ -416,7 +422,7 @@ impl VmLauncher for RemoteLauncher {
             // Register the waiter first: the host may answer a call synchronously, for example when
             // the tool fails before returning a future.
             let call = messages.iter().find_map(|message| match message {
-                CodemodeRemoteMessage::Vm(WorkerToHostMessage::Call { id, .. }) => Some(*id),
+                CodemodeRemoteMessage::Vm(WorkerToHostMessage::Call { id, .. } | WorkerToHostMessage::CallUtf16 { id, .. }) => Some(*id),
                 _ => None,
             });
             let reply: BoxFuture<'static, Result<CodemodeRemoteReply, String>> = match call {
@@ -451,17 +457,15 @@ impl VmLauncher for RemoteLauncher {
                 return Box::pin(async move { Err(message) });
             }
         };
-        let request = CodemodeRemoteRequest { data, interrupt_budget: self.interrupt_budget };
+        // The remote's VM keeps the remote's timezone.
+        let request = CodemodeRemoteRequest { data: VmStartData { timezone: None, ..data }, interrupt_budget: self.interrupt_budget };
         let run_state = state.clone();
         tokio::spawn(async move {
             let result = target.execute(request, exchange).await;
             match result {
                 Ok(()) => {
                     if !run_state.settled.load(Ordering::SeqCst) && !run_state.stopped.load(Ordering::SeqCst) {
-                        events.failure(CodemodeError::new(
-                            CodemodeErrorKind::Sandbox,
-                            "Remote sandbox returned before the script settled",
-                        ));
+                        events.failure(CodemodeError::new(CodemodeErrorKind::Sandbox, "Remote sandbox returned before the script settled"));
                     }
                 }
                 Err(error) => {

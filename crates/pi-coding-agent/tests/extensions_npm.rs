@@ -112,6 +112,7 @@ async fn custom_provider_anthropic_streams_with_the_sdk() {
         messages: vec![pi_ai::types::Message::User(pi_ai::types::UserMessage {
             content: pi_ai::types::UserContent::Text("hi".into()),
             timestamp: 0,
+            ..Default::default()
         })],
         tools: None,
     };
@@ -249,6 +250,7 @@ async fn custom_provider_gitlab_duo_streams_through_both_backends() {
         messages: vec![pi_ai::types::Message::User(pi_ai::types::UserMessage {
             content: pi_ai::types::UserContent::Text("hi".into()),
             timestamp: 0,
+            ..Default::default()
         })],
         tools: None,
     };

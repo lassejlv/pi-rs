@@ -257,7 +257,7 @@ async fn redacted_reasoning_is_preserved_and_replayed() {
         Message::User(UserMessage::new("read the file", 1)),
         Message::Assistant(AssistantMessage {
             content: vec![
-                AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(encoded.clone()), redacted: Some(true) }),
+                AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(encoded.clone()), redacted: Some(true), ..Default::default() }),
                 AssistantContent::ToolCall(ToolCall { id: "tool-1".into(), name: "read".into(), arguments: json!({ "path": "/tmp/a.txt" }).as_object().cloned().unwrap(), ..Default::default() }),
             ],
             api: "bedrock-converse-stream".into(),

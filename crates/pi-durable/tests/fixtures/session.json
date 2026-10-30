@@ -1,0 +1,4490 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "definitions": {
+    "counter": {
+      "kind": "counter",
+      "version": 1,
+      "scope": "session"
+    },
+    "v2": {
+      "kind": "counter",
+      "version": 2,
+      "scope": "session",
+      "migrate": true
+    },
+    "checkpoint": {
+      "kind": "checkpoint",
+      "version": 1,
+      "scope": "session",
+      "checkpointAfter": 2
+    },
+    "family": {
+      "kind": "member",
+      "version": 1,
+      "scope": "session",
+      "family": true
+    },
+    "historical": {
+      "kind": "historical",
+      "version": 1,
+      "scope": "conversation",
+      "history": "rewindable",
+      "fork": "asOf"
+    },
+    "current": {
+      "kind": "current",
+      "version": 1,
+      "scope": "conversation",
+      "history": "latest",
+      "fork": "current"
+    },
+    "initial": {
+      "kind": "initial",
+      "version": 1,
+      "scope": "conversation",
+      "history": "latest",
+      "fork": "initial"
+    },
+    "task": {
+      "kind": "scratch",
+      "version": 1,
+      "scope": "task"
+    }
+  },
+  "cases": [
+    {
+      "name": "creation noop edits rollback and retirement (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 99
+            }
+          ],
+          "fail": true
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "retire",
+              "token": "counter"
+            },
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 7
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        }
+      ],
+      "records": [
+        {
+          "value": null
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "callback failed"
+          }
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "value": [
+            null,
+            {
+              "count": 7
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 7
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.retire",
+            "id": 2
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 7
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1,
+                "retiredAt": 2
+              },
+              "value": null,
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 2
+              },
+              "version": 1,
+              "value": {
+                "count": 7
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "migration remains in memory until commit (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "v2"
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "v2"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "v2"
+        },
+        {
+          "op": "snapshot",
+          "token": "counter",
+          "error": true
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 4
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4,
+            "label": "migrated"
+          }
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        },
+        {
+          "value": [
+            {
+              "count": 4,
+              "label": "migrated"
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4,
+            "label": "migrated"
+          }
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Document 2 (counter) has newer version 2 than 1"
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 4
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 2,
+              "kind": "base",
+              "value": {
+                "count": 4,
+                "label": "migrated"
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 2,
+              "value": {
+                "count": 4,
+                "label": "migrated"
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "checkpoint delta accounting (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 0
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "checkpoint"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 0
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 3
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 4
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "checkpoint",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 0
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  1
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  2
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 3
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 0
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  1
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 2
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  2
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 3
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  3
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "family incarnation ownership and seeds (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "a",
+              "seed": {
+                "count": 3
+              }
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "count": 5,
+              "key": "a",
+              "seed": {
+                "count": 9
+              }
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "b",
+              "seed": {
+                "count": 10
+              }
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "a"
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "b"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "retire",
+              "token": "family",
+              "key": "a"
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "a",
+              "seed": {
+                "count": 11
+              }
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "a"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 3
+            },
+            {
+              "count": 5
+            },
+            {
+              "count": 10
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 5
+          }
+        },
+        {
+          "value": {
+            "count": 10
+          }
+        },
+        {
+          "value": [
+            null,
+            {
+              "count": 11
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 11
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "member",
+              "key": "a",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 5
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "member",
+              "key": "b",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 10
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.retire",
+            "id": 2
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "member",
+              "key": "a",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 11
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 5
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "member",
+                "key": "b",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 10
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1,
+                "retiredAt": 2
+              },
+              "value": null,
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 2
+              },
+              "version": 1,
+              "value": {
+                "count": 11
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fork policies and typed copy acquisition (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 1,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "current",
+              "count": 2,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "initial",
+              "count": 3,
+              "owner": "parent"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "cutoff"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 4,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "current",
+              "count": 5,
+              "owner": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "fork",
+              "parent": "parent",
+              "at": "cutoff",
+              "save": "child"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "child"
+        },
+        {
+          "op": "snapshot",
+          "token": "current",
+          "owner": "child"
+        },
+        {
+          "op": "snapshot",
+          "token": "initial",
+          "owner": "child"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 9,
+              "owner": "child"
+            },
+            {
+              "op": "doc",
+              "token": "initial",
+              "owner": "child"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "parent"
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "child"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            },
+            {
+              "count": 2
+            },
+            {
+              "count": 3
+            },
+            {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 4
+            },
+            {
+              "count": 5
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "id": 7,
+              "parent": {
+                "conversationId": 2,
+                "at": 6
+              }
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "value": {
+            "count": 5
+          }
+        },
+        {
+          "value": null
+        },
+        {
+          "value": [
+            {
+              "count": 9
+            },
+            {
+              "count": 0
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        },
+        {
+          "value": {
+            "count": 9
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "current",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "latest",
+              "fork": "current"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 2
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 5,
+              "kind": "initial",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "latest",
+              "fork": "initial"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 3
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 3,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          },
+          {
+            "type": "document.change",
+            "id": 4,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  5
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 7,
+              "parent": {
+                "conversationId": 2,
+                "at": 6
+              }
+            }
+          },
+          {
+            "type": "document.copy",
+            "record": {
+              "id": 8,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "source": {
+              "id": 3,
+              "at": 2
+            }
+          },
+          {
+            "type": "document.copy",
+            "record": {
+              "id": 9,
+              "kind": "current",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "latest",
+              "fork": "current"
+            },
+            "source": {
+              "id": 4,
+              "at": "current"
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 8,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  9
+                ]
+              ]
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 10,
+              "kind": "initial",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "latest",
+              "fork": "initial"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 0
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 6,
+                "conversationId": 2,
+                "head": 6
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 2
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 5,
+                "kind": "initial",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "initial",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 3
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 5
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  5
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 7,
+                "parent": {
+                  "conversationId": 2,
+                  "at": 6
+                }
+              }
+            },
+            {
+              "type": "document.copy",
+              "record": {
+                "id": 8,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "source": {
+                "id": 3,
+                "at": 2
+              }
+            },
+            {
+              "type": "document.copy",
+              "record": {
+                "id": 9,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "source": {
+                "id": 4,
+                "at": "current"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 8,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "version": 1,
+              "value": {
+                "count": 9
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  9
+                ]
+              ]
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 10,
+                "kind": "initial",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "latest",
+                "fork": "initial",
+                "createdAt": 5
+              },
+              "conversationId": 7,
+              "version": 1,
+              "value": {
+                "count": 0
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fork rejects source mutations atomically (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 1,
+              "owner": "parent"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "cutoff"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "fork",
+              "parent": "parent",
+              "at": "cutoff",
+              "save": "child"
+            },
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 2,
+              "owner": "parent"
+            }
+          ],
+          "error": true
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "parent"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            },
+            {
+              "kind": "note",
+              "id": 4,
+              "conversationId": 2,
+              "head": 4
+            }
+          ]
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Cannot change fork source document 3 in the fork transaction"
+          }
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 4,
+              "conversationId": 2,
+              "head": 4
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 4,
+                "conversationId": 2,
+                "head": 4
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task lifecycle and submission settlement (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "task",
+              "owner": "parent",
+              "save": "work"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "task",
+              "count": 6,
+              "owner": "work"
+            },
+            {
+              "op": "submission",
+              "owner": "parent",
+              "save": "request"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "answer"
+            },
+            {
+              "op": "place",
+              "submission": "request",
+              "entry": "answer"
+            },
+            {
+              "op": "settle",
+              "submission": "request",
+              "answer": "answer"
+            },
+            {
+              "op": "terminal",
+              "task": "work"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "task",
+          "owner": "work"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            3
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 6
+            },
+            {
+              "conversationId": 2,
+              "type": "input",
+              "status": "queued",
+              "id": 5
+            },
+            {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "value": null
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "pending",
+                "checkpoint": {
+                  "phase": "start"
+                }
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          },
+          {
+            "type": "submission",
+            "value": {
+              "conversationId": 2,
+              "type": "input",
+              "status": "done",
+              "id": 5,
+              "entry": 6,
+              "answer": 6
+            }
+          },
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": null
+                }
+              },
+              "endedAt": 1234
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "scratch",
+              "scope": {
+                "kind": "task",
+                "taskId": 3
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 6
+              }
+            }
+          },
+          {
+            "type": "document.retire",
+            "id": 4
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "pending",
+                  "checkpoint": {
+                    "phase": "start"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 6,
+                "conversationId": 2,
+                "head": 6
+              }
+            },
+            {
+              "type": "submission",
+              "value": {
+                "conversationId": 2,
+                "type": "input",
+                "status": "done",
+                "id": 5,
+                "entry": 6,
+                "answer": 6
+              }
+            },
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "terminal",
+                  "outcome": {
+                    "status": "completed",
+                    "result": null
+                  }
+                },
+                "endedAt": 1234
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "scratch",
+                "scope": {
+                  "kind": "task",
+                  "taskId": 3
+                },
+                "createdAt": 3,
+                "retiredAt": 3
+              },
+              "conversationId": 2,
+              "value": null,
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "validation precedes checkpoint callbacks (retention zero)",
+      "retention": 0,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "task",
+              "owner": "parent",
+              "save": "work"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 9
+            },
+            {
+              "op": "conversation",
+              "task": "work",
+              "save": "owned"
+            },
+            {
+              "op": "terminal",
+              "task": "work"
+            }
+          ],
+          "error": true
+        },
+        {
+          "op": "snapshot",
+          "token": "checkpoint"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            3
+          ]
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Conversation owner task 3 is terminal"
+          }
+        },
+        {
+          "value": null
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "pending",
+                "checkpoint": {
+                  "phase": "start"
+                }
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "pending",
+                  "checkpoint": {
+                    "phase": "start"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "creation noop edits rollback and retirement (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 99
+            }
+          ],
+          "fail": true
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "retire",
+              "token": "counter"
+            },
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 7
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        }
+      ],
+      "records": [
+        {
+          "value": null
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "callback failed"
+          }
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "value": [
+            null,
+            {
+              "count": 7
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 7
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.retire",
+            "id": 2
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 7
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1,
+                "retiredAt": 2
+              },
+              "value": null,
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 2
+              },
+              "version": 1,
+              "value": {
+                "count": 7
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "migration remains in memory until commit (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "counter",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "v2"
+        },
+        {
+          "op": "snapshot",
+          "token": "counter"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "v2"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "v2"
+        },
+        {
+          "op": "snapshot",
+          "token": "counter",
+          "error": true
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 4
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4,
+            "label": "migrated"
+          }
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        },
+        {
+          "value": [
+            {
+              "count": 4,
+              "label": "migrated"
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4,
+            "label": "migrated"
+          }
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Document 2 (counter) has newer version 2 than 1"
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "counter",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 4
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 2,
+              "kind": "base",
+              "value": {
+                "count": 4,
+                "label": "migrated"
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "counter",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 2,
+              "value": {
+                "count": 4,
+                "label": "migrated"
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "checkpoint delta accounting (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 0
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "checkpoint"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 0
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 3
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 4
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "checkpoint",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 0
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  1
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  2
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 3
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 2,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 0
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  1
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 2
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  2
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 3
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  3
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "checkpoint",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "family incarnation ownership and seeds (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "a",
+              "seed": {
+                "count": 3
+              }
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "count": 5,
+              "key": "a",
+              "seed": {
+                "count": 9
+              }
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "b",
+              "seed": {
+                "count": 10
+              }
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "a"
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "b"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "retire",
+              "token": "family",
+              "key": "a"
+            },
+            {
+              "op": "doc",
+              "token": "family",
+              "key": "a",
+              "seed": {
+                "count": 11
+              }
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "family",
+          "key": "a"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "count": 3
+            },
+            {
+              "count": 5
+            },
+            {
+              "count": 10
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 5
+          }
+        },
+        {
+          "value": {
+            "count": 10
+          }
+        },
+        {
+          "value": [
+            null,
+            {
+              "count": 11
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 11
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "document.create",
+            "record": {
+              "id": 2,
+              "kind": "member",
+              "key": "a",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 5
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "member",
+              "key": "b",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 10
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.retire",
+            "id": 2
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "member",
+              "key": "a",
+              "scope": {
+                "kind": "session"
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 11
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 5
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "member",
+                "key": "b",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1
+              },
+              "version": 1,
+              "value": {
+                "count": 10
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 2,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 1,
+                "retiredAt": 2
+              },
+              "value": null,
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "member",
+                "key": "a",
+                "scope": {
+                  "kind": "session"
+                },
+                "createdAt": 2
+              },
+              "version": 1,
+              "value": {
+                "count": 11
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fork policies and typed copy acquisition (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 1,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "current",
+              "count": 2,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "initial",
+              "count": 3,
+              "owner": "parent"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "cutoff"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 4,
+              "owner": "parent"
+            },
+            {
+              "op": "doc",
+              "token": "current",
+              "count": 5,
+              "owner": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "fork",
+              "parent": "parent",
+              "at": "cutoff",
+              "save": "child"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "child"
+        },
+        {
+          "op": "snapshot",
+          "token": "current",
+          "owner": "child"
+        },
+        {
+          "op": "snapshot",
+          "token": "initial",
+          "owner": "child"
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 9,
+              "owner": "child"
+            },
+            {
+              "op": "doc",
+              "token": "initial",
+              "owner": "child"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "parent"
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "child"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            },
+            {
+              "count": 2
+            },
+            {
+              "count": 3
+            },
+            {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 4
+            },
+            {
+              "count": 5
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "id": 7,
+              "parent": {
+                "conversationId": 2,
+                "at": 6
+              }
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        },
+        {
+          "value": {
+            "count": 5
+          }
+        },
+        {
+          "value": null
+        },
+        {
+          "value": [
+            {
+              "count": 9
+            },
+            {
+              "count": 0
+            }
+          ]
+        },
+        {
+          "value": {
+            "count": 4
+          }
+        },
+        {
+          "value": {
+            "count": 9
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "current",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "latest",
+              "fork": "current"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 2
+              }
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 5,
+              "kind": "initial",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "latest",
+              "fork": "initial"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 3
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 3,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            }
+          },
+          {
+            "type": "document.change",
+            "id": 4,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  5
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 7,
+              "parent": {
+                "conversationId": 2,
+                "at": 6
+              }
+            }
+          },
+          {
+            "type": "document.copy",
+            "record": {
+              "id": 8,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "source": {
+              "id": 3,
+              "at": 2
+            }
+          },
+          {
+            "type": "document.copy",
+            "record": {
+              "id": 9,
+              "kind": "current",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "latest",
+              "fork": "current"
+            },
+            "source": {
+              "id": 4,
+              "at": "current"
+            }
+          }
+        ],
+        [
+          {
+            "type": "document.change",
+            "id": 8,
+            "content": {
+              "version": 1,
+              "kind": "delta",
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  9
+                ]
+              ]
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 10,
+              "kind": "initial",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 7
+              },
+              "history": "latest",
+              "fork": "initial"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 0
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 6,
+                "conversationId": 2,
+                "head": 6
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 2
+              },
+              "ops": []
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 5,
+                "kind": "initial",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "initial",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 3
+              },
+              "ops": []
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 4
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  4
+                ]
+              ]
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 5
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  5
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 7,
+                "parent": {
+                  "conversationId": 2,
+                  "at": 6
+                }
+              }
+            },
+            {
+              "type": "document.copy",
+              "record": {
+                "id": 8,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "source": {
+                "id": 3,
+                "at": 2
+              }
+            },
+            {
+              "type": "document.copy",
+              "record": {
+                "id": 9,
+                "kind": "current",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "latest",
+                "fork": "current",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "source": {
+                "id": 4,
+                "at": "current"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "changes": [
+            {
+              "type": "document",
+              "record": {
+                "id": 8,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 4
+              },
+              "conversationId": 7,
+              "version": 1,
+              "value": {
+                "count": 9
+              },
+              "ops": [
+                [
+                  "s",
+                  [
+                    "count"
+                  ],
+                  9
+                ]
+              ]
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 10,
+                "kind": "initial",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 7
+                },
+                "history": "latest",
+                "fork": "initial",
+                "createdAt": 5
+              },
+              "conversationId": 7,
+              "version": 1,
+              "value": {
+                "count": 0
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fork rejects source mutations atomically (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 1,
+              "owner": "parent"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "cutoff"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "fork",
+              "parent": "parent",
+              "at": "cutoff",
+              "save": "child"
+            },
+            {
+              "op": "doc",
+              "token": "historical",
+              "count": 2,
+              "owner": "parent"
+            }
+          ],
+          "error": true
+        },
+        {
+          "op": "snapshot",
+          "token": "historical",
+          "owner": "parent"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 1
+            },
+            {
+              "kind": "note",
+              "id": 4,
+              "conversationId": 2,
+              "head": 4
+            }
+          ]
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Cannot change fork source document 3 in the fork transaction"
+          }
+        },
+        {
+          "value": {
+            "count": 1
+          }
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 4,
+              "conversationId": 2,
+              "head": 4
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 3,
+              "kind": "historical",
+              "scope": {
+                "kind": "conversation",
+                "conversationId": 2
+              },
+              "history": "rewindable",
+              "fork": "asOf"
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 1
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 4,
+                "conversationId": 2,
+                "head": 4
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 3,
+                "kind": "historical",
+                "scope": {
+                  "kind": "conversation",
+                  "conversationId": 2
+                },
+                "history": "rewindable",
+                "fork": "asOf",
+                "createdAt": 2
+              },
+              "conversationId": 2,
+              "version": 1,
+              "value": {
+                "count": 1
+              },
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task lifecycle and submission settlement (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "task",
+              "owner": "parent",
+              "save": "work"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "task",
+              "count": 6,
+              "owner": "work"
+            },
+            {
+              "op": "submission",
+              "owner": "parent",
+              "save": "request"
+            },
+            {
+              "op": "entry",
+              "owner": "parent",
+              "save": "answer"
+            },
+            {
+              "op": "place",
+              "submission": "request",
+              "entry": "answer"
+            },
+            {
+              "op": "settle",
+              "submission": "request",
+              "answer": "answer"
+            },
+            {
+              "op": "terminal",
+              "task": "work"
+            }
+          ]
+        },
+        {
+          "op": "snapshot",
+          "token": "task",
+          "owner": "work"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            3
+          ]
+        },
+        {
+          "value": [
+            {
+              "count": 6
+            },
+            {
+              "conversationId": 2,
+              "type": "input",
+              "status": "queued",
+              "id": 5
+            },
+            {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "value": null
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "pending",
+                "checkpoint": {
+                  "phase": "start"
+                }
+              }
+            }
+          }
+        ],
+        [
+          {
+            "type": "entry",
+            "value": {
+              "kind": "note",
+              "id": 6,
+              "conversationId": 2,
+              "head": 6
+            }
+          },
+          {
+            "type": "submission",
+            "value": {
+              "conversationId": 2,
+              "type": "input",
+              "status": "done",
+              "id": 5,
+              "entry": 6,
+              "answer": 6
+            }
+          },
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "terminal",
+                "outcome": {
+                  "status": "completed",
+                  "result": null
+                }
+              },
+              "endedAt": 1234
+            }
+          },
+          {
+            "type": "document.create",
+            "record": {
+              "id": 4,
+              "kind": "scratch",
+              "scope": {
+                "kind": "task",
+                "taskId": 3
+              }
+            },
+            "content": {
+              "version": 1,
+              "kind": "base",
+              "value": {
+                "count": 6
+              }
+            }
+          },
+          {
+            "type": "document.retire",
+            "id": 4
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "pending",
+                  "checkpoint": {
+                    "phase": "start"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "changes": [
+            {
+              "type": "entry",
+              "value": {
+                "kind": "note",
+                "id": 6,
+                "conversationId": 2,
+                "head": 6
+              }
+            },
+            {
+              "type": "submission",
+              "value": {
+                "conversationId": 2,
+                "type": "input",
+                "status": "done",
+                "id": 5,
+                "entry": 6,
+                "answer": 6
+              }
+            },
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "terminal",
+                  "outcome": {
+                    "status": "completed",
+                    "result": null
+                  }
+                },
+                "endedAt": 1234
+              }
+            },
+            {
+              "type": "document",
+              "record": {
+                "id": 4,
+                "kind": "scratch",
+                "scope": {
+                  "kind": "task",
+                  "taskId": 3
+                },
+                "createdAt": 3,
+                "retiredAt": 3
+              },
+              "conversationId": 2,
+              "value": null,
+              "ops": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "validation precedes checkpoint callbacks (retention infinite)",
+      "retention": null,
+      "steps": [
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "conversation",
+              "save": "parent"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "task",
+              "owner": "parent",
+              "save": "work"
+            }
+          ]
+        },
+        {
+          "op": "commit",
+          "steps": [
+            {
+              "op": "doc",
+              "token": "checkpoint",
+              "count": 9
+            },
+            {
+              "op": "conversation",
+              "task": "work",
+              "save": "owned"
+            },
+            {
+              "op": "terminal",
+              "task": "work"
+            }
+          ],
+          "error": true
+        },
+        {
+          "op": "snapshot",
+          "token": "checkpoint"
+        }
+      ],
+      "records": [
+        {
+          "value": [
+            {
+              "id": 2
+            }
+          ]
+        },
+        {
+          "value": [
+            3
+          ]
+        },
+        {
+          "error": {
+            "name": "Error",
+            "message": "Conversation owner task 3 is terminal"
+          }
+        },
+        {
+          "value": null
+        }
+      ],
+      "writes": [
+        [
+          {
+            "type": "conversation",
+            "value": {
+              "id": 2
+            }
+          }
+        ],
+        [
+          {
+            "type": "task",
+            "value": {
+              "id": 3,
+              "conversationId": 2,
+              "kind": "test",
+              "version": 1,
+              "input": null,
+              "background": false,
+              "abortRequested": false,
+              "state": {
+                "status": "pending",
+                "checkpoint": {
+                  "phase": "start"
+                }
+              }
+            }
+          }
+        ]
+      ],
+      "publications": [
+        {
+          "seq": 1,
+          "changes": [
+            {
+              "type": "conversation",
+              "value": {
+                "id": 2
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "changes": [
+            {
+              "type": "task",
+              "value": {
+                "id": 3,
+                "conversationId": 2,
+                "kind": "test",
+                "version": 1,
+                "input": null,
+                "background": false,
+                "abortRequested": false,
+                "state": {
+                  "status": "pending",
+                  "checkpoint": {
+                    "phase": "start"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

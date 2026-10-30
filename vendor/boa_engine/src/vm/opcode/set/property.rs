@@ -61,6 +61,7 @@ fn set_by_name(
     drop(object_borrowed);
 
     let name: PropertyKey = ic.name.clone().into();
+    let array_length = object.is_array() && ic.name.to_std_string_escaped() == "length";
 
     let context = &mut InternalMethodPropertyContext::new(context);
     let succeeded = object.__set__(name.clone(), value.clone(), receiver.clone(), context)?;
@@ -70,9 +71,10 @@ fn set_by_name(
             .into());
     }
 
-    // Cache the property.
+    // Cache the property. An array's `length` must go through `ArraySetLength`, which deletes the
+    // elements past a smaller length; a cached slot write would skip that.
     let slot = *context.slot();
-    if succeeded && slot.is_cacheable() {
+    if succeeded && slot.is_cacheable() && !array_length {
         let ic = &context.vm.frame().code_block.ic[usize::from(index)];
         let object_borrowed = object.borrow();
         let shape = object_borrowed.shape();

@@ -24,6 +24,40 @@ mod tests;
 #[cfg(test)]
 pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+/// Holds [`TEST_ENV_LOCK`] with `HOME` pointed at an empty directory (the TS tests and golden
+/// generator run with an isolated home), restoring it on drop.
+#[cfg(test)]
+pub(crate) struct IsolatedHome {
+    _guard: std::sync::MutexGuard<'static, ()>,
+    previous: Option<std::ffi::OsString>,
+    _dir: tempfile::TempDir,
+}
+
+#[cfg(test)]
+impl IsolatedHome {
+    pub(crate) fn new() -> Self {
+        let guard = TEST_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = tempfile::tempdir().unwrap();
+        let previous = std::env::var_os("HOME");
+        // SAFETY: serialized by TEST_ENV_LOCK with the other tests that touch HOME.
+        unsafe { std::env::set_var("HOME", dir.path()) };
+        Self { _guard: guard, previous, _dir: dir }
+    }
+}
+
+#[cfg(test)]
+impl Drop for IsolatedHome {
+    fn drop(&mut self) {
+        // SAFETY: still holding TEST_ENV_LOCK.
+        unsafe {
+            match &self.previous {
+                Some(home) => std::env::set_var("HOME", home),
+                None => std::env::remove_var("HOME"),
+            }
+        }
+    }
+}
+
 use crate::config::CONFIG_DIR_NAME;
 use crate::core::output_guard::is_stdout_taken_over;
 use crate::core::pi_manifest::{PiManifest, read_pi_manifest};

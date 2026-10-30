@@ -41,7 +41,7 @@ pub fn stream(model: &Model, context: &TranscriptContext, options: StreamOptions
         create_client: Box::new(create_client),
         custom_client_error: "Custom fetch is not supported by the Google Generative AI adapter",
     };
-    tokio::spawn(run_google_stream(model.clone(), context.clone(), options, sender, spec));
+    crate::utils::wasm::spawn(run_google_stream(model.clone(), context.clone(), options, sender, spec));
     stream
 }
 

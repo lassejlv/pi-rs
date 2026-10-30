@@ -61,6 +61,7 @@ fn has_visible(c: &AssistantContent) -> bool {
 impl AssistantMessageComponent {
     /// Defaults: `hide_thinking_block` false, `markdown_theme` [`get_markdown_theme`],
     /// `hidden_thinking_label` "Thinking...", `output_pad` 1, no transformers.
+    #[allow(clippy::too_many_arguments)] // mirrors the TS constructor's positional parameters
     pub fn new(
         message: Option<AssistantMessage>,
         hide_thinking_block: Option<bool>,

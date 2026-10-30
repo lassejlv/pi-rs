@@ -1066,6 +1066,7 @@ pub(crate) fn function_call(
 
     let has_binding_identifier = context.vm.frame().code_block().has_binding_identifier();
     let has_function_scope = context.vm.frame().code_block().has_function_scope();
+    let code_this_not_in_environment = context.vm.frame().code_block().this_not_in_environment();
 
     if has_binding_identifier {
         let frame = context.vm.frame_mut();
@@ -1084,6 +1085,11 @@ pub(crate) fn function_call(
         let scope = context.vm.frame().code_block().constant_scope(last_env);
         let frame = context.vm.frame_mut();
         let global = frame.realm.environment();
+        let this = if code_this_not_in_environment {
+            ThisBindingStatus::Lexical
+        } else {
+            this
+        };
         frame.environments.push_function(
             scope,
             FunctionSlots::new(this, function_object.clone(), None),
@@ -1190,14 +1196,19 @@ fn function_construct(
 
     if has_function_scope {
         let scope = context.vm.frame().code_block().constant_scope(last_env);
+        let this_not_in_environment = context.vm.frame().code_block().this_not_in_environment();
         let frame = context.vm.frame_mut();
         let global = frame.realm.environment();
         frame.environments.push_function(
             scope,
             FunctionSlots::new(
-                this.clone().map_or(ThisBindingStatus::Uninitialized, |o| {
-                    ThisBindingStatus::Initialized(o.into())
-                }),
+                if this_not_in_environment && this.is_some() {
+                    ThisBindingStatus::Lexical
+                } else {
+                    this.clone().map_or(ThisBindingStatus::Uninitialized, |o| {
+                        ThisBindingStatus::Initialized(o.into())
+                    })
+                },
                 this_function_object.clone(),
                 Some(
                     new_target

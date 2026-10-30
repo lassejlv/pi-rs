@@ -59,3 +59,31 @@ undefined
 Error: e symbol
 true
 "###;
+
+/// `v8.setFlagsFromString("--expose-gc")` exposes `gc` in node:vm contexts created afterwards,
+/// as V8 does (Chord watch.test.ts's `runInNewContext("gc")`).
+#[tokio::test]
+async fn expose_gc_flag_reaches_new_vm_contexts() {
+    let rt = pi_jsrt::JsRuntime::new(pi_jsrt::RuntimeOptions {
+        expose_gc: true,
+        ..Default::default()
+    })
+    .unwrap();
+    let value = rt
+        .eval_module(
+            r#"
+        import { setFlagsFromString } from "node:v8";
+        import { runInNewContext } from "node:vm";
+        export const before = runInNewContext("typeof gc");
+        setFlagsFromString("--expose-gc");
+        export const after = runInNewContext("typeof gc");
+        export const same = runInNewContext("gc") === globalThis.gc;
+    "#,
+            "/vm-gc.mjs",
+        )
+        .await
+        .unwrap();
+    assert_eq!(value.get("before").await.unwrap(), serde_json::json!("undefined"));
+    assert_eq!(value.get("after").await.unwrap(), serde_json::json!("function"));
+    assert_eq!(value.get("same").await.unwrap(), serde_json::json!(true));
+}

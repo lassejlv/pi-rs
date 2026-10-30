@@ -51,6 +51,7 @@ const PAGE: usize = 65536;
 const ALIGN: usize = 64;
 
 struct MemSlot {
+    mem: Memory,
     buffer: JsArrayBuffer,
     len: usize,
     ptr: *mut u8,
@@ -280,6 +281,7 @@ fn call_wasm(func: Func, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValu
     w.ctxs.borrow_mut().push(ctx as *mut Context);
     let r = with_store(&w, |s| func.call(s, &params, &mut results));
     w.ctxs.borrow_mut().pop();
+    refresh_memories(&w, ctx)?;
     match r {
         Ok(()) => results_to_js(&w, &results, ctx),
         Err(e) => match w.pending.borrow_mut().take() {
@@ -319,6 +321,7 @@ fn host_call(idx: usize, result_types: &[ValType], mut caller: Caller<'_, ()>, p
     let ctx = unsafe { &mut *ctx_ptr };
     w.callers.borrow_mut().push(&mut caller as *mut Caller<'_, ()> as *mut ());
     let r = (|| -> JsResult<()> {
+        refresh_memories(&w, ctx)?;
         let f = w.js_funcs.borrow()[idx].clone();
         let mut args = Vec::with_capacity(params.len());
         for p in params {
@@ -398,12 +401,23 @@ fn new_memory(w: &Wasm, ty: MemoryType, ctx: &mut Context) -> JsResult<Memory> {
     // `min` bytes); ownership passes to the ArrayBuffer.
     let vec = unsafe { aligned_vec::AVec::<u8, aligned_vec::ConstAlign<ALIGN>>::from_raw_parts(ptr, ALIGN, min, cap) };
     let buffer = JsArrayBuffer::from_byte_block(vec, ctx)?;
-    w.memories.borrow_mut().insert(key(&mem), MemSlot { buffer, len: min, ptr });
+    w.memories.borrow_mut().insert(key(&mem), MemSlot { mem, buffer, len: min, ptr });
     Ok(mem)
 }
 
 fn range_error(msg: &str) -> JsError {
     boa_engine::JsNativeError::range().with_message(msg.to_string()).into()
+}
+
+/// Detach the buffers of memories wasm grew, as V8 does at growth: JS that caches a view of
+/// `memory.buffer` (wasm-bindgen's `cachedUint8ArrayMemory0`) sees `byteLength === 0` when the
+/// wasm call that grew it returns, or when it calls back into JS.
+fn refresh_memories(w: &Wasm, ctx: &mut Context) -> JsResult<()> {
+    let memories: Vec<Memory> = w.memories.borrow().values().map(|slot| slot.mem).collect();
+    for mem in memories {
+        memory_buffer(w, mem, ctx)?;
+    }
+    Ok(())
 }
 
 /// The memory's current ArrayBuffer (a new one after growth; the old one is detached).

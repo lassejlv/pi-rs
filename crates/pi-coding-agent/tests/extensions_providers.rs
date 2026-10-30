@@ -45,7 +45,7 @@ async fn session_with_extension(source: &str) -> (Harness, PathBuf) {
 fn user(text: &str) -> Context {
     Context {
         system_prompt: None,
-        messages: vec![Message::User(UserMessage { content: UserContent::Text(text.to_string()), timestamp: 0 })],
+        messages: vec![Message::User(UserMessage { content: UserContent::Text(text.to_string()), timestamp: 0, ..Default::default() })],
         tools: None,
     }
 }

@@ -1,0 +1,30 @@
+# Real-browser checks of pi-durable's IndexedDB storage, built from the crate
+# itself for wasm32-unknown-unknown with the `indexeddb` feature. See run.sh.
+[package]
+name = "pi-durable-indexeddb-browser"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[workspace]
+
+[dependencies]
+pi-durable = { path = "../..", default-features = false, features = ["indexeddb"] }
+pi-chord = { path = "../../../pi-chord" }
+pi-ai = { path = "../../../pi-ai" }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+futures = "0.3"
+serde = { version = "1", features = ["derive"] }
+parking_lot = "0.12"
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "=0.4.79"
+web-sys = { version = "=0.3.106", features = ["console"] }
+
+# Same vendored engine as the pi-rs workspace.
+[patch.crates-io]
+boa_engine = { path = "../../../../vendor/boa_engine" }
+boa_ast = { path = "../../../../vendor/boa_ast" }
+boa_parser = { path = "../../../../vendor/boa_parser" }

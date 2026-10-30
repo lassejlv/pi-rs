@@ -76,6 +76,8 @@ pub(crate) struct State {
     idle_ms: Cell<f64>,
     /// `process.nextTick` callbacks are queued (see [`run_microtasks`]).
     ticks_pending: Cell<bool>,
+    /// The runtime's timezone, shared with [`Hooks`]; `ops.setEnv("TZ", …)` changes it.
+    pub(crate) timezone: Rc<RefCell<Option<jiff::tz::TimeZone>>>,
     /// Events posted by I/O tasks that have not run yet (see [`Poster`]).
     queued: Arc<std::sync::atomic::AtomicUsize>,
     /// Waiters for [`State::alive`] to become false (see `JsRuntime::wait_idle`).
@@ -416,7 +418,22 @@ pub(crate) fn report(ctx: &mut Context, kind: &str, err: &Error) {
 // Host hooks (rejection tracking)
 // ---------------------------------------------------------------------------
 
-pub(crate) struct Hooks;
+pub(crate) struct Hooks {
+    /// The runtime's timezone (`process.env.TZ`), `None` for the host's.
+    timezone: Rc<RefCell<Option<jiff::tz::TimeZone>>>,
+}
+
+/// A `TZ` value as a timezone, as the C library reads it: an IANA name (with an optional leading
+/// `:`) or a POSIX rule; anything else, including the empty string, is UTC.
+pub(crate) fn timezone_named(tz: &str) -> jiff::tz::TimeZone {
+    let name = tz.strip_prefix(':').unwrap_or(tz);
+    if name.is_empty() {
+        return jiff::tz::TimeZone::UTC;
+    }
+    jiff::tz::TimeZone::get(name)
+        .or_else(|_| jiff::tz::TimeZone::posix(name))
+        .unwrap_or(jiff::tz::TimeZone::UTC)
+}
 
 /// The async context jobs and timers carry: the AsyncLocalStorage frame (a JS value, `undefined`
 /// for the empty frame) and the async_hooks execution/trigger ids. It is captured when a promise
@@ -482,6 +499,14 @@ thread_local! {
 }
 
 impl HostHooks for Hooks {
+    fn local_timezone_offset_seconds(&self, unix_time_seconds: i64) -> i32 {
+        let timezone = self.timezone.borrow();
+        match (timezone.as_ref(), jiff::Timestamp::from_second(unix_time_seconds)) {
+            (Some(timezone), Ok(at)) => timezone.to_offset(at).seconds(),
+            _ => boa_engine::context::DefaultHooks.local_timezone_offset_seconds(unix_time_seconds),
+        }
+    }
+
     fn make_job_callback(&self, callback: JsFunction, context: &mut Context) -> boa_engine::job::JobCallback {
         let Some(st) = context.get_data::<Rc<State>>().cloned() else {
             return boa_engine::job::JobCallback::new(callback, ());
@@ -553,11 +578,27 @@ pub(crate) enum TimerCallback {
     Native(Option<NativeTimer>),
 }
 
+/// Where a timer is queued: the real clock, or the fake clock of [`FakeClock`] (microseconds).
+#[derive(Clone, Copy)]
+enum TimerKey {
+    Real((Instant, u64)),
+    Fake((u64, u64)),
+}
+
 struct TimerEntry {
     callback: TimerCallback,
     interval: Option<Duration>,
-    key: (Instant, u64),
+    key: TimerKey,
     refed: bool,
+}
+
+/// A frozen timer clock (`__jsrtTimers.freeze`, used by test runners' fake timers): timers
+/// created while it is installed wait on it and fire only when it is advanced. They never keep
+/// the event loop alive, and they are dropped when the clock is thawed. Timers created before
+/// keep running on the real clock.
+struct FakeClock {
+    now_us: u64,
+    queue: BTreeMap<(u64, u64), u64>,
 }
 
 #[derive(Default)]
@@ -565,14 +606,55 @@ pub(crate) struct Timers {
     queue: BTreeMap<(Instant, u64), u64>,
     entries: HashMap<u64, TimerEntry>,
     seq: u64,
+    fake: Option<FakeClock>,
+}
+
+fn micros(d: Duration) -> u64 {
+    u64::try_from(d.as_micros()).unwrap_or(u64::MAX)
 }
 
 impl Timers {
     pub(crate) fn add(&mut self, id: u64, callback: TimerCallback, delay: Duration, interval: Option<Duration>) {
-        self.seq += 1;
-        let key = (Instant::now() + delay, self.seq);
-        self.queue.insert(key, id);
+        let key = self.key_after(delay, true, id);
         self.entries.insert(id, TimerEntry { callback, interval, key, refed: true });
+    }
+
+    /// Add a timer on the real clock even while a fake clock is installed.
+    fn add_real(&mut self, id: u64, callback: TimerCallback, delay: Duration) {
+        let key = self.key_after(delay, false, id);
+        self.entries.insert(id, TimerEntry { callback, interval: None, key, refed: true });
+    }
+
+    /// Queue timer `id` `delay` from now on the fake clock (when installed and `fake`) or the
+    /// real one.
+    fn key_after(&mut self, delay: Duration, fake: bool, id: u64) -> TimerKey {
+        self.seq += 1;
+        let seq = self.seq;
+        match self.fake.as_mut().filter(|_| fake) {
+            Some(clock) => {
+                let key = (clock.now_us.saturating_add(micros(delay)), seq);
+                clock.queue.insert(key, id);
+                TimerKey::Fake(key)
+            }
+            None => {
+                let key = (Instant::now() + delay, seq);
+                self.queue.insert(key, id);
+                TimerKey::Real(key)
+            }
+        }
+    }
+
+    fn unqueue(&mut self, key: TimerKey) {
+        match key {
+            TimerKey::Real(k) => {
+                self.queue.remove(&k);
+            }
+            TimerKey::Fake(k) => {
+                if let Some(clock) = self.fake.as_mut() {
+                    clock.queue.remove(&k);
+                }
+            }
+        }
     }
 
     /// `timeout.ref()` / `unref()`: an unreferenced timer does not keep the loop alive.
@@ -583,21 +665,21 @@ impl Timers {
     }
 
     fn refed(&self) -> usize {
-        self.entries.values().filter(|e| e.refed).count()
+        self.entries.values().filter(|e| e.refed && matches!(e.key, TimerKey::Real(_))).count()
     }
 
     pub(crate) fn cancel(&mut self, id: u64) -> Option<TimerCallback> {
         let e = self.entries.remove(&id)?;
-        self.queue.remove(&e.key);
+        self.unqueue(e.key);
         Some(e.callback)
     }
 
     pub(crate) fn refresh(&mut self, id: u64, delay: Duration) {
+        let Some(old) = self.entries.get(&id).map(|e| e.key) else { return };
+        self.unqueue(old);
+        let key = self.key_after(delay, matches!(old, TimerKey::Fake(_)), id);
         if let Some(e) = self.entries.get_mut(&id) {
-            self.queue.remove(&e.key);
-            self.seq += 1;
-            e.key = (Instant::now() + delay, self.seq);
-            self.queue.insert(e.key, id);
+            e.key = key;
         }
     }
 
@@ -607,6 +689,56 @@ impl Timers {
 
     pub(crate) fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    /// Install a fresh fake clock at `now_us`, dropping the timers of a previous one.
+    fn freeze(&mut self, now_us: u64) -> Vec<TimerCallback> {
+        let dropped = self.thaw();
+        self.fake = Some(FakeClock { now_us, queue: BTreeMap::new() });
+        dropped
+    }
+
+    /// Remove the fake clock and its timers (returned so they are dropped outside the borrow).
+    fn thaw(&mut self) -> Vec<TimerCallback> {
+        let Some(clock) = self.fake.take() else { return Vec::new() };
+        clock.queue.values().filter_map(|id| self.entries.remove(id)).map(|e| e.callback).collect()
+    }
+
+    fn fake_count(&self) -> usize {
+        self.fake.as_ref().map_or(0, |c| c.queue.len())
+    }
+
+    /// Pop the earliest fake timer due at or before `limit_us`, moving the clock to its deadline.
+    fn pop_fake(&mut self, limit_us: u64) -> Option<Due> {
+        let clock = self.fake.as_mut()?;
+        let (&key, &id) = clock.queue.iter().next()?;
+        if key.0 > limit_us {
+            return None;
+        }
+        clock.queue.remove(&key);
+        clock.now_us = clock.now_us.max(key.0);
+        let now_us = clock.now_us;
+        let mut entry = self.entries.remove(&id)?;
+        match entry.interval {
+            Some(interval) => {
+                let cb = match &entry.callback {
+                    TimerCallback::Js(f, a) => Some(Due::Js((f.clone(), a.clone(), false))),
+                    TimerCallback::Native(_) => None,
+                };
+                self.seq += 1;
+                let next = (now_us.saturating_add(micros(interval)), self.seq);
+                if let Some(clock) = self.fake.as_mut() {
+                    clock.queue.insert(next, id);
+                }
+                entry.key = TimerKey::Fake(next);
+                self.entries.insert(id, entry);
+                cb
+            }
+            None => match entry.callback {
+                TimerCallback::Js(f, a) => Some(Due::Js((f, a, true))),
+                TimerCallback::Native(mut f) => f.take().map(Due::Native),
+            },
+        }
     }
 }
 
@@ -629,8 +761,9 @@ fn run_due_timers(ctx: &mut Context) {
                         TimerCallback::Native(_) => None,
                     };
                     timers.seq += 1;
-                    entry.key = (now + interval, timers.seq);
-                    timers.queue.insert(entry.key, id);
+                    let next = (now + interval, timers.seq);
+                    entry.key = TimerKey::Real(next);
+                    timers.queue.insert(next, id);
                     timers.entries.insert(id, entry);
                     cb.map(Due::Js)
                 }
@@ -640,30 +773,182 @@ fn run_due_timers(ctx: &mut Context) {
                 },
             }
         };
-        match due {
-            Some(Due::Js((f, async_ctx, last))) => {
-                let id = async_ctx.id;
-                let hooked = st.async_hook.borrow().is_some();
-                let previous = st.swap_async_ctx(async_ctx);
-                if hooked {
-                    emit_async_hook(ctx, "before", id, "", 0.0);
-                }
-                if let Err(e) = f.call(&JsValue::undefined(), &[], ctx) {
-                    report_uncaught(ctx, e);
-                }
-                if hooked {
-                    emit_async_hook(ctx, "after", id, "", 0.0);
-                    if last {
-                        emit_async_hook(ctx, "destroy", id, "", 0.0);
-                    }
-                }
-                st.swap_async_ctx(previous);
-            }
-            Some(Due::Native(f)) => f(ctx),
-            None => {}
+        if let Some(due) = due {
+            fire(ctx, due);
         }
         run_microtasks(ctx);
     }
+}
+
+/// Run one due timer callback in its async context.
+fn fire(ctx: &mut Context, due: Due) {
+    let st = state(ctx);
+    match due {
+        Due::Js((f, async_ctx, last)) => {
+            let id = async_ctx.id;
+            let hooked = st.async_hook.borrow().is_some();
+            let previous = st.swap_async_ctx(async_ctx);
+            if hooked {
+                emit_async_hook(ctx, "before", id, "", 0.0);
+            }
+            if let Err(e) = f.call(&JsValue::undefined(), &[], ctx) {
+                report_uncaught(ctx, e);
+            }
+            if hooked {
+                emit_async_hook(ctx, "after", id, "", 0.0);
+                if last {
+                    emit_async_hook(ctx, "destroy", id, "", 0.0);
+                }
+            }
+            st.swap_async_ctx(previous);
+        }
+        Due::Native(f) => f(ctx),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Test controls: `gc()` and the fake timer clock (`__jsrtTimers`)
+// ---------------------------------------------------------------------------
+
+fn ms_to_us(ms: f64) -> u64 {
+    if ms.is_finite() && ms > 0.0 { (ms * 1000.0) as u64 } else { 0 }
+}
+
+/// `gc()`: a full collection (WeakRef targets kept alive by the current job are released too).
+fn op_gc(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    ctx.clear_kept_objects();
+    boa_engine::gc::force_collect();
+    Ok(JsValue::undefined())
+}
+
+/// `__jsrtTimers.freeze(nowMs)`: install a fake clock; later timers wait on it.
+fn op_fake_freeze(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let now = ms_to_us(arg_f64(args, 0, ctx)?);
+    let dropped = state(ctx).timers.borrow_mut().freeze(now);
+    drop(dropped);
+    Ok(JsValue::undefined())
+}
+
+/// `__jsrtTimers.thaw()`: remove the fake clock and drop its pending timers.
+fn op_fake_thaw(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let dropped = state(ctx).timers.borrow_mut().thaw();
+    drop(dropped);
+    Ok(JsValue::undefined())
+}
+
+/// `__jsrtTimers.frozen()`
+fn op_fake_frozen(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    Ok(JsValue::from(state(ctx).timers.borrow().fake.is_some()))
+}
+
+/// `__jsrtTimers.now()`: the fake clock in ms (`undefined` when not frozen).
+fn op_fake_now(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    Ok(state(ctx).timers.borrow().fake.as_ref().map_or(JsValue::undefined(), |c| JsValue::from(c.now_us as f64 / 1000.0)))
+}
+
+/// `__jsrtTimers.next()`: deadline (ms) of the earliest fake timer, or `undefined`.
+fn op_fake_next(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let timers = state(ctx).timers.borrow().fake.as_ref().and_then(|c| c.queue.keys().next().map(|k| k.0));
+    Ok(timers.map_or(JsValue::undefined(), |us| JsValue::from(us as f64 / 1000.0)))
+}
+
+/// `__jsrtTimers.count()`: pending fake timers.
+fn op_fake_count(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    Ok(JsValue::from(state(ctx).timers.borrow().fake_count() as f64))
+}
+
+/// `__jsrtTimers.runNext(limitMs = Infinity)`: fire the earliest fake timer due by `limitMs`,
+/// moving the clock to its deadline. Promise jobs are not run (as with fake timers in Node).
+/// Returns whether a timer fired.
+fn op_fake_run_next(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let limit = args.get_or_undefined(0);
+    let limit = if limit.is_undefined() { u64::MAX } else { ms_to_us(limit.to_number(ctx)?) };
+    let due = state(ctx).timers.borrow_mut().pop_fake(limit);
+    let fired = due.is_some();
+    if let Some(due) = due {
+        fire(ctx, due);
+    }
+    Ok(JsValue::from(fired))
+}
+
+/// `__jsrtTimers.advance(ms)`: fire every fake timer due within `ms`, then move the clock by `ms`.
+fn op_fake_advance(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let delta = ms_to_us(arg_f64(args, 0, ctx)?);
+    let st = state(ctx);
+    let Some(target) = st.timers.borrow().fake.as_ref().map(|c| c.now_us.saturating_add(delta)) else {
+        return Ok(JsValue::from(0));
+    };
+    let mut fired = 0u32;
+    loop {
+        let due = st.timers.borrow_mut().pop_fake(target);
+        let Some(due) = due else { break };
+        fire(ctx, due);
+        fired += 1;
+    }
+    if let Some(clock) = st.timers.borrow_mut().fake.as_mut() {
+        clock.now_us = clock.now_us.max(target);
+    }
+    Ok(JsValue::from(fired))
+}
+
+/// `__jsrtTimers.setNow(ms)`: move the fake clock without firing timers.
+fn op_fake_set_now(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let now = ms_to_us(arg_f64(args, 0, ctx)?);
+    if let Some(clock) = state(ctx).timers.borrow_mut().fake.as_mut() {
+        clock.now_us = now;
+    }
+    Ok(JsValue::undefined())
+}
+
+/// `__jsrtTimers.realTimeout(callback, ms) -> id`: a one-shot timer on the real clock even while
+/// frozen (a test runner's own deadlines and event-loop yields). Cancel with `clearTimeout(id)`.
+fn op_real_timeout(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let Some(f) = args.get_or_undefined(0).as_function() else {
+        return Err(type_error("The \"callback\" argument must be of type function"));
+    };
+    let delay = Duration::from_micros(ms_to_us(arg_f64(args, 1, ctx)?));
+    let st = state(ctx);
+    let id = st.next_id();
+    let async_ctx = st.new_async_ctx();
+    st.timers.borrow_mut().add_real(id, TimerCallback::Js(f, async_ctx), delay);
+    Ok(JsValue::from(id as f64))
+}
+
+/// `__jsrtTimers.unref(id)`: the timer no longer keeps the event loop alive.
+fn op_real_unref(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let id = arg_f64(args, 0, ctx)? as u64;
+    state(ctx).timers.borrow_mut().set_ref(id, false);
+    Ok(JsValue::undefined())
+}
+
+const TIMER_CONTROL_OPS: &[(&str, usize, OpFn)] = &[
+    ("freeze", 1, op_fake_freeze),
+    ("thaw", 0, op_fake_thaw),
+    ("frozen", 0, op_fake_frozen),
+    ("now", 0, op_fake_now),
+    ("setNow", 1, op_fake_set_now),
+    ("next", 0, op_fake_next),
+    ("count", 0, op_fake_count),
+    ("runNext", 1, op_fake_run_next),
+    ("advance", 1, op_fake_advance),
+    ("realTimeout", 2, op_real_timeout),
+    ("unref", 1, op_real_unref),
+];
+
+/// Install the `gc()` global and the `__jsrtTimers` object when enabled by the options.
+pub(crate) fn install_controls(ctx: &mut Context) -> JsResult<()> {
+    let st = state(ctx);
+    let global = ctx.global_object();
+    if st.shared.options.expose_gc {
+        let f = make_fn(ctx, "gc", 0, op_gc);
+        global.set(js_string!("gc"), f, true, ctx)?;
+    }
+    if st.shared.options.timer_control {
+        let obj = JsObject::with_object_proto(ctx.intrinsics());
+        define_ops(ctx, &obj, TIMER_CONTROL_OPS)?;
+        global.set(js_string!("__jsrtTimers"), obj, true, ctx)?;
+    }
+    Ok(())
 }
 
 enum Due {
@@ -1120,10 +1405,12 @@ pub(crate) struct ThreadInit {
 pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<Result<(), Error>>) {
     let ThreadInit { rt, shared, tokio, tx, rx, cwd } = init;
     let loader = Rc::new(crate::loader::Loader::new(shared.clone()));
+    // `process.env.TZ` is the runtime's timezone, as in Node (see `ops.setEnv`).
+    let timezone = Rc::new(RefCell::new(shared.env.get("TZ").map(|tz| timezone_named(tz))));
     let mut ctx = match Context::builder()
         .job_executor(Rc::new(Executor::default()))
         .module_loader(loader.clone())
-        .host_hooks(Rc::new(Hooks))
+        .host_hooks(Rc::new(Hooks { timezone: timezone.clone() }))
         .build()
     {
         Ok(c) => c,
@@ -1164,6 +1451,7 @@ pub(crate) fn thread_main(init: ThreadInit, ready: std::sync::mpsc::SyncSender<R
         async_hook: RefCell::default(),
         in_async_hook: Cell::new(false),
         ticks_pending: Cell::new(false),
+        timezone,
         loop_start_ms: Cell::new(0.0),
         idle_ms: Cell::new(0.0),
         idle_waiters: RefCell::default(),

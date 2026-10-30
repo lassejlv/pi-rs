@@ -51,6 +51,11 @@ bitflags! {
         /// If the function requires a function scope.
         const HAS_FUNCTION_SCOPE = 0b1_0000_0000;
 
+        /// Nothing reads `this` through the function environment (no inner arrow uses it, no
+        /// direct eval, `super` or `new.target`): the function's own `this` comes from the
+        /// frame, so the environment does not keep the receiver alive for closures.
+        const THIS_NOT_IN_ENVIRONMENT = 0b10_0000_0000;
+
         /// Trace instruction execution to `stdout`.
         #[cfg(feature = "trace")]
         const TRACEABLE = 0b1000_0000_0000_0000;
@@ -296,6 +301,10 @@ impl CodeBlock {
     }
 
     /// Returns true if this function requires a function scope.
+    pub(crate) fn this_not_in_environment(&self) -> bool {
+        self.flags.get().contains(CodeBlockFlags::THIS_NOT_IN_ENVIRONMENT)
+    }
+
     pub(crate) fn has_function_scope(&self) -> bool {
         self.flags.get().has_function_scope()
     }

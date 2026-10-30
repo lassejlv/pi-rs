@@ -9,6 +9,8 @@
 use serde_json::Value;
 
 use crate::js;
+mod utf16;
+pub use utf16::{CodemodeSourceErrorUtf16, ParsedCodemodeSourceUtf16, parse_codemode_source_utf16};
 
 /// Prefix of the options line.
 pub const CODEMODE_OPTIONS_PREFIX: &str = "// @options:";

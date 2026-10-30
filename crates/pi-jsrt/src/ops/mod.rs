@@ -25,6 +25,7 @@ pub(crate) mod net;
 pub(crate) mod prime;
 pub(crate) mod process;
 pub(crate) mod signal;
+pub(crate) mod sqlite;
 pub(crate) mod tls;
 pub(crate) mod vm;
 pub(crate) mod wasm;
@@ -178,6 +179,12 @@ const LAZY_GLUE: &[LazyGlue] = &[
         file: "node/vm.js",
         src: include_str!("../../js/node/vm.js"),
         builtins: &["vm"],
+        globals: &[],
+    },
+    LazyGlue {
+        file: "node/sqlite.js",
+        src: include_str!("../../js/node/sqlite.js"),
+        builtins: &["sqlite"],
         globals: &[],
     },
     LazyGlue {
@@ -371,6 +378,7 @@ pub(crate) fn bootstrap(ctx: &mut Context) -> JsResult<()> {
         define_ops(ctx, &ops, http2::OPS)?;
         define_ops(ctx, &ops, dgram::OPS)?;
         define_ops(ctx, &ops, dns::OPS)?;
+        define_ops(ctx, &ops, sqlite::OPS)?;
     }
     let config = process::config_object(ctx)?;
     if node && let Some(cfg) = config.as_object() {
@@ -390,6 +398,7 @@ pub(crate) fn bootstrap(ctx: &mut Context) -> JsResult<()> {
         engine::run_microtasks(ctx);
         trace_glue(name, t);
     }
+    engine::install_controls(ctx)?;
     Ok(())
 }
 
@@ -405,6 +414,7 @@ pub(crate) fn teardown(ctx: &mut Context) {
     signal::teardown(ctx);
     http2::teardown(ctx);
     dgram::teardown(ctx);
+    sqlite::teardown(ctx);
 }
 
 /// Read bytes from a string (UTF-8), ArrayBuffer, typed array or DataView.

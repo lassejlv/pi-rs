@@ -39,7 +39,7 @@ pub(crate) fn bytes_of(value: &Value) -> Vec<u8> {
 
 /// Telemetry parents (`StreamOptions.telemetry`) passed to JavaScript as `{ __piTelemetry: id }`,
 /// alive while the JavaScript call that received them runs.
-static TELEMETRY_PARENTS: std::sync::LazyLock<parking_lot::Mutex<std::collections::HashMap<u64, pi_telemetry::SpanRef>>> =
+static TELEMETRY_PARENTS: std::sync::LazyLock<parking_lot::Mutex<std::collections::HashMap<u64, pi_telemetry::ContextRef>>> =
     std::sync::LazyLock::new(Default::default);
 /// Request observers started by JavaScript `Models` collections, until their result is observed.
 static TELEMETRY_OBSERVERS: std::sync::LazyLock<
@@ -47,7 +47,7 @@ static TELEMETRY_OBSERVERS: std::sync::LazyLock<
 > = std::sync::LazyLock::new(Default::default);
 
 /// Register a telemetry parent for JavaScript; release it with [`release_telemetry_parent`].
-pub(crate) fn register_telemetry_parent(span: pi_telemetry::SpanRef) -> u64 {
+pub(crate) fn register_telemetry_parent(span: pi_telemetry::ContextRef) -> u64 {
     let id = super::next_id();
     TELEMETRY_PARENTS.lock().insert(id, span);
     id
@@ -58,7 +58,7 @@ pub(crate) fn release_telemetry_parent(id: u64) {
 }
 
 /// The telemetry parent a JavaScript options object carries (`{ __piTelemetry: id }`).
-fn telemetry_parent_of(value: &Value) -> Option<pi_telemetry::SpanRef> {
+fn telemetry_parent_of(value: &Value) -> Option<pi_telemetry::ContextRef> {
     let id = value.get("__piTelemetry")?.as_u64()?;
     TELEMETRY_PARENTS.lock().get(&id).cloned()
 }

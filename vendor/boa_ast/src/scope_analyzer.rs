@@ -1223,6 +1223,12 @@ impl BindingCollectorVisitor<'_> {
         self.visit_function_body_mut(body)?;
         std::mem::swap(&mut self.scope, &mut body_scope);
 
+        // PATCH(pi-rs): an arrow's `this` is its enclosing function's `this`, so a `this` that escaped into
+        // this arrow (from an arrow nested inside it) escapes the enclosing function too.
+        if arrow && function_scope.escaped_this() {
+            body_scope.escape_this_in_enclosing_function_scope();
+        }
+
         *scopes = function_scopes;
 
         self.in_arrow = old_in_arrow;

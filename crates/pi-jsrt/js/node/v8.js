@@ -1073,6 +1073,8 @@ const v8 = {
   cachedDataVersionTag: () => 0x5c3f2a17,
   setFlagsFromString(flags) {
     if (typeof flags !== "string") throw invalidArgType("flags", "of type string", flags);
+    // `--expose-gc` reaches contexts created afterwards (node:vm), when this runtime has `gc`.
+    if (/(^|\s)--expose[-_]gc(\s|$)/.test(flags)) internal.exposeGcInContexts = true;
   },
   setHeapSnapshotNearHeapLimit() {},
   isStringOneByteRepresentation(s) {

@@ -8,7 +8,6 @@ use crate::{
     Context, JsError, JsExpect, JsNativeError, JsObject, JsResult, JsString, JsValue, Module,
     builtins::promise::{PromiseCapability, ResolvingFunctions},
     environments::EnvironmentStack,
-    error::RuntimeLimitError,
     object::JsFunction,
     realm::Realm,
     script::Script,
@@ -925,10 +924,17 @@ impl Context {
             let exit_early = self.vm.frame().exit_early();
 
             if self.vm.handle_exception_at(pc) {
+                // Local patch (PATCH.md): drop the unwound frames' values, as a return would, so a
+                // handler that catches deep in the stack does not keep their stack space.
+                self.vm.stack.truncate_to_frame(&frame);
                 return ControlFlow::Continue(());
             }
 
             if exit_early {
+                // Local patch (PATCH.md): leave the stack as the early-exit branch above does.
+                self.vm.frame_mut().environments.truncate(env_fp as usize);
+                let current = self.vm.frames.last().expect("frame must exist");
+                self.vm.stack.truncate_to_frame(current);
                 return ControlFlow::Break(CompletionRecord::Throw(
                     self.vm
                         .pending_exception
@@ -1021,12 +1027,15 @@ impl Context {
         // `Context::run()` recursively (for example, accessor calls).
         // Subtract 1 to exclude the dummy frame at index 0.
         let recursion_depth = (self.vm.frames.len() - 1).saturating_add(self.vm.host_call_depth);
-        if self.vm.runtime_limits.recursion_limit() <= recursion_depth {
-            return Err(RuntimeLimitError::Recursion.into());
-        }
-        // Must throw if the stack size exceeds the defined maximum length.
-        if self.vm.runtime_limits.stack_size_limit() <= self.vm.stack.stack.len() {
-            return Err(RuntimeLimitError::StackSize.into());
+        // Local patch (PATCH.md): both limits throw the catchable `RangeError` V8 and QuickJS throw
+        // for a stack overflow, instead of an uncatchable `RuntimeLimitError`. They still hold:
+        // a handler that recurses again reaches them again.
+        if self.vm.runtime_limits.recursion_limit() <= recursion_depth
+            || self.vm.runtime_limits.stack_size_limit() <= self.vm.stack.stack.len()
+        {
+            return Err(JsNativeError::range()
+                .with_message("Maximum call stack size exceeded")
+                .into());
         }
 
         Ok(())

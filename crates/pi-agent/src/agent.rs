@@ -939,6 +939,7 @@ fn normalize_prompt_input(input: PromptInput) -> Vec<AgentMessage> {
             vec![AgentMessage::User(UserMessage {
                 content: UserContent::Blocks(content),
                 timestamp: now_ms(),
+                ..Default::default()
             })]
         }
     }

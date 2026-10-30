@@ -104,11 +104,11 @@ impl From<String> for SpanOptions {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpanError {
     pub name: String,
-    pub message: String,
+    pub message: crate::TelemetryText,
 }
 
 impl SpanError {
-    pub fn new(name: impl Into<String>, message: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>, message: impl Into<crate::TelemetryText>) -> Self {
         Self {
             name: name.into(),
             message: message.into(),
@@ -182,6 +182,16 @@ pub enum SpanOutcome {
 
 /// Adapter contract for trusted typed inputs; malformed input behavior is unspecified.
 pub trait TelemetryContext: Any + Send + Sync {
+    /// Add an event to this context's active span. Root and extracted parent
+    /// contexts have no local span and ignore it. This distinct native name
+    /// preserves the existing `TelemetrySpan::add_event` adapter contract.
+    fn record_event(&self, _name: &str, _attributes: SpanAttributes) {}
+    /// Add a link to this context's active span, as `TelemetryContext.addLink`.
+    /// Root and extracted parent contexts have no local span and ignore it.
+    fn record_link(&self, _link: SpanLink) {}
+    /// Update an active span through a context handle. Roots and remote parents ignore it.
+    fn update_attributes(&self, _attributes: SpanAttributes) {}
+
     /// Adapter capabilities remain available on child spans and extracted parents.
     fn metrics(&self) -> Option<MetricsRef> {
         None

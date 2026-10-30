@@ -76,7 +76,9 @@ pub struct RuntimeOptions {
     /// Virtual modules available to `import` / `require` by exact specifier.
     pub virtual_modules: HashMap<String, VirtualModule>,
     /// Specifier aliases (exact or `prefix/` matches), e.g. `"@sinclair/typebox" -> "typebox"`.
-    /// Targets may be other specifiers, virtual modules or absolute paths.
+    /// Targets may be other specifiers, virtual modules or absolute paths. A key that is an
+    /// absolute file path redirects every specifier resolving to that file (e.g. relative imports
+    /// of a source file replaced by a virtual module).
     pub aliases: HashMap<String, String>,
     /// Name of the JS thread.
     pub thread_name: String,
@@ -103,6 +105,13 @@ pub struct RuntimeOptions {
     /// executable with [`crate::node::NODE_MARKER`], which an embedding binary hands to
     /// [`crate::node::main_if_requested`] first thing in `main`.
     pub node_exec: Option<Vec<String>>,
+    /// Define a `gc()` global that forces a full collection (Node's `--expose-gc`).
+    pub expose_gc: bool,
+    /// Define the `__jsrtTimers` global that test runners use for fake timers: `freeze(nowMs)`
+    /// installs a fake clock that timers created afterwards wait on, `advance(ms)` /
+    /// `runNext(limitMs)` fire them, `next()`, `now()`, `count()`, `setNow(ms)`, `thaw()`, and
+    /// `realTimeout(callback, ms)` schedules on the real clock while frozen.
+    pub timer_control: bool,
 }
 
 impl Default for RuntimeOptions {
@@ -128,6 +137,8 @@ impl Default for RuntimeOptions {
             esm_cjs_globals: true,
             stdin: false,
             node_exec: None,
+            expose_gc: false,
+            timer_control: false,
         }
     }
 }
@@ -152,6 +163,8 @@ pub(crate) struct Shared {
     pub(crate) on_uncaught: Option<UncaughtHandler>,
     pub(crate) virtual_modules: RwLock<HashMap<String, VirtualModule>>,
     pub(crate) aliases: RwLock<HashMap<String, String>>,
+    /// Source text served instead of a file's contents ([`JsRuntime::set_file_source`]).
+    pub(crate) file_sources: RwLock<HashMap<PathBuf, String>>,
     pub(crate) env: HashMap<String, String>,
     pub(crate) cwd: PathBuf,
 }
@@ -283,6 +296,14 @@ pub fn in_host_call() -> bool {
     CURRENT_CTX.with(|c| !c.get().is_null())
 }
 
+/// Run `f` as a synchronous host function body: while it runs, blocking calls into this runtime
+/// from this thread ([`JsHandle::call_blocking`], [`JsRuntime::with_context_blocking`],
+/// [`crate::ctx::with_current`]) run re-entrantly on `ctx`. `f` must not use `ctx` itself.
+pub(crate) fn enter_host_call<R>(ctx: &mut Context, f: impl FnOnce() -> R) -> R {
+    let _guard = CurrentCtxGuard::enter(ctx);
+    f()
+}
+
 struct CurrentCtxGuard(*mut Context);
 
 impl CurrentCtxGuard {
@@ -353,6 +374,7 @@ impl JsRuntime {
             on_uncaught: options.on_uncaught.clone(),
             virtual_modules: RwLock::new(options.virtual_modules.clone()),
             aliases: RwLock::new(options.aliases.clone()),
+            file_sources: RwLock::default(),
             options,
             ids: AtomicU64::new(1),
             refs: Mutex::new(HashMap::new()),
@@ -468,6 +490,13 @@ impl JsRuntime {
 
     pub(crate) fn post(&self, f: impl FnOnce(&mut Context) + Send + 'static) -> Result<()> {
         self.inner.tx.send(Msg::Task(Box::new(f))).map_err(|_| Error::Terminated)
+    }
+
+    /// Queue `f` to run on the JS thread (promise jobs run after it) without waiting for it. Unlike
+    /// [`JsRuntime::with_context`] it needs no async runtime, so threads that must not wait (or
+    /// tokio workers that may all be busy) can hand work to JS.
+    pub fn post_task(&self, f: impl FnOnce(&mut Context) + Send + 'static) -> Result<()> {
+        self.post(f)
     }
 
     fn request<R: Send + 'static>(&self, f: impl FnOnce(&mut Context, Reply<R>) + Send + 'static) -> Result<oneshot::Receiver<Result<R>>> {
@@ -587,6 +616,14 @@ impl JsRuntime {
     /// Register or replace a virtual module. Takes effect for modules not yet loaded.
     pub fn set_virtual_module(&self, specifier: impl Into<String>, module: VirtualModule) {
         self.inner.shared.virtual_modules.write().insert(specifier.into(), module);
+    }
+
+    /// Serve `source` as the contents of the file at `path` (absolute) when it is loaded, instead
+    /// of reading it from disk. The module keeps the file's identity: relative imports,
+    /// `import.meta.url` and the language chosen by its extension. Takes effect for files not yet
+    /// loaded (test runners use it for source transforms such as vitest's mock hoisting).
+    pub fn set_file_source(&self, path: impl Into<PathBuf>, source: impl Into<String>) {
+        self.inner.shared.file_sources.write().insert(path.into(), source.into());
     }
 
     /// Register or replace a specifier alias.

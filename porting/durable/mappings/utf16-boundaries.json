@@ -1,0 +1,96 @@
+{
+ "boundaries": [
+  {
+   "location": "crates/pi-durable/src/harness/tool/registration.rs::validate_tool_arguments",
+   "before": "Arguments and schema bridged through serde_json (sdk_json) and the tool name through to_string_checked; any lone surrogate rejected the call with 'Unsupported SDK JSON'",
+   "after": "Validates strict JSON directly with pi_ai::utils::validation::utf16::validate_tool_arguments; coerced values, keys, tool name and the full upstream error message (JSON.stringify escapes in 'Received arguments') keep UTF16 units; error is Error::host(\"Error\", JsonString)",
+   "test": "crates/pi-durable/tests/utf16_boundaries.rs::tool_arguments_validate_lone_surrogates_like_source (6 cases pinned from pi-ai validateToolArguments under Node; red: /tmp/pi-durable-utf16-validation-red.log)"
+  },
+  {
+   "location": "crates/pi-durable/src/harness/tool/registration.rs::structured_output_error",
+   "before": "Schema and structuredOutput bridged through serde_json; lone surrogates rejected with 'Unsupported SDK JSON'; path used trim_start_matches('/')",
+   "after": "utf16::SchemaValidator over strict JSON; instance path and message stay UTF16; single leading '/' stripped as in instancePath.replace(/^\\//, '')",
+   "test": "crates/pi-durable/tests/utf16_boundaries.rs::structured_output_validates_lone_surrogates_like_source (TypeBox Compile outputs pinned under Node)"
+  },
+  {
+   "location": "crates/pi-ai/src/utils/validation.rs + crates/pi-ai/src/utils/validation/utf16.rs",
+   "before": "Validator, TypeBox Convert and AJV-style coercion operated on serde_json::Value only",
+   "after": "Engine moved to pi_json::strict::Value (utf16 module, public); the existing serde_json API (SchemaValidator, check_schema, typebox_convert, coerce_with_json_schema, validate_tool_arguments, validate_tool_call) delegates with exact UTF8<->UTF16 conversion. Received-arguments rendering now uses strict JSON.stringify(…, null, 2) key order",
+   "test": "crates/pi-ai/src/utils/validation.rs::tests::utf16_engine_keeps_unpaired_surrogates plus the 11 existing validation tests"
+  },
+  {
+   "location": "crates/pi-durable/src/harness/models.rs::provider_messages (used by models/collection.rs SdkCollection::stream_simple)",
+   "before": "wire::decode of every durable message into pi_ai::Message; any lone surrogate (e.g. a tool output truncated mid-pair) rejected the whole model request",
+   "after": "For the eight APIs whose upstream request builders apply sanitizeSurrogates to user/assistant/thinking/tool-result/system text (openai-completions, mistral, openai-responses, azure, anthropic, bedrock, google, vertex; codex too except its system text), those fields and system section values are stripped of unpaired units before decoding, and each changed text is marked with pi-ai's never-serialized bits: lone_surrogates_removed on TextContent/ThinkingContent/UserMessage, and content_lone_surrogates_removed/sections_lone_surrogates_removed on SystemMessage. The SDK's emptiness checks that upstream runs before sanitizing honour them: message text/thinking/tool-result checks in anthropic, openai-completions, openai-responses, google and mistral; transform_messages; system rendering (getSystemMessageText part filter, renderSystemMessageUpdate content check, getCurrentSystemMessage collapse) and each provider's system-text presence check (anthropic system/update blocks, openai-completions, openai-responses/azure, google systemInstruction, mistral, bedrock buildSystemPrompt). Codex sends system text as unsanitized instructions, so codex system messages with unpaired units still reject. Native text never sets the bits. All other strings still reject explicitly",
+   "test": "crates/pi-durable/tests/utf16_boundaries.rs::sanitized_text_keeps_upstream_blank_checks_in_request_bodies (54 bodies: 6 APIs x 9 scenarios incl. system content/blocks/sections/mid-conversation updates, captured from upstream streamSimple at the HTTP layer on a local HTTP/1.1 server, bedrock via AWS_BEDROCK_FORCE_HTTP1=1 NodeHttpHandler; fixtures/utf16-provider-bodies.json), ::provider_text_strips_lone_surrogates_like_source_request_bodies, ::provider_conversion_keeps_rejecting_strings_the_sdk_cannot_carry"
+  },
+  {
+   "location": "crates/pi-durable/src/harness/models/collection.rs::SdkCollection::get_model; crates/pi-durable/src/codemode/models.rs::SdkCodemodeModels::{models,model}",
+   "before": "to_string_checked on provider/model identities returned an error",
+   "after": "An identity with a lone surrogate finds no SDK model (Ok(None) / empty list), as getModel/getModelsOfType/getModelOfType lookups do upstream",
+   "test": "crates/pi-durable/tests/utf16_boundaries.rs::sdk_model_lookup_misses_identities_with_lone_surrogates"
+  },
+  {
+   "location": "crates/pi-ai/src/telemetry.rs (provider_error span status)",
+   "before": "errorMessage sliced to 500 UTF16 units then String::from_utf16_lossy, turning a split pair into U+FFFD",
+   "after": "Sliced units kept as JsonString/TelemetryText, matching errorMessage.slice(0, 500)",
+   "test": "crates/pi-ai/tests/telemetry.rs::bounded_error_messages_keep_a_split_surrogate_like_javascript_slice (red: /tmp/pi-ai-telemetry-utf16-red.log)"
+  },
+  {
+   "location": "crates/pi-telemetry/src/attributes.rs::TelemetryCarrier; crates/pi-telemetry/src/memory.rs; crates/pi-durable/src/harness/scheduler/telemetry.rs::carrier; crates/pi-durable/src/harness/submissions.rs (steer link decode)",
+   "before": "TelemetryCarrier = IndexMap<String, String>; the scheduler dropped a persisted trace/link carrier entirely (phase parented at root, link lost) when any key or value held a lone surrogate; submissions failed to decode it",
+   "after": "TelemetryCarrier is a newtype over IndexMap<TelemetryText, TelemetryText> (Deref/DerefMut, FromIterator, Index<&str>, get_str) serialized through strict JSON, so carriers keep JavaScript strings end to end; serde adapters keep compiling",
+   "test": "crates/pi-durable/tests/utf16_boundaries.rs::persisted_trace_and_link_carriers_keep_lone_surrogates; all pi-telemetry propagation/store/conformance tests"
+  },
+  {
+   "location": "crates/pi-ai/src/utils/validation/utf16.rs regex keywords (pattern, patternProperties, TypeBox property patterns)",
+   "before": "Strings with unpaired units matched with U+FFFD in their place; patterns containing surrogate \\uXXXX escapes failed to compile in Rust regex and were silently ignored (always valid)",
+   "after": "u-flag semantics: subject and pattern are code points; each unpaired surrogate (raw or \\uXXXX escape) maps to one private code point U+10F800+(unit-0xD800); escaped surrogate pairs combine to their code point",
+   "test": "crates/pi-ai/src/utils/validation.rs::tests::utf16_patterns_follow_javascript_unicode_regexes (10 cases from TypeBox Compile under Node)"
+  },
+  {
+   "location": "crates/pi-telemetry/src/store.rs StoredSpan/StoredLink/StoredTrace IDs; crates/pi-telemetry/src/memory.rs carrier_id, get_trace, find_traces cursor and ordering; TelemetryText Ord",
+   "before": "IDs were String built with Display of carrier values (U+FFFD for unpaired units); trace grouping, getTrace and cursors lost the units; ordering compared UTF-8 bytes",
+   "after": "IDs are TelemetryText: `${scope}:${span}` and trace IDs keep carrier UTF-16 units; getTrace takes &TelemetryText; cursors are strict JSON.stringify([startedMs, traceId]); span and trace ordering compares UTF-16 code units like JavaScript `<`",
+   "test": "crates/pi-telemetry/tests/utf16_ids.rs::stored_ids_keep_lone_surrogates_and_javascript_order (pinned InMemoryTelemetryContext under Node with Date.now = () => 1000; includes U+10000 vs U+FFFF ordering)"
+  }
+ ],
+ "open": [
+  {
+   "location": "Request fields other than sanitized text: tool-call arguments, tool-call/tool-result IDs and names, text/thinking signatures, system tools_added definitions, stream options (headers, metadata, sessionId, extra), deferred handles, and every string for non-sanitizing APIs (pi-messages and others)",
+   "upstream": "JSON.stringify emits each unpaired unit as a \\udXXX escape in the HTTP body",
+   "native": "Explicit error before any request: wire::decode/provider_options reject the strict JSON (pinned by crates/pi-durable/tests/utf16_boundaries.rs::provider_conversion_keeps_rejecting_strings_the_sdk_cannot_carry)",
+   "reason": "Exact parity needs UTF-16-capable pi-ai request types; String/serde_json::Value cannot carry unpaired units"
+  },
+  {
+   "location": "Response parsing through pi_json::js_json_parse: anthropic SSE events (parse_json_with_repair), mistral, google, pi-messages and openai-codex SSE events, every provider's final tool-call arguments (parse_tool_call_arguments) and streaming partial arguments (parse_streaming_json[_object])",
+   "upstream": "JSON.parse keeps unpaired \\udXXX escapes as units in the assistant message",
+   "native": "Silent U+FFFD replacement (pi-json's documented native contract, intentionally unchanged); the durable assistant value stores U+FFFD (pinned by ::response_json_helpers_replace_lone_surrogate_escapes and ::anthropic_response_escapes_reach_durable_values_as_replacement_characters)",
+   "reason": "Exact parity needs UTF-16-capable pi-ai response types"
+  },
+  {
+   "location": "Response parsing through serde_json: openai-responses SSE events, bedrock eventstream payloads",
+   "upstream": "JSON.parse keeps the unit",
+   "native": "Explicit stream error (MALFORMED_SSE_JSON / payload decode error)",
+   "reason": "Same as above"
+  },
+  {
+   "location": "Regex stand-ins",
+   "upstream": "u-flag RegExp on UTF-16",
+   "native": "Real characters in U+10F800..=U+10FFFF collide with surrogate stand-ins",
+   "reason": "Rust regex has no UTF-16 mode"
+  },
+  {
+   "location": "Telemetry attribute keys, metric/event/span names",
+   "upstream": "Every Durable and pi-ai attribute key, event and span name is a literal of the pinned schemas (harness/telemetry.ts, pi-ai telemetry); no durable data reaches a key",
+   "native": "UTF-8 String keys",
+   "reason": "Closed by construction: upstream cannot produce unpaired surrogates there"
+  },
+  {
+   "location": "render_trace output; compaction retry classification",
+   "upstream": "render returns a JavaScript string; retry classification matches error text",
+   "native": "render returns a UTF-8 String (IDs and attribute strings rendered with Display); retry classification matches lossy error text",
+   "reason": "Display/classification only, no durable value is altered"
+  }
+ ]
+}

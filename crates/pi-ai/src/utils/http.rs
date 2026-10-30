@@ -33,6 +33,7 @@ pub fn http_idle_timeout() -> Option<Duration> {
     *IDLE_TIMEOUT.lock()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn build_client(proxy: Option<&str>) -> anyhow::Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder().no_proxy().connect_timeout(Duration::from_secs(60));
     if let Some(timeout) = http_idle_timeout() {
@@ -42,6 +43,12 @@ fn build_client(proxy: Option<&str>) -> anyhow::Result<reqwest::Client> {
         builder = builder.proxy(reqwest::Proxy::all(proxy)?);
     }
     Ok(builder.build()?)
+}
+/// wasm32: requests go through the host's `fetch`, which owns proxies,
+/// connection pooling and timeouts.
+#[cfg(target_arch = "wasm32")]
+fn build_client(_proxy: Option<&str>) -> anyhow::Result<reqwest::Client> {
+    Ok(reqwest::Client::builder().build()?)
 }
 
 /// A client for requests to `target_url`, with the proxy configured from the environment.

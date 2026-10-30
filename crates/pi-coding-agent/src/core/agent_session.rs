@@ -3079,6 +3079,7 @@ impl AgentSession {
             tools_removed: None,
             timestamp: now_ms(),
             timestamp_last: false,
+            ..Default::default()
         }))
     }
 
@@ -3169,6 +3170,7 @@ impl AgentSession {
                         timestamp: current.as_ref().map(|c| c.timestamp).unwrap_or_else(now_ms),
                         // `{ role, content, toolsAdded?, timestamp }`
                         timestamp_last: true,
+                        ..Default::default()
                     };
                     let mut result = vec![AgentMessage::System(head)];
                     result.extend(
@@ -3372,6 +3374,7 @@ impl AgentSession {
                 messages.push(AgentMessage::User(UserMessage {
                     content: UserContent::Blocks(content),
                     timestamp: now_ms(),
+                    ..Default::default()
                 }));
             }
         }
@@ -3841,6 +3844,7 @@ impl AgentSession {
         UserMessage {
             content: UserContent::Blocks(content),
             timestamp: now_ms(),
+            ..Default::default()
         }
     }
 

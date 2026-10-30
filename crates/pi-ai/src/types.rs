@@ -213,8 +213,8 @@ pub enum DeferredOption {
 #[derive(Clone, Default)]
 pub struct StreamOptions {
     pub signal: Option<CancellationToken>,
-    /// Explicit parent span for telemetry produced by this logical request.
-    pub telemetry: Option<pi_telemetry::SpanRef>,
+    /// Explicit parent context for telemetry produced by this logical request.
+    pub telemetry: Option<pi_telemetry::ContextRef>,
     pub api_key: Option<String>,
     /// Custom HTTP client (the `fetch` option equivalent).
     pub http_client: Option<reqwest::Client>,
@@ -341,12 +341,31 @@ pub struct TextContent {
     /// Provider message metadata (legacy id string or `TextSignatureV1` JSON).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text_signature: Option<String>,
+    /// Set by a caller whose JavaScript text lost unpaired UTF-16 surrogates on the way to
+    /// this UTF-8 string. Upstream checks length/`trim()` before `sanitizeSurrogates`, so such
+    /// text still counts as non-blank there. Never serialized; always false for native text.
+    #[serde(skip)]
+    pub lone_surrogates_removed: bool,
 }
 
 impl TextContent {
     pub fn new(text: impl Into<String>) -> Self {
-        Self { text: text.into(), text_signature: None }
+        Self { text: text.into(), ..Default::default() }
     }
+    /// Upstream's `text.trim().length === 0` before sanitizing.
+    pub fn is_blank(&self) -> bool {
+        is_blank_text(&self.text, self.lone_surrogates_removed)
+    }
+    /// Upstream's `text.length === 0` before sanitizing.
+    pub fn is_empty_text(&self) -> bool {
+        self.text.is_empty() && !self.lone_surrogates_removed
+    }
+}
+
+/// `text.trim().length === 0` for JavaScript text that may have lost unpaired
+/// surrogates, which are not whitespace, before reaching this string.
+pub fn is_blank_text(text: &str, lone_surrogates_removed: bool) -> bool {
+    text.trim().is_empty() && !lone_surrogates_removed
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -359,11 +378,20 @@ pub struct ThinkingContent {
     /// When true, the thinking content was redacted by safety filters.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redacted: Option<bool>,
+    /// Set by a caller whose JavaScript text lost unpaired UTF-16 surrogates on the way to
+    /// this UTF-8 string. Upstream checks length/`trim()` before `sanitizeSurrogates`, so such
+    /// text still counts as non-blank there. Never serialized; always false for native text.
+    #[serde(skip)]
+    pub lone_surrogates_removed: bool,
 }
 
 impl ThinkingContent {
     pub fn new(thinking: impl Into<String>) -> Self {
-        Self { thinking: thinking.into(), thinking_signature: None, redacted: None }
+        Self { thinking: thinking.into(), ..Default::default() }
+    }
+    /// Upstream's `thinking.trim().length === 0` before sanitizing.
+    pub fn is_blank(&self) -> bool {
+        is_blank_text(&self.thinking, self.lone_surrogates_removed)
     }
 }
 
@@ -659,6 +687,39 @@ pub struct SystemMessage {
     pub timestamp: i64,
     /// Serialize `timestamp` after the tool fields. Only affects key order; ignored by `==`.
     pub timestamp_last: bool,
+    /// For string `content`, as [`TextContent::lone_surrogates_removed`]. Never serialized.
+    pub content_lone_surrogates_removed: bool,
+    /// Names of sections whose value lost unpaired surrogates, as
+    /// [`TextContent::lone_surrogates_removed`]. Never serialized.
+    pub sections_lone_surrogates_removed: Vec<String>,
+}
+
+impl SystemMessage {
+    /// Upstream's `contentText(content).length === 0` before sanitizing.
+    pub fn content_is_empty(&self) -> bool {
+        match &self.content {
+            SystemContent::Text(text) => text.is_empty() && !self.content_lone_surrogates_removed,
+            SystemContent::Blocks(blocks) => match blocks.as_slice() {
+                [] => true,
+                [SystemTextBlock::Text(block)] => block.is_empty_text(),
+                // Joined with "\n", so never empty.
+                _ => false,
+            },
+        }
+    }
+    /// Whether the content lost unpaired surrogates.
+    pub fn content_lone_surrogates_removed(&self) -> bool {
+        match &self.content {
+            SystemContent::Text(_) => self.content_lone_surrogates_removed,
+            SystemContent::Blocks(blocks) => {
+                blocks.iter().any(|SystemTextBlock::Text(block)| block.lone_surrogates_removed)
+            }
+        }
+    }
+    /// Whether section `name`'s value lost unpaired surrogates.
+    pub fn section_lone_surrogates_removed(&self, name: &str) -> bool {
+        self.sections_lone_surrogates_removed.iter().any(|removed| removed == name)
+    }
 }
 
 impl PartialEq for SystemMessage {
@@ -736,6 +797,7 @@ impl<'de> Deserialize<'de> for SystemMessage {
             tools_removed: wire.tools_removed,
             timestamp: wire.timestamp,
             timestamp_last,
+            ..Default::default()
         })
     }
 }
@@ -747,11 +809,14 @@ pub struct UserMessage {
     pub content: UserContent,
     #[serde(with = "lax_i64")]
     pub timestamp: i64,
+    /// For string `content`, as [`TextContent::lone_surrogates_removed`].
+    #[serde(skip)]
+    pub lone_surrogates_removed: bool,
 }
 
 impl UserMessage {
     pub fn new(content: impl Into<UserContent>, timestamp: i64) -> Self {
-        Self { content: content.into(), timestamp }
+        Self { content: content.into(), timestamp, lone_surrogates_removed: false }
     }
 }
 

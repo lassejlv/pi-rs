@@ -851,7 +851,7 @@ pub async fn execute_codemode(
         let result = sandbox
             .execute(
                 &parsed.code,
-                CodemodeExecuteOptions { signal: signal.as_ref().map(Into::into), timeout_ms: None, store: Some(store) },
+                CodemodeExecuteOptions { signal: signal.as_ref().map(Into::into), timeout_ms: None, store: Some(store), timezone: None },
             )
             .await;
         sandbox.close().await;

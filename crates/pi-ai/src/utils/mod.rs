@@ -29,9 +29,14 @@ pub mod typebox_helpers;
 pub mod uuid;
 pub mod validation;
 pub mod version;
+pub mod wasm;
 
 /// Current Unix time in milliseconds (`Date.now()`).
 pub fn now_ms() -> i64 {
+    // `SystemTime::now` panics on wasm32-unknown-unknown.
+    #[cfg(target_arch = "wasm32")]
+    return js_sys::Date::now() as i64;
+    #[cfg(not(target_arch = "wasm32"))]
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)

@@ -1,0 +1,36 @@
+[package]
+name = "pi-durable-jsrt"
+description = "Embedded @earendil-works/pi-durable and @earendil-works/chord packages for pi-jsrt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pi-jsrt.workspace = true
+boa_engine.workspace = true
+pi-json.workspace = true
+pi-chord.workspace = true
+pi-ai.workspace = true
+pi-telemetry.workspace = true
+indexmap.workspace = true
+serde.workspace = true
+base64.workspace = true
+pi-durable.workspace = true
+photon-rs.workspace = true
+pi-codemode.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+futures.workspace = true
+parking_lot.workspace = true
+oxc_allocator.workspace = true
+oxc_parser.workspace = true
+oxc_ast.workspace = true
+oxc_span.workspace = true
+
+[features]
+# The stock service's transaction probes (`pi-durable/stock-test-probes`).
+stock-test-probes = ["pi-durable/stock-test-probes"]
+
+[dev-dependencies]
+sha2.workspace = true
+tempfile.workspace = true

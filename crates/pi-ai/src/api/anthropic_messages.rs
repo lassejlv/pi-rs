@@ -21,7 +21,7 @@ use crate::types::{
     AssistantContent, AssistantMessage, AssistantMessageEvent, CacheRetention, ConstrainedSamplingConfig, ImageContent,
     JsonSchemaStrictness, Message, Model, ProviderEnv, ProviderHeaders, ProviderResponse, StopReason, StreamOptions,
     TextContent, ThinkingContent, ThinkingLevel, Tool, ToolCall, ToolResultMessage, TranscriptContext,
-    UserContent, UserContentBlock,
+    UserContent, UserContentBlock, is_blank_text,
 };
 use crate::utils::diagnostics::{AssistantMessageDiagnostic, DiagnosticErrorInfo, append_assistant_message_diagnostic};
 use crate::utils::error_body::{ProviderHttpError, SdkErrorStyle};
@@ -33,7 +33,10 @@ use crate::utils::json_parse::{parse_json_with_repair, parse_streaming_json_obje
 use crate::utils::provider_env::get_provider_env_value;
 use crate::utils::provider_retry::{ProviderRetryOptions, retry_provider_request};
 use crate::utils::sse::sse_reader;
-use crate::utils::text::{get_system_message_text, render_system_message_update};
+use crate::utils::text::{
+    get_system_message_text, get_system_message_text_is_empty, render_system_message_update,
+    render_system_message_update_is_empty,
+};
 use crate::utils::transcript::{get_current_tools, get_initial_system_message, resolve_transcript};
 
 /// Version of `@anthropic-ai/sdk` whose request shape this module reproduces.
@@ -390,7 +393,7 @@ fn convert_messages(
             Message::System(system) => {
                 let text = render_system_message_update(system);
                 let mut blocks: Vec<Value> = Vec::new();
-                if !text.is_empty() {
+                if !render_system_message_update_is_empty(system) {
                     blocks.push(json!({ "type": "text", "text": text }));
                 }
                 if let Some(convert) = convert_tool_definitions {
@@ -413,7 +416,7 @@ fn convert_messages(
             }
             Message::User(user) => match &user.content {
                 UserContent::Text(text) => {
-                    if !text.trim().is_empty() {
+                    if !is_blank_text(text, user.lone_surrogates_removed) {
                         params.push(json!({ "role": "user", "content": text }));
                     }
                 }
@@ -440,7 +443,7 @@ fn convert_messages(
                 for block in &assistant.content {
                     match block {
                         AssistantContent::Text(t) => {
-                            if t.text.trim().is_empty() {
+                            if t.is_blank() {
                                 continue;
                             }
                             blocks.push(json!({ "type": "text", "text": t.text }));
@@ -452,7 +455,7 @@ fn convert_messages(
                             }
                             let signature = t.thinking_signature.clone().unwrap_or_default();
                             let has_signature = !signature.trim().is_empty();
-                            if t.thinking.trim().is_empty() && !has_signature {
+                            if t.is_blank() && !has_signature {
                                 continue;
                             }
                             if !has_signature {
@@ -627,6 +630,7 @@ fn build_params(
     let model_compat = model.compat();
     let initial_system = get_initial_system_message(&context.messages);
     let initial_system_text = initial_system.map(get_system_message_text).unwrap_or_default();
+    let initial_system_empty = initial_system.is_none_or(get_system_message_text_is_empty);
     let normalize = |id: &str, _: &Model, _: &AssistantMessage| normalize_tool_call_id(id);
     let transformed = transform_messages(&context.messages, model, Some(&normalize));
     let conversation: &[Message] = if initial_system.is_some() && !transformed.is_empty() { &transformed[1..] } else { &transformed };
@@ -688,11 +692,11 @@ fn build_params(
     };
     if is_oauth {
         let mut system = vec![with_cache("You are Claude Code, Anthropic's official CLI for Claude.")];
-        if !initial_system_text.is_empty() {
+        if !initial_system_empty {
             system.push(with_cache(&initial_system_text));
         }
         params.insert("system".into(), Value::Array(system));
-    } else if !initial_system_text.is_empty() {
+    } else if !initial_system_empty {
         params.insert("system".into(), Value::Array(vec![with_cache(&initial_system_text)]));
     }
 
@@ -1129,6 +1133,7 @@ async fn run_stream(
                                     block.get("signature").and_then(Value::as_str).unwrap_or_default().to_string(),
                                 ),
                                 redacted: None,
+                                ..Default::default()
                             }));
                             meta.push(BlockMeta { index, partial_json: String::new() });
                             sender.push(AssistantMessageEvent::ThinkingStart {
@@ -1141,6 +1146,7 @@ async fn run_stream(
                                 thinking: "[Reasoning redacted]".to_string(),
                                 thinking_signature: block.get("data").and_then(Value::as_str).map(str::to_string),
                                 redacted: Some(true),
+                                ..Default::default()
                             }));
                             meta.push(BlockMeta { index, partial_json: String::new() });
                             sender.push(AssistantMessageEvent::ThinkingStart {
@@ -1347,7 +1353,7 @@ fn error_message_of(error: &anyhow::Error) -> String {
 /// Stream an Anthropic Messages response.
 pub fn stream(model: &Model, context: &TranscriptContext, options: StreamOptions) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

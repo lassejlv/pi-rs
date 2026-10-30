@@ -303,9 +303,16 @@ impl Array {
                     .shape()
                     .to_addr_usize()
             {
-                // NOTE: The "length" property is the first element.
-                borrowed_object.properties_mut().storage[0] = JsValue::new(len);
-                return Ok(());
+                // NOTE: The "length" property is the first element. Writing it directly is only
+                // valid when nothing is truncated: a shrink must delete the elements past `len`
+                // (ArraySetLength), e.g. when a coercion during `splice` grew the array.
+                let current = borrowed_object.properties().storage[0]
+                    .as_number()
+                    .unwrap_or(f64::INFINITY);
+                if len as f64 >= current {
+                    borrowed_object.properties_mut().storage[0] = JsValue::new(len);
+                    return Ok(());
+                }
             }
         }
 

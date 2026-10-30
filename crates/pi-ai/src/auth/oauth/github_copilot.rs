@@ -212,15 +212,15 @@ async fn fetch_with_rate_limit_retry(
     policy: RetryPolicy,
 ) -> anyhow::Result<OAuthHttpResponse> {
     let budget = if policy.max_retries > 0 && policy.max_elapsed_ms > 0 {
-        Some(tokio::time::Instant::now() + std::time::Duration::from_millis(policy.max_elapsed_ms))
+        Some(crate::utils::wasm::Instant::now() + std::time::Duration::from_millis(policy.max_elapsed_ms))
     } else {
         None
     };
     let request_signal = signal.child_token();
     let budget_guard = budget.map(|deadline| {
         let token = request_signal.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep_until(deadline).await;
+        crate::utils::wasm::spawn(async move {
+            crate::utils::wasm::sleep_until(deadline).await;
             token.cancel();
         })
     });
@@ -248,7 +248,7 @@ async fn fetch_with_rate_limit_retry(
             let delay_ms = delay_ms.max(0.0);
             if let Some(deadline) = budget {
                 let remaining = deadline
-                    .saturating_duration_since(tokio::time::Instant::now())
+                    .saturating_duration_since(crate::utils::wasm::Instant::now())
                     .as_secs_f64()
                     * 1000.0;
                 if delay_ms >= remaining {

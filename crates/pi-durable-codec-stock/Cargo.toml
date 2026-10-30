@@ -1,0 +1,15 @@
+[package]
+name = "pi-durable-codec-stock"
+description = "Test-only WebAssembly bindings for unchanged durable codec tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pi-json.workspace = true
+serde.workspace = true
+serde_json.workspace = true

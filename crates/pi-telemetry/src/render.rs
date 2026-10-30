@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 
+use crate::TelemetryText;
 use crate::attributes::SpanAttributes;
 use crate::context::SpanStatus;
 use crate::js::number_to_string;
@@ -22,9 +23,9 @@ fn format_attributes(attributes: Option<&SpanAttributes>) -> String {
 /// Render stored spans as a chronological forest, treating absent parents as roots. Spans with
 /// the same ID are deduplicated (the last one wins, at the position of the first).
 pub fn render_trace(spans: &[StoredSpan]) -> String {
-    let mut by_id: IndexMap<&str, &StoredSpan> = IndexMap::new();
+    let mut by_id: IndexMap<&TelemetryText, &StoredSpan> = IndexMap::new();
     for span in spans {
-        by_id.insert(span.id.as_str(), span);
+        by_id.insert(&span.id, span);
     }
     let mut ordered: Vec<&StoredSpan> = by_id.values().copied().collect();
     ordered.sort_by(|left, right| {
@@ -34,9 +35,9 @@ pub fn render_trace(spans: &[StoredSpan]) -> String {
     });
 
     let mut roots: Vec<&StoredSpan> = Vec::new();
-    let mut children: HashMap<&str, Vec<&StoredSpan>> = HashMap::new();
+    let mut children: HashMap<&TelemetryText, Vec<&StoredSpan>> = HashMap::new();
     for span in ordered {
-        match span.parent_id.as_deref() {
+        match span.parent_id.as_ref() {
             Some(parent) if by_id.contains_key(parent) => {
                 children.entry(parent).or_default().push(span)
             }
@@ -78,7 +79,7 @@ pub fn render_trace(spans: &[StoredSpan]) -> String {
                 format_attributes(link.attributes.as_ref())
             ));
         }
-        if let Some(descendants) = children.get(span.id.as_str()) {
+        if let Some(descendants) = children.get(&span.id) {
             for descendant in descendants.iter().rev() {
                 pending.push((descendant, depth + 1));
             }

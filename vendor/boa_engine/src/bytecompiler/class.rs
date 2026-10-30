@@ -10,6 +10,7 @@ use boa_ast::{
         ClassDeclaration, ClassElement, ClassElementName, ClassExpression, FormalParameterList,
         FunctionExpression,
     },
+    operations::{ContainsSymbol, contains},
     property::{MethodDefinitionKind, PropertyName},
     scope::Scope,
 };
@@ -113,6 +114,18 @@ impl ByteCompiler<'_> {
         let value = compiler.register_allocator.alloc();
         if let Some(expr) = &class.constructor {
             compiler.code_block_flags |= CodeBlockFlags::HAS_FUNCTION_SCOPE;
+            // A base constructor whose `this` nothing reads through its environment (see
+            // `THIS_NOT_IN_ENVIRONMENT`); derived constructors bind `this` there at `super()`.
+            if class.super_ref.is_none()
+                && !expr.contains_direct_eval()
+                && !expr.scopes().function_scope().escaped_this()
+                && !contains(expr.parameters(), ContainsSymbol::Super)
+                && !contains(expr.body(), ContainsSymbol::Super)
+                && !contains(expr.parameters(), ContainsSymbol::NewTarget)
+                && !contains(expr.body(), ContainsSymbol::NewTarget)
+            {
+                compiler.code_block_flags |= CodeBlockFlags::THIS_NOT_IN_ENVIRONMENT;
+            }
             let _ = compiler.push_scope(expr.scopes().function_scope());
 
             compiler.length = expr.parameters().length();

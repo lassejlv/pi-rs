@@ -693,6 +693,7 @@ function createWriteStream(p, options = {}) {
     return opening;
   };
   const stream = new Writable({
+    highWaterMark: options.highWaterMark,
     decodeStrings: true,
     defaultEncoding: options.encoding ?? "utf8",
     write(chunk, encoding, cb) {

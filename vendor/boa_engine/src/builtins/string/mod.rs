@@ -990,7 +990,7 @@ impl String {
         // 10. Let index be ! StringIndexOf(S, searchStr, start).
         // 11. If index is not -1, return true.
         // 12. Return false.
-        Ok(string.index_of(search_str.as_str(), start).is_some().into())
+        Ok(string_index_of(string.as_str(), search_str.as_str(), start).is_some().into())
     }
 
     /// `String.prototype.replace( regexp|substr, newSubstr|function )`
@@ -1197,7 +1197,7 @@ impl String {
             match_positions.push(p);
 
             // b. Set position to ! StringIndexOf(string, searchString, position + advanceBy).
-            position = string.index_of(search_string.as_str(), p + advance_by);
+            position = string_index_of(string.as_str(), search_string.as_str(), p + advance_by);
         }
 
         // 12. Let endOfLastMatch be 0.
@@ -1299,8 +1299,7 @@ impl String {
         let start = pos.clamp_finite(0, len) as usize;
 
         // 8. Return 𝔽(! StringIndexOf(S, searchStr, start)).
-        Ok(string
-            .index_of(search_str.as_str(), start)
+        Ok(string_index_of(string.as_str(), search_str.as_str(), start)
             .map_or(-1, |i| i as i64)
             .into())
     }
@@ -2040,7 +2039,7 @@ impl String {
             i = index + separator_length;
 
             // e. Set j to ! StringIndexOf(S, R, i).
-            j = this_str.index_of(separator_str.as_str(), i);
+            j = string_index_of(this_str.as_str(), separator_str.as_str(), i);
         }
 
         // 15. Let T be the substring of S from i.
@@ -2821,4 +2820,16 @@ pub(crate) fn get_substitution(
 
     // 11. Return result.
     Ok(js_string!(&result[..]))
+}
+
+/// `StringIndexOf(string, searchValue, fromIndex)`, scanning from `fromIndex`.
+///
+/// Local patch (see `PATCH.md`): `JsStr::index_of` reaches `fromIndex` by skipping the windows
+/// before it one at a time, so every loop that advances through a string (`split`, `replaceAll`,
+/// `indexOf`/`includes` with a position) was quadratic in the string's length.
+fn string_index_of(string: JsStr<'_>, search_value: JsStr<'_>, from_index: usize) -> Option<usize> {
+    string
+        .get(from_index..)?
+        .index_of(search_value, 0)
+        .map(|index| index + from_index)
 }

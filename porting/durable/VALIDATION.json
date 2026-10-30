@@ -1,0 +1,580 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "recordedAt": "2026-10-26T16:52:31.277709+00:00",
+  "implementationCommit": "7380f5e",
+  "stockAdapterCommit": "1f0b2248f3b224eb235e15513cfdb329d849428c",
+  "completeNativePort": false,
+  "singleUninterruptedCombinedGate": false,
+  "unresolvedIncidents": [
+    {
+      "test": "harness-scheduler-retention.test.ts: 20000-deep chain",
+      "durationMs": 76105.027542,
+      "deadlineMs": 60000,
+      "log": "/tmp/pi-durable-current-stock-checks.log",
+      "cause": "Not established; subsequent traced and untraced repeats passed without changing the deadline"
+    }
+  ],
+  "rust": {
+    "passed": 858,
+    "libraryCodeUnchangedAfterRun": false,
+    "log": "/tmp/pi-durable-check-2026-10-26-runtime-full.log",
+    "supersededBy": "latestNative"
+  },
+  "stock": {
+    "passed": 2530,
+    "files": 63,
+    "fileModeGroups": 126,
+    "unchangedPinnedTests": true,
+    "unaffectedPrefix": {
+      "passed": 788,
+      "fileModeGroups": 26,
+      "log": "/tmp/pi-durable-check-2026-10-26-runtime-full.log"
+    },
+    "currentAdapterRuns": [
+      {
+        "passed": 444,
+        "fileModeGroups": 26,
+        "log": "/tmp/pi-durable-current-stock-checks.log",
+        "scope": "Completed files before the subsequent retention timeout"
+      },
+      {
+        "passed": 28,
+        "fileModeGroups": 2,
+        "log": "/tmp/pi-durable-retention-handles-untraced-2.log"
+      },
+      {
+        "passed": 1270,
+        "fileModeGroups": 72,
+        "log": "/tmp/pi-durable-current-stock-tail.log"
+      }
+    ],
+    "coverage": [
+      {
+        "file": "codemode-checkpoints.test.ts",
+        "passedByRetentionMs": {
+          "600000": 2,
+          "0": 2
+        }
+      },
+      {
+        "file": "codemode-describe.test.ts",
+        "passedByRetentionMs": {
+          "600000": 5,
+          "0": 5
+        }
+      },
+      {
+        "file": "codemode-models.test.ts",
+        "passedByRetentionMs": {
+          "600000": 7,
+          "0": 7
+        }
+      },
+      {
+        "file": "codemode.test.ts",
+        "passedByRetentionMs": {
+          "600000": 41,
+          "0": 41
+        }
+      },
+      {
+        "file": "codemode/declarations.test.ts",
+        "passedByRetentionMs": {
+          "600000": 17,
+          "0": 17
+        }
+      },
+      {
+        "file": "env-line-scan.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "env-node-conformance.test.ts",
+        "passedByRetentionMs": {
+          "600000": 51,
+          "0": 51
+        }
+      },
+      {
+        "file": "env-node-spill.test.ts",
+        "passedByRetentionMs": {
+          "600000": 1,
+          "0": 1
+        }
+      },
+      {
+        "file": "env-node.test.ts",
+        "passedByRetentionMs": {
+          "600000": 52,
+          "0": 52
+        }
+      },
+      {
+        "file": "harness-blocked.test.ts",
+        "passedByRetentionMs": {
+          "600000": 12,
+          "0": 12
+        }
+      },
+      {
+        "file": "harness-callers.test.ts",
+        "passedByRetentionMs": {
+          "600000": 5,
+          "0": 5
+        }
+      },
+      {
+        "file": "harness-cancellation-barrier.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "harness-compaction.test.ts",
+        "passedByRetentionMs": {
+          "600000": 108,
+          "0": 108
+        }
+      },
+      {
+        "file": "harness-context.test.ts",
+        "passedByRetentionMs": {
+          "600000": 22,
+          "0": 22
+        }
+      },
+      {
+        "file": "harness-conversations.test.ts",
+        "passedByRetentionMs": {
+          "600000": 12,
+          "0": 12
+        }
+      },
+      {
+        "file": "harness-events.test.ts",
+        "passedByRetentionMs": {
+          "600000": 14,
+          "0": 14
+        }
+      },
+      {
+        "file": "harness-failed-run-inbox.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "harness-generation-recovery.test.ts",
+        "passedByRetentionMs": {
+          "600000": 8,
+          "0": 8
+        }
+      },
+      {
+        "file": "harness-generation.test.ts",
+        "passedByRetentionMs": {
+          "600000": 25,
+          "0": 25
+        }
+      },
+      {
+        "file": "harness-host-inputs.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "harness-inbox.test.ts",
+        "passedByRetentionMs": {
+          "600000": 32,
+          "0": 32
+        }
+      },
+      {
+        "file": "harness-input-entries.test.ts",
+        "passedByRetentionMs": {
+          "600000": 11,
+          "0": 11
+        }
+      },
+      {
+        "file": "harness-inspect.test.ts",
+        "passedByRetentionMs": {
+          "600000": 2,
+          "0": 2
+        }
+      },
+      {
+        "file": "harness-lifecycle.test.ts",
+        "passedByRetentionMs": {
+          "600000": 14,
+          "0": 14
+        }
+      },
+      {
+        "file": "harness-live-deltas.test.ts",
+        "passedByRetentionMs": {
+          "600000": 11,
+          "0": 11
+        }
+      },
+      {
+        "file": "harness-nested-tools-restart.test.ts",
+        "passedByRetentionMs": {
+          "600000": 11,
+          "0": 11
+        }
+      },
+      {
+        "file": "harness-nested-tools.test.ts",
+        "passedByRetentionMs": {
+          "600000": 33,
+          "0": 33
+        }
+      },
+      {
+        "file": "harness-ownership.test.ts",
+        "passedByRetentionMs": {
+          "600000": 41,
+          "0": 41
+        }
+      },
+      {
+        "file": "harness-prompt.test.ts",
+        "passedByRetentionMs": {
+          "600000": 9,
+          "0": 9
+        }
+      },
+      {
+        "file": "harness-read-only.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "harness-registry.test.ts",
+        "passedByRetentionMs": {
+          "600000": 10,
+          "0": 10
+        }
+      },
+      {
+        "file": "harness-reports.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "harness-scheduler-indexes.test.ts",
+        "passedByRetentionMs": {
+          "600000": 5,
+          "0": 5
+        }
+      },
+      {
+        "file": "harness-scheduler-retention.test.ts",
+        "passedByRetentionMs": {
+          "600000": 14,
+          "0": 14
+        }
+      },
+      {
+        "file": "harness-sleep.test.ts",
+        "passedByRetentionMs": {
+          "600000": 13,
+          "0": 13
+        }
+      },
+      {
+        "file": "harness-storage-failure.test.ts",
+        "passedByRetentionMs": {
+          "600000": 24,
+          "0": 24
+        }
+      },
+      {
+        "file": "harness-structured-output.test.ts",
+        "passedByRetentionMs": {
+          "600000": 10,
+          "0": 10
+        }
+      },
+      {
+        "file": "harness-structured.test.ts",
+        "passedByRetentionMs": {
+          "600000": 58,
+          "0": 58
+        }
+      },
+      {
+        "file": "harness-submissions.test.ts",
+        "passedByRetentionMs": {
+          "600000": 10,
+          "0": 10
+        }
+      },
+      {
+        "file": "harness-task-graph.test.ts",
+        "passedByRetentionMs": {
+          "600000": 5,
+          "0": 5
+        }
+      },
+      {
+        "file": "harness-tasks-recovery.test.ts",
+        "passedByRetentionMs": {
+          "600000": 24,
+          "0": 24
+        }
+      },
+      {
+        "file": "harness-tasks.test.ts",
+        "passedByRetentionMs": {
+          "600000": 36,
+          "0": 36
+        }
+      },
+      {
+        "file": "harness-telemetry.test.ts",
+        "passedByRetentionMs": {
+          "600000": 24,
+          "0": 24
+        }
+      },
+      {
+        "file": "harness-tools-recovery.test.ts",
+        "passedByRetentionMs": {
+          "600000": 9,
+          "0": 9
+        }
+      },
+      {
+        "file": "harness-tools.test.ts",
+        "passedByRetentionMs": {
+          "600000": 39,
+          "0": 39
+        }
+      },
+      {
+        "file": "harness-view.test.ts",
+        "passedByRetentionMs": {
+          "600000": 14,
+          "0": 14
+        }
+      },
+      {
+        "file": "jsonl-storage.test.ts",
+        "passedByRetentionMs": {
+          "600000": 93,
+          "0": 93
+        }
+      },
+      {
+        "file": "session-adoption.test.ts",
+        "passedByRetentionMs": {
+          "600000": 5,
+          "0": 5
+        }
+      },
+      {
+        "file": "session-checkpoints-migrations.test.ts",
+        "passedByRetentionMs": {
+          "600000": 20,
+          "0": 20
+        }
+      },
+      {
+        "file": "session-definitions.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "session-document-retention.test.ts",
+        "passedByRetentionMs": {
+          "600000": 21,
+          "0": 21
+        }
+      },
+      {
+        "file": "session-documents.test.ts",
+        "passedByRetentionMs": {
+          "600000": 27,
+          "0": 27
+        }
+      },
+      {
+        "file": "session-forks.test.ts",
+        "passedByRetentionMs": {
+          "600000": 14,
+          "0": 14
+        }
+      },
+      {
+        "file": "session-tables.test.ts",
+        "passedByRetentionMs": {
+          "600000": 12,
+          "0": 12
+        }
+      },
+      {
+        "file": "session-watches.test.ts",
+        "passedByRetentionMs": {
+          "600000": 22,
+          "0": 22
+        }
+      },
+      {
+        "file": "sqlite-cloudflare.test.ts",
+        "passedByRetentionMs": {
+          "600000": 30,
+          "0": 30
+        }
+      },
+      {
+        "file": "sqlite-facade.test.ts",
+        "passedByRetentionMs": {
+          "600000": 6,
+          "0": 6
+        }
+      },
+      {
+        "file": "sqlite-migrations.test.ts",
+        "passedByRetentionMs": {
+          "600000": 4,
+          "0": 4
+        }
+      },
+      {
+        "file": "sqlite-storage.test.ts",
+        "passedByRetentionMs": {
+          "600000": 65,
+          "0": 65
+        }
+      },
+      {
+        "file": "tool-search.test.ts",
+        "passedByRetentionMs": {
+          "600000": 6,
+          "0": 6
+        }
+      },
+      {
+        "file": "tools-images.test.ts",
+        "passedByRetentionMs": {
+          "600000": 34,
+          "0": 34
+        }
+      },
+      {
+        "file": "tools-read-differential.test.ts",
+        "passedByRetentionMs": {
+          "600000": 2,
+          "0": 2
+        }
+      },
+      {
+        "file": "tools.test.ts",
+        "passedByRetentionMs": {
+          "600000": 35,
+          "0": 35
+        }
+      }
+    ],
+    "fullCoreMatrixSourceCommit": "1f0b224"
+  },
+  "checks": [
+    "format",
+    "downstream compilation",
+    "native conversation example",
+    "all-target Clippy",
+    "feature-gated Clippy",
+    "WebAssembly codec Clippy",
+    "current stock adapter Clippy",
+    "independent reference fixtures",
+    "JSONL and SQLite interchange and reopen"
+  ],
+  "scope": "Native services through test-only transports; each runner records the retained source callbacks and host capabilities. This is not complete browser or embedded package verification.",
+  "remaining": [
+    "browser and worker backends including IndexedDB",
+    "embedded JavaScript package exports",
+    "remaining generic validation and provider UTF16 boundaries",
+    "final module and export parity audit"
+  ],
+  "logs": {
+    "/tmp/pi-durable-check-2026-10-26-runtime-full.log": "0aba3fe76ad1d57bb6d098c3b47150839a9c023e591eb8f86706f7d4a10f6ae7",
+    "/tmp/pi-durable-current-stock-checks.log": "6f12416a886ad3fe23ef30d0410a6d1503efbceb14f11bff843c05122c11c10a",
+    "/tmp/pi-durable-current-stock-tail.log": "59351491113ae1ccab0dcc41693b1db895a04028715f71b769862f71a4613f37",
+    "/tmp/pi-durable-retention-handles-untraced-2.log": "86ad122feea4fb446ae326b72e940d74ea389c448d2b57a824d4f0227880070b"
+  },
+  "latestNative": {
+    "sourceCommit": "7f349af",
+    "publicApiCommit": "94e11d2",
+    "passed": 858,
+    "testThreads": 4,
+    "runs": [
+      {
+        "log": "/tmp/pi-durable-public-native-bounded-final.log",
+        "passed": 840,
+        "sha256": "f0dd0da1834849d14bfba4827e0f040086b8a54774472d6576b0a4cfb38b34bb"
+      },
+      {
+        "log": "/tmp/pi-durable-public-probes.log",
+        "passed": 2,
+        "sha256": "eccfeee7f69475883a2f8a70e94b830020ac092b15ddd524bf06bf51af757e68"
+      },
+      {
+        "log": "/tmp/pi-durable-public-ai-telemetry.log",
+        "passed": 14,
+        "sha256": "af2f90b4b8c99ebfb8c4d62b496a74c433c11e0fe049538c5349ba4341a0b7cb"
+      },
+      {
+        "log": "/tmp/pi-durable-public-js-telemetry.log",
+        "passed": 2,
+        "sha256": "2ff15346d423c326f86fe07291ceab518914fb5c3f32b4d2c0caf246ab339980"
+      }
+    ],
+    "conversationExample": {
+      "log": "/tmp/pi-durable-public-conversation.log",
+      "nativeSectionRendered": true
+    },
+    "allTargetClippyLog": "/tmp/pi-durable-public-exports-clippy.log",
+    "stockRegistryRegression": {
+      "passed": 20,
+      "modes": [
+        "600000",
+        "0"
+      ],
+      "report": "/tmp/pi-durable-stock-public-exports-registry-report.json",
+      "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e"
+    }
+  },
+  "testInfrastructure": {
+    "boaCrateType": "lib",
+    "hashedRustLibraries": true,
+    "unusedCdylibRemoved": true,
+    "nativeFixtureConcurrency": 4,
+    "sandboxEvidence": {
+      "defaultConcurrencyRun": "/tmp/pi-durable-public-native-full.log",
+      "boundedSameBinaryRun": "/tmp/pi-durable-native-sandbox-bounded.log",
+      "passed": 99,
+      "executionDeadlinesUnchanged": true
+    },
+    "asyncContextFixture": {
+      "observedNodeRuns": 20,
+      "observedTimerInterleavings": 3,
+      "assertions": "All events, store values, prefix, suffix and per-task causal order remain exact; only cross-task timer interleavings are allowed",
+      "stockTestsChanged": false
+    }
+  }
+}

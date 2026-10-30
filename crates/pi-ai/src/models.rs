@@ -841,7 +841,7 @@ impl Models {
                 let watcher = {
                     let caller = caller_signal.clone();
                     let controller = controller.clone();
-                    tokio::spawn(async move {
+                    crate::utils::wasm::spawn(async move {
                         tokio::select! {
                             _ = caller.cancelled() => {},
                             _ = controller.cancelled() => {},

@@ -44,6 +44,6 @@ pub struct TypesafeSystemOneApi;
 #[async_trait]
 impl ProviderClassifier for TypesafeSystemOneApi {
     async fn classify(&self, model: &ClassifierModel, context: &ClassifierContext, options: StreamOptions) -> ClassifierResult {
-        classify(model, context, options).await
+        crate::utils::wasm::assert_send(classify(model, context, options)).await
     }
 }

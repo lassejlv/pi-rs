@@ -47,3 +47,6 @@ pub use store::{
     MetricQuery, StoredEvent, StoredLink, StoredMetric, StoredSpan, StoredTrace, TelemetryStore,
     TraceQuery, TraceQueryResult,
 };
+
+mod text;
+pub use text::TelemetryText;

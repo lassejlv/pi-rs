@@ -241,24 +241,38 @@ impl Json {
             .first()
             .cloned()
             .unwrap_or_default()
-            .to_string(context)?
-            .to_std_string()
-            .map_err(|e| JsNativeError::syntax().with_message(e.to_string()))?;
+            .to_string(context)?;
 
         // 2. Parse ! StringToCodePoints(jsonString) as a JSON text as specified in ECMA-404.
         //    Throw a SyntaxError exception if it is not a valid JSON text as defined in that specification.
-        if let Err(e) = serde_json::from_str::<serde_json::Value>(&json_string) {
+        // Raw validation checks JSON grammar without requiring Unicode scalar strings.
+        // The parser below reads the original UTF-16 source, including unpaired units.
+        if let Err(e) = serde_json::from_str::<&serde_json::value::RawValue>(
+            &json_string.to_std_string_lossy(),
+        ) {
             return Err(JsNativeError::syntax().with_message(e.to_string()).into());
         }
 
         // Check if a reviver is provided, to determine if we need source text tracking
         let has_reviver = args.get_or_undefined(1).is_callable();
 
+        // Without a reviver nothing observes the parse beyond its result: build the value
+        // directly from the (already validated) UTF-16 text instead of parsing, compiling and
+        // evaluating it as a script.
+        if !has_reviver {
+            let units = json_string.to_vec();
+            let mut parser = DirectJson { units: &units, at: 0 };
+            return parser.value(context);
+        }
+
         // 3. Let scriptString be the string-concatenation of "(", jsonString, and ");".
-        let script_string = format!("({json_string});");
+        let script_string: Vec<u16> = once(0x28)
+            .chain(json_string.to_vec())
+            .chain([0x29, 0x3b])
+            .collect();
 
         // 4-10. Parse and evaluate the script
-        let source = Source::from_bytes(&script_string);
+        let source = Source::from_utf16(&script_string);
         let mut parser = Parser::new(source);
         parser.set_json_parse();
 
@@ -965,7 +979,7 @@ impl Json {
         // 1. If state.[[Stack]] contains value, throw a TypeError exception because the structure is cyclical.
         if !state.stack_set.insert(value.clone()) {
             return Err(JsNativeError::typ()
-                .with_message("cyclic object value")
+                .with_message("Converting circular structure to JSON")
                 .into());
         }
 
@@ -1124,7 +1138,7 @@ impl Json {
         // 1. If state.[[Stack]] contains value, throw a TypeError exception because the structure is cyclical.
         if !state.stack_set.insert(value.clone()) {
             return Err(JsNativeError::typ()
-                .with_message("cyclic object value")
+                .with_message("Converting circular structure to JSON")
                 .into());
         }
 
@@ -1244,4 +1258,188 @@ struct StateRecord {
     indent: JsString,
     gap: JsString,
     property_list: Option<Vec<JsString>>,
+}
+
+
+/// A JSON value built directly from validated UTF-16 JSON text (`JSON.parse` without a reviver).
+/// Validation already happened, so this only has to be correct for valid input. Strings keep
+/// every code unit (`\uD800` alone stays a lone surrogate); objects are filled with
+/// `CreateDataProperty` in source order, so a repeated key keeps its first position and takes
+/// the last value, and `__proto__` is an ordinary own property, as the spec's evaluation does.
+struct DirectJson<'a> {
+    units: &'a [u16],
+    at: usize,
+}
+
+impl DirectJson<'_> {
+    fn skip_ws(&mut self) {
+        while let Some(&u) = self.units.get(self.at) {
+            if matches!(u, 0x20 | 0x09 | 0x0a | 0x0d) {
+                self.at += 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn peek(&self) -> u16 {
+        self.units.get(self.at).copied().unwrap_or(0)
+    }
+
+    fn error() -> crate::JsError {
+        JsNativeError::syntax()
+            .with_message("invalid JSON text")
+            .into()
+    }
+
+    fn value(&mut self, context: &mut Context) -> JsResult<JsValue> {
+        self.skip_ws();
+        match self.peek() {
+            0x7b => {
+                self.at += 1;
+                let object = JsObject::with_object_proto(context.intrinsics());
+                self.skip_ws();
+                if self.peek() == 0x7d {
+                    self.at += 1;
+                    return Ok(object.into());
+                }
+                loop {
+                    self.skip_ws();
+                    let key = self.string()?;
+                    self.skip_ws();
+                    if self.peek() != 0x3a {
+                        return Err(Self::error());
+                    }
+                    self.at += 1;
+                    let value = self.value(context)?;
+                    object.create_data_property_or_throw(key, value, context)?;
+                    self.skip_ws();
+                    match self.peek() {
+                        0x2c => self.at += 1,
+                        0x7d => {
+                            self.at += 1;
+                            return Ok(object.into());
+                        }
+                        _ => return Err(Self::error()),
+                    }
+                }
+            }
+            0x5b => {
+                self.at += 1;
+                let mut items = Vec::new();
+                self.skip_ws();
+                if self.peek() == 0x5d {
+                    self.at += 1;
+                } else {
+                    loop {
+                        items.push(self.value(context)?);
+                        self.skip_ws();
+                        match self.peek() {
+                            0x2c => self.at += 1,
+                            0x5d => {
+                                self.at += 1;
+                                break;
+                            }
+                            _ => return Err(Self::error()),
+                        }
+                    }
+                }
+                Ok(crate::builtins::array::Array::create_array_from_list(items, context).into())
+            }
+            0x22 => Ok(self.string()?.into()),
+            0x74 => {
+                self.at += 4;
+                Ok(true.into())
+            }
+            0x66 => {
+                self.at += 5;
+                Ok(false.into())
+            }
+            0x6e => {
+                self.at += 4;
+                Ok(JsValue::null())
+            }
+            _ => self.number(),
+        }
+    }
+
+    fn number(&mut self) -> JsResult<JsValue> {
+        let start = self.at;
+        while let Some(&u) = self.units.get(self.at) {
+            if matches!(u, 0x30..=0x39 | 0x2d | 0x2b | 0x2e | 0x65 | 0x45) {
+                self.at += 1;
+            } else {
+                break;
+            }
+        }
+        let text: String = self.units[start..self.at]
+            .iter()
+            .map(|&u| char::from(u as u8))
+            .collect();
+        let number: f64 = text.parse().map_err(|_| Self::error())?;
+        Ok(JsValue::new(number))
+    }
+
+    fn hex4(&mut self) -> JsResult<u16> {
+        let mut value = 0u16;
+        for _ in 0..4 {
+            let u = self.peek();
+            let digit = match u {
+                0x30..=0x39 => u - 0x30,
+                0x41..=0x46 => u - 0x41 + 10,
+                0x61..=0x66 => u - 0x61 + 10,
+                _ => return Err(Self::error()),
+            };
+            value = value * 16 + digit;
+            self.at += 1;
+        }
+        Ok(value)
+    }
+
+    fn string(&mut self) -> JsResult<JsString> {
+        if self.peek() != 0x22 {
+            return Err(Self::error());
+        }
+        self.at += 1;
+        let start = self.at;
+        // Fast path: no escapes.
+        while let Some(&u) = self.units.get(self.at) {
+            match u {
+                0x22 => {
+                    let s = JsString::from(&self.units[start..self.at]);
+                    self.at += 1;
+                    return Ok(s);
+                }
+                0x5c => break,
+                _ => self.at += 1,
+            }
+        }
+        let mut out: Vec<u16> = self.units[start..self.at].to_vec();
+        loop {
+            let Some(&u) = self.units.get(self.at) else {
+                return Err(Self::error());
+            };
+            self.at += 1;
+            match u {
+                0x22 => return Ok(JsString::from(&out[..])),
+                0x5c => {
+                    let e = self.peek();
+                    self.at += 1;
+                    out.push(match e {
+                        0x22 => 0x22,
+                        0x5c => 0x5c,
+                        0x2f => 0x2f,
+                        0x62 => 0x08,
+                        0x66 => 0x0c,
+                        0x6e => 0x0a,
+                        0x72 => 0x0d,
+                        0x74 => 0x09,
+                        0x75 => self.hex4()?,
+                        _ => return Err(Self::error()),
+                    });
+                }
+                other => out.push(other),
+            }
+        }
+    }
 }

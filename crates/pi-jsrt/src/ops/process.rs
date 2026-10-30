@@ -247,9 +247,14 @@ fn op_cpu_usage(_: &JsValue, _: &[JsValue], ctx: &mut Context) -> JsResult<JsVal
     object(ctx, vec![("user", JsValue::from(user)), ("system", JsValue::from(system))])
 }
 
+/// `ops.setEnv(name, value | undefined)`: `process.env` reports every assignment and deletion.
+/// `TZ` sets the runtime's timezone, as Node's does; deleting it returns to the host's.
 fn op_set_env(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
-    // process.env is a plain object; this hook exists so embedders can observe changes later.
-    let _ = arg_opt_string(args, 0, ctx)?;
+    let name = arg_opt_string(args, 0, ctx)?;
+    let value = arg_opt_string(args, 1, ctx)?;
+    if name.as_deref() == Some("TZ") {
+        *crate::engine::state(ctx).timezone.borrow_mut() = value.as_deref().map(crate::engine::timezone_named);
+    }
     Ok(JsValue::undefined())
 }
 

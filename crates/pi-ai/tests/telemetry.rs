@@ -325,6 +325,23 @@ async fn reports_error_and_aborted_status_without_error_attributes_or_events() {
 }
 
 #[tokio::test]
+async fn bounded_error_messages_keep_a_split_surrogate_like_javascript_slice() {
+    let telemetry = InMemoryTelemetryContext::new();
+    let mut result = message(StopReason::Error);
+    result.error_message = Some(format!("{}\u{1F600}tail", "x".repeat(499)));
+    let (models, _) = setup(result);
+    telemetry
+        .start_span("caller", |span| async move { models.fetch_deferred(&model(), &handle(), with_parent(&span, None)).await })
+        .await;
+    settled(&telemetry).await;
+    // `errorMessage.slice(0, 500)` keeps the high surrogate of U+1F600.
+    let mut units: Vec<u16> = "x".repeat(499).encode_utf16().collect();
+    units.push(0xd83d);
+    let expected = pi_json::strict::JsonString::from_utf16(units);
+    assert_eq!(telemetry.get_spans()[1].status, SpanStatus::error(SpanError::new("provider_error", expected)));
+}
+
+#[tokio::test]
 async fn bounds_poll_error_messages_including_missing_messages() {
     for missing in [false, true] {
         let telemetry = InMemoryTelemetryContext::new();

@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+pi-json.workspace = true
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 futures = { workspace = true }
@@ -15,6 +16,12 @@ parking_lot = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
+# std::time clocks on native; the JavaScript clock on wasm32, where std::time panics.
+web-time = "1.1"
+
+# wasm32-unknown-unknown has no OS randomness; uuid draws it from JavaScript.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { workspace = true, features = ["js"] }
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -146,7 +146,9 @@ function structuredClone(value, options = undefined) {
       seen.set(v, out);
       for (const k of Object.keys(v)) {
         const val = v[k];
-        out[k] = clone(val);
+        // An own "__proto__" key stays a data property, as in the HTML structured clone.
+        if (k === "__proto__") Object.defineProperty(out, k, { value: clone(val), writable: true, enumerable: true, configurable: true });
+        else out[k] = clone(val);
       }
       return out;
     }

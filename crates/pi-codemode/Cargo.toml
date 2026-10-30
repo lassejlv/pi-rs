@@ -6,13 +6,13 @@ license.workspace = true
 description = "Sandboxed JavaScript execution where the only capability is calling injected tools"
 
 [dependencies]
+jiff.workspace = true
 boa_engine.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_ast.workspace = true
 oxc_ast_visit.workspace = true
 oxc_span.workspace = true
-tokio.workspace = true
 tokio-util.workspace = true
 futures.workspace = true
 serde.workspace = true
@@ -22,6 +22,15 @@ thiserror.workspace = true
 parking_lot.workspace = true
 indexmap.workspace = true
 libc.workspace = true
+
+# Native builds use the workspace tokio ("full"); wasm32 gets the portable subset
+# and boa's JavaScript-hosted clock and randomness.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1", default-features = false, features = ["sync", "macros", "rt", "time"] }
+boa_engine = { workspace = true, features = ["js"] }
 
 [dev-dependencies]
 tokio = { workspace = true }

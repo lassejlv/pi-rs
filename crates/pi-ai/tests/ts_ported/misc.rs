@@ -319,7 +319,7 @@ fn legacy_prompt_fields_and_tool_state_helpers() {
 // Port of telemetry-options.test.ts
 // ---------------------------------------------------------------------------
 
-type Observed = Arc<Mutex<Vec<Option<pi_telemetry::SpanRef>>>>;
+type Observed = Arc<Mutex<Vec<Option<pi_telemetry::ContextRef>>>>;
 
 struct TelemetryStreams(Observed);
 
@@ -383,7 +383,7 @@ impl ProviderImages for TelemetryImages {
 fn same(observed: &Observed, span: &pi_telemetry::SpanRef, count: usize) {
     let observed = observed.lock();
     assert_eq!(observed.len(), count);
-    assert!(observed.iter().all(|s| s.as_ref().is_some_and(|s| Arc::ptr_eq(s, span))));
+    assert!(observed.iter().all(|s| s.as_ref().is_some_and(|s| std::ptr::addr_eq(Arc::as_ptr(s), Arc::as_ptr(span)))));
 }
 
 #[tokio::test]
@@ -393,7 +393,7 @@ async fn telemetry_span_survives_every_dispatch_path() {
         "reasoning": false, "input": ["text"], "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}, "contextWindow": 1000, "maxTokens": 100}));
     let context = normalize_context(&Context::default());
     let base = pi_ai::api::simple_options::build_base_options(&model, &context, &StreamOptions { telemetry: Some(span.clone()), ..Default::default() }, None);
-    assert!(Arc::ptr_eq(base.telemetry.as_ref().unwrap(), &span));
+    assert!(std::ptr::addr_eq(Arc::as_ptr(base.telemetry.as_ref().unwrap()), Arc::as_ptr(&span)));
 
     let observed: Observed = Arc::default();
     let provider = create_provider(CreateProviderOptions {

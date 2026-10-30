@@ -89,6 +89,19 @@ fn parse(args: Vec<String>) -> Parsed {
 /// Run in Node mode with `args` (everything after the program name and the marker) and return
 /// the exit code. Normally the process exits from inside (`process.exit`, uncaught errors).
 pub fn run(args: Vec<String>) -> i32 {
+    run_with(args, |_| {}, |_| async { Ok(()) })
+}
+
+/// [`run`] for an embedder that adds to the runtime: `configure` edits the options (aliases,
+/// virtual modules...) and `setup` runs on the new runtime before the main module.
+pub fn run_with<F>(
+    args: Vec<String>,
+    configure: impl FnOnce(&mut RuntimeOptions),
+    setup: impl FnOnce(JsRuntime) -> F,
+) -> i32
+where
+    F: std::future::Future<Output = std::result::Result<(), String>>,
+{
     reset_signals();
     let parsed = parse(args);
     let tokio = match tokio::runtime::Builder::new_multi_thread().worker_threads(2).thread_name("pi-jsrt-io").enable_all().build() {
@@ -106,18 +119,38 @@ pub fn run(args: Vec<String>) -> i32 {
         let p = std::path::Path::new(s);
         if p.is_absolute() { p.to_path_buf() } else { cwd.join(p) }
     });
+    // `--import`/`--require` preloads run before the main module; `--input-type=module` evaluates
+    // `-e` code as an ES module (top-level await, static imports).
+    let mut preloads: Vec<(bool, String)> = Vec::new();
+    let mut flags = parsed.exec_argv.iter();
+    while let Some(flag) = flags.next() {
+        match flag.as_str() {
+            "-r" | "--require" | "--import" => {
+                if let Some(spec) = flags.next() {
+                    preloads.push((flag != "--import", spec.clone()));
+                }
+            }
+            f if f.starts_with("--import=") => preloads.push((false, f["--import=".len()..].to_string())),
+            f if f.starts_with("--require=") => preloads.push((true, f["--require=".len()..].to_string())),
+            _ => {}
+        }
+    }
+    let module_eval = parsed.exec_argv.iter().any(|a| a == "--input-type=module");
+    let (eval, module_source) = if module_eval { (None, parsed.eval.clone()) } else { (parsed.eval.clone(), None) };
+    let eval_name = cwd.join("[eval1]").display().to_string();
     let mut argv = vec![exe];
     if let Some(s) = &script {
         argv.push(s.display().to_string());
     }
     argv.extend(parsed.args.iter().cloned());
-    let options = RuntimeOptions {
+    let mut options = RuntimeOptions {
         cwd: Some(cwd),
         env: Some(env),
         argv,
         exec_argv: parsed.exec_argv.clone(),
         esm_cjs_globals: false,
         stdin: true,
+        expose_gc: parsed.exec_argv.iter().any(|a| a == "--expose-gc" || a == "--expose_gc"),
         tokio: Some(tokio.handle().clone()),
         on_exit: Some(Arc::new(|code| {
             use std::io::Write;
@@ -128,6 +161,7 @@ pub fn run(args: Vec<String>) -> i32 {
         })),
         ..Default::default()
     };
+    configure(&mut options);
     tokio.block_on(async move {
         let rt = match JsRuntime::new(options) {
             Ok(rt) => rt,
@@ -136,15 +170,32 @@ pub fn run(args: Vec<String>) -> i32 {
                 return 1;
             }
         };
+        if let Err(e) = setup(rt.clone()).await {
+            eprintln!("{e}");
+            return 1;
+        }
+        for (require, spec) in &preloads {
+            let loaded = if *require { rt.require(spec.as_str()).await.map(drop) } else { rt.import(spec.as_str()).await.map(drop) };
+            if let Err(e) = loaded {
+                eprintln!("{e}");
+                return 1;
+            }
+        }
         let main = json!({
             "file": script.map(|s| s.display().to_string()),
-            "eval": parsed.eval,
+            "eval": eval,
             "print": parsed.print,
             "ipcFd": startup.get("NODE_CHANNEL_FD").and_then(|v| v.parse::<i64>().ok()),
             "serialization": startup.get("NODE_CHANNEL_SERIALIZATION_MODE").cloned().unwrap_or_else(|| "json".into()),
             "uniqueId": startup.get("NODE_UNIQUE_ID"),
         });
         if call_internal(&rt, "nodeMain", main).await.is_err() {
+            return 1;
+        }
+        if let Some(source) = module_source
+            && let Err(e) = rt.eval_module(source, eval_name).await
+        {
+            eprintln!("{e}");
             return 1;
         }
         loop {

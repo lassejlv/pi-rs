@@ -7,6 +7,7 @@ use crate::{
 };
 use boa_ast::{
     function::{FormalParameterList, FunctionBody},
+    operations::{ContainsSymbol, contains},
     scope::{FunctionScopes, Scope},
 };
 use boa_gc::Gc;
@@ -165,6 +166,18 @@ impl FunctionCompiler {
                 CodeBlockFlags::HAS_FUNCTION_SCOPE,
                 self.force_function_scope || scopes.requires_function_scope(),
             );
+        }
+
+        // The function environment only needs `this` when something reads it from there.
+        if !self.arrow
+            && !contains_direct_eval
+            && !scopes.function_scope().escaped_this()
+            && !contains(parameters, ContainsSymbol::Super)
+            && !contains(body, ContainsSymbol::Super)
+            && !contains(parameters, ContainsSymbol::NewTarget)
+            && !contains(body, ContainsSymbol::NewTarget)
+        {
+            compiler.code_block_flags |= CodeBlockFlags::THIS_NOT_IN_ENVIRONMENT;
         }
 
         if compiler.code_block_flags.has_function_scope() {

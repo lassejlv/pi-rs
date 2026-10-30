@@ -421,6 +421,7 @@ pub fn build_system_prompt(input: &BuildSystemPromptOptions) -> anyhow::Result<S
         tools_removed: None,
         timestamp: 0,
         timestamp_last: false,
+        ..Default::default()
     };
     Ok(get_system_message_text(&message))
 }

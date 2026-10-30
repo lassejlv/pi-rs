@@ -2,6 +2,9 @@
 //! overrides, extendResources). Extension and theme cases live with the extension loader and
 //! theme modules.
 
+// Tests hold `TEST_ENV_LOCK` across awaits to serialize process-global env changes.
+#![allow(clippy::await_holding_lock)]
+
 use super::*;
 use crate::core::source_info::{CreateSyntheticSourceInfoOptions, create_synthetic_source_info};
 use std::path::PathBuf;
@@ -704,6 +707,8 @@ async fn skips_project_resources_when_project_is_not_trusted() {
 
 #[tokio::test]
 async fn extend_resources_applies_extension_metadata() {
+    // The real ~/.agents/skills would add unrelated skill diagnostics.
+    let _home = crate::core::package_manager::IsolatedHome::new();
     let dirs = Dirs::new();
     let extra_skill_dir = node_join(&[&dirs.temp_dir, "extra skills", "extra-skill"]);
     let skill_path = node_join(&[&extra_skill_dir, "SKILL.md"]);

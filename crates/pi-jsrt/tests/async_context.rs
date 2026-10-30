@@ -11,12 +11,43 @@ fn run(name: &str, script: &str) -> String {
     let path = dir.path().join(name);
     std::fs::write(&path, script).unwrap();
     let out = Command::new(NODE_BIN).arg(&path).output().unwrap();
-    format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr))
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    )
 }
 
 #[test]
 fn async_local_storage_follows_async_continuations() {
-    assert_eq!(run("als.js", ALS), ALS_NODE);
+    let actual: Vec<serde_json::Value> = serde_json::from_str(&run("als.js", ALS)).unwrap();
+    let expected: Vec<serde_json::Value> = serde_json::from_str(ALS_NODE).unwrap();
+    assert_eq!(actual.len(), expected.len());
+    let start = expected
+        .iter()
+        .position(|row| row[0] == "sync after run")
+        .unwrap()
+        + 1;
+    let end = expected
+        .iter()
+        .position(|row| row[0] == "resource")
+        .unwrap();
+    assert_eq!(actual[..start], expected[..start]);
+    assert_eq!(actual[end..], expected[end..]);
+    // These independent 5 ms timers can land on different loop iterations.
+    // Node itself interleaves A's immediate/timeout with B's continuation.
+    // Compare every event and store value in each task's causal order instead.
+    for tag in ["A", "B"] {
+        let actual = actual[start..end]
+            .iter()
+            .filter(|row| row[0] == tag)
+            .collect::<Vec<_>>();
+        let expected = expected[start..end]
+            .iter()
+            .filter(|row| row[0] == tag)
+            .collect::<Vec<_>>();
+        assert_eq!(actual, expected, "async context {tag}");
+    }
 }
 
 #[test]

@@ -24,7 +24,10 @@ use crate::utils::event_stream::AssistantMessageEventSender;
 use crate::utils::hash::short_hash;
 use crate::utils::json_parse::{parse_streaming_json_object, parse_tool_call_arguments};
 use crate::utils::sanitize_unicode::sanitize_surrogates;
-use crate::utils::text::{get_system_message_text, render_system_message_update};
+use crate::utils::text::{
+    get_system_message_text, get_system_message_text_is_empty, render_system_message_update,
+    render_system_message_update_is_empty,
+};
 use crate::utils::transcript::{
     TranscriptToolSupport, resolve_transcript, resolve_transcript_tools,
 };
@@ -84,7 +87,8 @@ fn convert_tool_result_output(model: &Model, content: &[UserContentBlock]) -> Va
         .collect::<Vec<_>>()
         .join("\n");
     let images: Vec<&ImageContent> = content.iter().filter_map(|c| c.as_image()).collect();
-    let has_text = !text_result.trim().is_empty();
+    let removed = content.iter().filter_map(|c| c.as_text()).any(|t| t.lone_surrogates_removed);
+    let has_text = !crate::types::is_blank_text(&text_result, removed);
     if images.is_empty() || !model.supports_images() {
         let text = if has_text {
             text_result
@@ -351,10 +355,11 @@ pub fn convert_responses_messages(
                     )?;
                 }
                 if !is_leading_system_message || include_initial_system_message {
+                    // Each part with upstream's emptiness before `sanitizeSurrogates`.
                     let mut parts = vec![if is_leading_system_message {
-                        get_system_message_text(system)
+                        (get_system_message_text(system), get_system_message_text_is_empty(system))
                     } else {
-                        render_system_message_update(system)
+                        (render_system_message_update(system), render_system_message_update_is_empty(system))
                     }];
                     if anchors_tool_changes {
                         let added: HashSet<&str> = system
@@ -371,18 +376,18 @@ pub fn convert_responses_messages(
                             .filter(|name| !added.contains(name.as_str()))
                             .collect();
                         if !removed.is_empty() {
-                            parts.push(render_tool_removal_notice(&removed));
+                            let notice = render_tool_removal_notice(&removed);
+                            let empty = notice.is_empty();
+                            parts.push((notice, empty));
                         }
                         for name in &removed {
                             unavailable_tools.insert(name);
                         }
                     }
-                    let text = parts
-                        .into_iter()
-                        .filter(|p| !p.is_empty())
-                        .collect::<Vec<_>>()
-                        .join("\n\n");
-                    if !text.is_empty() {
+                    let parts: Vec<String> =
+                        parts.into_iter().filter(|(_, empty)| !empty).map(|(part, _)| part).collect();
+                    let text = parts.join("\n\n");
+                    if !parts.is_empty() {
                         messages.push(json!({ "role": instruction_role, "content": sanitize_surrogates(&text) }));
                     }
                 }

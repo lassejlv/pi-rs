@@ -146,7 +146,7 @@ pub async fn refresh_stored_oauth_credential(
         let signal = signal.clone();
         let lock_wait = lock_wait.clone();
         let started = started.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             signal.cancelled().await;
             if !started.load(std::sync::atomic::Ordering::SeqCst) {
                 lock_wait.cancel();
@@ -159,7 +159,7 @@ pub async fn refresh_stored_oauth_credential(
     let store = credentials.clone();
     let store_id = provider_id.to_string();
     let lock_signal = lock_wait.clone();
-    let operation = tokio::spawn(async move {
+    let operation = crate::utils::wasm::spawn(async move {
         store
             .modify(
                 &store_id,
@@ -173,8 +173,8 @@ pub async fn refresh_stored_oauth_credential(
                         }
                         let timeout = CancellationToken::new();
                         let timer = timeout.clone();
-                        let handle = tokio::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(DEFAULT_OAUTH_REFRESH_TIMEOUT_MS)).await;
+                        let handle = crate::utils::wasm::spawn(async move {
+                            crate::utils::wasm::sleep(Duration::from_millis(DEFAULT_OAUTH_REFRESH_TIMEOUT_MS)).await;
                             timer.cancel();
                         });
                         let refreshed = oauth.refresh(current, timeout).await;

@@ -4,8 +4,8 @@ use pi_telemetry::{
 
 fn span(id: &str) -> StoredSpan {
     StoredSpan {
-        id: id.to_string(),
-        trace_id: "trace".to_string(),
+        id: id.into(),
+        trace_id: "trace".into(),
         parent_id: None,
         name: id.to_string(),
         started_ms: 0.0,
@@ -210,7 +210,7 @@ fn renders_deep_trees_without_recursive_calls() {
         .map(|index| {
             with(span(&index.to_string()), |s| {
                 if index > 0 {
-                    s.parent_id = Some((index - 1).to_string());
+                    s.parent_id = Some((index - 1).to_string().into());
                 }
             })
         })

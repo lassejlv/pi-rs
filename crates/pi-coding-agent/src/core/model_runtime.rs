@@ -542,17 +542,23 @@ impl ModelRuntime {
     /// Recompose every provider. Providers are replaced one by one (and stale ones removed) rather
     /// than cleared first, so concurrent readers never observe an empty collection.
     fn rebuild_providers(&self) {
-        let _composition = self.composition.lock();
-        self.state.lock().composition_errors.clear();
-        let ids = self.provider_ids();
-        for provider_id in &ids {
-            self.recompose_provider(provider_id);
-        }
-        for provider in self.models.get_providers() {
-            if !ids.contains(provider.id()) {
-                self.models.delete_provider(provider.id());
+        {
+            let _composition = self.composition.lock();
+            self.state.lock().composition_errors.clear();
+            let ids = self.provider_ids();
+            for provider_id in &ids {
+                self.recompose_provider(provider_id);
+            }
+            for provider in self.models.get_providers() {
+                if !ids.contains(provider.id()) {
+                    self.models.delete_provider(provider.id());
+                }
             }
         }
+        // Outside the composition lock, like every other recomposition: the snapshot reads each
+        // provider's models, and an extension's provider answers on its JS thread, which may be
+        // waiting for this lock in `registerProvider` (a refresh running beside an extension that
+        // registers providers deadlocked here).
         self.update_model_snapshot();
     }
 

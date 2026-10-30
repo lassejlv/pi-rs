@@ -1,0 +1,1388 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "cases": [
+    {
+      "name": "empty",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {},
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "null details and structured channels do not enter model content",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "details": null,
+        "structuredOutput": null,
+        "control": {
+          "terminate": false,
+          "handoff": "ignored",
+          "addTools": [
+            "ignored"
+          ]
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "details": null,
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "explicit output and diagnostics",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "diagnostics": [
+          {
+            "severity": "info",
+            "message": "hint"
+          },
+          {
+            "severity": "warn",
+            "message": "trimmed",
+            "code": "truncated"
+          },
+          {
+            "severity": "error",
+            "message": "failed",
+            "code": "error"
+          }
+        ]
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "one"
+              },
+              {
+                "type": "text",
+                "text": "two"
+              },
+              {
+                "type": "text",
+                "text": "<harness>\n[info] hint\n[warn] trimmed\n[error] failed\n</harness>"
+              }
+            ],
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": [
+            {
+              "severity": "info",
+              "message": "hint"
+            },
+            {
+              "severity": "warn",
+              "message": "trimmed",
+              "code": "truncated"
+            },
+            {
+              "severity": "error",
+              "message": "failed",
+              "code": "error"
+            }
+          ]
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "images and text",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "image",
+            "data": "aGVsbG8=",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "visible"
+          }
+        ],
+        "isError": false,
+        "details": {
+          "text": "ui only"
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "image",
+                "data": "aGVsbG8=",
+                "mimeType": "image/png"
+              },
+              {
+                "type": "text",
+                "text": "visible"
+              }
+            ],
+            "details": {
+              "text": "ui only"
+            },
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "UTF16 name identities and diagnostics",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "\ud800",
+        "name": "\udfff",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "\ud800"
+          }
+        ],
+        "isError": true,
+        "details": {
+          "\ud800": "\udfff"
+        },
+        "diagnostics": [
+          {
+            "severity": "error",
+            "message": "\udfff",
+            "code": "\ud800"
+          }
+        ]
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "\ud800",
+            "toolName": "\udfff",
+            "content": [
+              {
+                "type": "text",
+                "text": "\ud800"
+              },
+              {
+                "type": "text",
+                "text": "<harness>\n[error] \udfff\n</harness>"
+              }
+            ],
+            "details": {
+              "\ud800": "\udfff"
+            },
+            "isError": true,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": [
+            {
+              "severity": "error",
+              "message": "\udfff",
+              "code": "\ud800"
+            }
+          ]
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "usage recorded once with receipt",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "spent"
+          }
+        ],
+        "usage": {
+          "input": 1.5,
+          "output": 2,
+          "cacheRead": 3,
+          "cacheWrite": 4,
+          "totalTokens": 10.5,
+          "cost": {
+            "input": 0.01,
+            "output": 0.02,
+            "cacheRead": 0.03,
+            "cacheWrite": 0.04,
+            "total": 0.1
+          }
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "spent"
+              }
+            ],
+            "usage": {
+              "input": 1.5,
+              "output": 2,
+              "cacheRead": 3,
+              "cacheWrite": 4,
+              "totalTokens": 10.5,
+              "cost": {
+                "input": 0.01,
+                "output": 0.02,
+                "cacheRead": 0.03,
+                "cacheWrite": 0.04,
+                "total": 0.1
+              }
+            },
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 3,
+        "conversationId": 1
+      },
+      "usage": {
+        "models": {},
+        "tools": {
+          "read": {
+            "input": 1.5,
+            "output": 2,
+            "cacheRead": 3,
+            "cacheWrite": 4,
+            "totalTokens": 10.5,
+            "cost": {
+              "input": 0.01,
+              "output": 0.02,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.04,
+              "total": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fractional usage key and explicit zero duration",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "__proto__",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "isError": true,
+        "usage": {
+          "input": 1.5,
+          "output": 2,
+          "cacheRead": 3,
+          "cacheWrite": 4,
+          "totalTokens": 10.5,
+          "cost": {
+            "input": 0.01,
+            "output": 0.02,
+            "cacheRead": 0.03,
+            "cacheWrite": 0.04,
+            "total": 0.1
+          }
+        }
+      },
+      "meta": {
+        "timestamp": 42,
+        "durationMs": 0
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "__proto__",
+            "content": [],
+            "usage": {
+              "input": 1.5,
+              "output": 2,
+              "cacheRead": 3,
+              "cacheWrite": 4,
+              "totalTokens": 10.5,
+              "cost": {
+                "input": 0.01,
+                "output": 0.02,
+                "cacheRead": 0.03,
+                "cacheWrite": 0.04,
+                "total": 0.1
+              }
+            },
+            "isError": true,
+            "durationMs": 0,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 3,
+        "conversationId": 1
+      },
+      "usage": {
+        "models": {},
+        "tools": {
+          "__proto__": {
+            "input": 1.5,
+            "output": 2,
+            "cacheRead": 3,
+            "cacheWrite": 4,
+            "totalTokens": 10.5,
+            "cost": {
+              "input": 0.01,
+              "output": 0.02,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.04,
+              "total": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fractional duration and timestamp",
+      "retention": 600000,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [],
+        "diagnostics": []
+      },
+      "meta": {
+        "timestamp": 42.25,
+        "durationMs": 0.5
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "isError": false,
+            "durationMs": 0.5,
+            "timestamp": 42.25
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "empty",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {},
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "null details and structured channels do not enter model content",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "details": null,
+        "structuredOutput": null,
+        "control": {
+          "terminate": false,
+          "handoff": "ignored",
+          "addTools": [
+            "ignored"
+          ]
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "details": null,
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "explicit output and diagnostics",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "diagnostics": [
+          {
+            "severity": "info",
+            "message": "hint"
+          },
+          {
+            "severity": "warn",
+            "message": "trimmed",
+            "code": "truncated"
+          },
+          {
+            "severity": "error",
+            "message": "failed",
+            "code": "error"
+          }
+        ]
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "one"
+              },
+              {
+                "type": "text",
+                "text": "two"
+              },
+              {
+                "type": "text",
+                "text": "<harness>\n[info] hint\n[warn] trimmed\n[error] failed\n</harness>"
+              }
+            ],
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": [
+            {
+              "severity": "info",
+              "message": "hint"
+            },
+            {
+              "severity": "warn",
+              "message": "trimmed",
+              "code": "truncated"
+            },
+            {
+              "severity": "error",
+              "message": "failed",
+              "code": "error"
+            }
+          ]
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "images and text",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "image",
+            "data": "aGVsbG8=",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "visible"
+          }
+        ],
+        "isError": false,
+        "details": {
+          "text": "ui only"
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "image",
+                "data": "aGVsbG8=",
+                "mimeType": "image/png"
+              },
+              {
+                "type": "text",
+                "text": "visible"
+              }
+            ],
+            "details": {
+              "text": "ui only"
+            },
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "UTF16 name identities and diagnostics",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "\ud800",
+        "name": "\udfff",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "\ud800"
+          }
+        ],
+        "isError": true,
+        "details": {
+          "\ud800": "\udfff"
+        },
+        "diagnostics": [
+          {
+            "severity": "error",
+            "message": "\udfff",
+            "code": "\ud800"
+          }
+        ]
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "\ud800",
+            "toolName": "\udfff",
+            "content": [
+              {
+                "type": "text",
+                "text": "\ud800"
+              },
+              {
+                "type": "text",
+                "text": "<harness>\n[error] \udfff\n</harness>"
+              }
+            ],
+            "details": {
+              "\ud800": "\udfff"
+            },
+            "isError": true,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": [
+            {
+              "severity": "error",
+              "message": "\udfff",
+              "code": "\ud800"
+            }
+          ]
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    },
+    {
+      "name": "usage recorded once with receipt",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [
+          {
+            "type": "text",
+            "text": "spent"
+          }
+        ],
+        "usage": {
+          "input": 1.5,
+          "output": 2,
+          "cacheRead": 3,
+          "cacheWrite": 4,
+          "totalTokens": 10.5,
+          "cost": {
+            "input": 0.01,
+            "output": 0.02,
+            "cacheRead": 0.03,
+            "cacheWrite": 0.04,
+            "total": 0.1
+          }
+        }
+      },
+      "meta": {
+        "timestamp": 42
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "spent"
+              }
+            ],
+            "usage": {
+              "input": 1.5,
+              "output": 2,
+              "cacheRead": 3,
+              "cacheWrite": 4,
+              "totalTokens": 10.5,
+              "cost": {
+                "input": 0.01,
+                "output": 0.02,
+                "cacheRead": 0.03,
+                "cacheWrite": 0.04,
+                "total": 0.1
+              }
+            },
+            "isError": false,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 3,
+        "conversationId": 1
+      },
+      "usage": {
+        "models": {},
+        "tools": {
+          "read": {
+            "input": 1.5,
+            "output": 2,
+            "cacheRead": 3,
+            "cacheWrite": 4,
+            "totalTokens": 10.5,
+            "cost": {
+              "input": 0.01,
+              "output": 0.02,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.04,
+              "total": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fractional usage key and explicit zero duration",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "__proto__",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "isError": true,
+        "usage": {
+          "input": 1.5,
+          "output": 2,
+          "cacheRead": 3,
+          "cacheWrite": 4,
+          "totalTokens": 10.5,
+          "cost": {
+            "input": 0.01,
+            "output": 0.02,
+            "cacheRead": 0.03,
+            "cacheWrite": 0.04,
+            "total": 0.1
+          }
+        }
+      },
+      "meta": {
+        "timestamp": 42,
+        "durationMs": 0
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "__proto__",
+            "content": [],
+            "usage": {
+              "input": 1.5,
+              "output": 2,
+              "cacheRead": 3,
+              "cacheWrite": 4,
+              "totalTokens": 10.5,
+              "cost": {
+                "input": 0.01,
+                "output": 0.02,
+                "cacheRead": 0.03,
+                "cacheWrite": 0.04,
+                "total": 0.1
+              }
+            },
+            "isError": true,
+            "durationMs": 0,
+            "timestamp": 42
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 3,
+        "conversationId": 1
+      },
+      "usage": {
+        "models": {},
+        "tools": {
+          "__proto__": {
+            "input": 1.5,
+            "output": 2,
+            "cacheRead": 3,
+            "cacheWrite": 4,
+            "totalTokens": 10.5,
+            "cost": {
+              "input": 0.01,
+              "output": 0.02,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.04,
+              "total": 0.1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fractional duration and timestamp",
+      "retention": 0,
+      "call": {
+        "type": "toolCall",
+        "id": "call-1",
+        "name": "read",
+        "arguments": {
+          "path": "a.ts"
+        }
+      },
+      "result": {
+        "output": [],
+        "diagnostics": []
+      },
+      "meta": {
+        "timestamp": 42.25,
+        "durationMs": 0.5
+      },
+      "entry": {
+        "model": [
+          {
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "content": [],
+            "isError": false,
+            "durationMs": 0.5,
+            "timestamp": 42.25
+          }
+        ],
+        "data": {
+          "diagnostics": []
+        },
+        "kind": "pi.tool-result",
+        "id": 2,
+        "conversationId": 1
+      },
+      "usage": null
+    }
+  ],
+  "assignments": [
+    {
+      "name": "new field",
+      "current": {},
+      "value": null,
+      "after": {
+        "value": null
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value"
+          ],
+          null
+        ]
+      ]
+    },
+    {
+      "name": "record delete before numeric key order",
+      "current": {
+        "value": {
+          "old": 1,
+          "z": 2
+        }
+      },
+      "value": {
+        "2": "two",
+        "10": "ten",
+        "z": 3
+      },
+      "after": {
+        "value": {
+          "2": "two",
+          "10": "ten",
+          "z": 3
+        }
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value",
+            "2"
+          ],
+          "two"
+        ],
+        [
+          "s",
+          [
+            "value",
+            "10"
+          ],
+          "ten"
+        ],
+        [
+          "s",
+          [
+            "value",
+            "z"
+          ],
+          3
+        ],
+        [
+          "d",
+          [
+            "value",
+            "old"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "append existing leaf",
+      "current": {
+        "value": {
+          "text": "hello",
+          "other": 1
+        }
+      },
+      "value": {
+        "text": "hello world",
+        "other": 1
+      },
+      "after": {
+        "value": {
+          "text": "hello world",
+          "other": 1
+        }
+      },
+      "ops": [
+        [
+          "a",
+          [
+            "value",
+            "text"
+          ],
+          " world"
+        ]
+      ]
+    },
+    {
+      "name": "grow array without rewriting existing objects",
+      "current": {
+        "value": [
+          {
+            "text": "a"
+          },
+          2
+        ]
+      },
+      "value": [
+        {
+          "text": "ab"
+        },
+        3,
+        {
+          "text": "new"
+        }
+      ],
+      "after": {
+        "value": [
+          {
+            "text": "ab"
+          },
+          3,
+          {
+            "text": "new"
+          }
+        ]
+      },
+      "ops": [
+        [
+          "p",
+          [
+            "value"
+          ],
+          2,
+          0,
+          [
+            {
+              "text": "new"
+            }
+          ]
+        ],
+        [
+          "s",
+          [
+            "value",
+            1
+          ],
+          3
+        ],
+        [
+          "a",
+          [
+            "value",
+            0,
+            "text"
+          ],
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "shrink array replaces field",
+      "current": {
+        "value": [
+          1,
+          2,
+          3
+        ]
+      },
+      "value": [
+        1
+      ],
+      "after": {
+        "value": [
+          1
+        ]
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value"
+          ],
+          [
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "identical records preserve noops",
+      "current": {
+        "value": {
+          "a": [
+            1,
+            {
+              "text": "x"
+            }
+          ]
+        }
+      },
+      "value": {
+        "a": [
+          1,
+          {
+            "text": "x"
+          }
+        ]
+      },
+      "after": {
+        "value": {
+          "a": [
+            1,
+            {
+              "text": "x"
+            }
+          ]
+        }
+      },
+      "ops": []
+    },
+    {
+      "name": "UTF16 keys and leaves",
+      "current": {
+        "value": {
+          "\ud800": "\udfff"
+        }
+      },
+      "value": {
+        "\ud800": "\udfffmore"
+      },
+      "after": {
+        "value": {
+          "\ud800": "\udfffmore"
+        }
+      },
+      "ops": [
+        [
+          "a",
+          [
+            "value",
+            "\ud800"
+          ],
+          "more"
+        ]
+      ]
+    },
+    {
+      "name": "nested record to array",
+      "current": {
+        "value": {
+          "a": {
+            "b": 1
+          }
+        }
+      },
+      "value": {
+        "a": [
+          1,
+          2
+        ]
+      },
+      "after": {
+        "value": {
+          "a": [
+            1,
+            2
+          ]
+        }
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value",
+            "a"
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "array to scalar",
+      "current": {
+        "value": [
+          1
+        ]
+      },
+      "value": false,
+      "after": {
+        "value": false
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value"
+          ],
+          false
+        ]
+      ]
+    },
+    {
+      "name": "null to record",
+      "current": {
+        "value": null
+      },
+      "value": {
+        "ok": true
+      },
+      "after": {
+        "value": {
+          "ok": true
+        }
+      },
+      "ops": [
+        [
+          "s",
+          [
+            "value"
+          ],
+          {
+            "ok": true
+          }
+        ]
+      ]
+    }
+  ]
+}

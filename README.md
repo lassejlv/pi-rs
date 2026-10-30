@@ -45,11 +45,33 @@ profile.release.strip=false`.
 | `crates/pi-json` | (new) | `JSON.parse` with V8's error messages and `JSON.stringify` with JavaScript formatting, shared by the crates above |
 | `crates/pi-jsrt` | (new) | Embedded JavaScript runtime for extensions: Boa engine, oxc TypeScript stripping, ES module loader, Node API shims (`fs`, `path`, `child_process`, `events`, streams, `fetch`, ...) |
 | `crates/pi-coding-agent` | `packages/coding-agent` | The `pi` binary and library: sessions, tools, settings, resources, packages, interactive/print/JSON/RPC modes, built-in extensions |
+| `crates/pi-chord` | `packages/chord` (subset) | JSON revisions, invocation context, cancellation, watches and SQLite contracts used by durable storage |
+| `crates/pi-durable` | `packages/durable` | Durable sessions, transactions, documents, tasks, scheduler, Harness and storage (memory, JSONL, SQLite, IndexedDB, Cloudflare) |
+| `crates/pi-durable-jsrt` | (new) | Serves `@earendil-works/pi-durable` and `@earendil-works/chord` to pi extensions as embedded pi-jsrt modules |
 
 Modules mirror the TypeScript file layout (`core/agent-session.ts` is
 `pi_coding_agent::core::agent_session`). [`PORTING.md`](PORTING.md) describes the conventions and
 [`crates/pi-coding-agent/ARCHITECTURE.md`](crates/pi-coding-agent/ARCHITECTURE.md) the design of
 the main crate.
+
+## Durable
+
+`pi-chord` and `pi-durable` are a native Rust port of the TypeScript `@earendil-works/chord` and
+`@earendil-works/pi-durable` packages: sessions, transactions, documents, the task scheduler and a
+public `Harness`/`Conversation` API, backed by memory, JSONL, SQLite, IndexedDB and Cloudflare
+Durable Object storage. `pi-durable-jsrt` serves both packages to pi extensions as embedded
+pi-jsrt modules, so existing extensions that import `@earendil-works/pi-durable` or
+`@earendil-works/chord` run unchanged.
+
+Try it with `/durable` from [`durable-demo.ts`](crates/pi-coding-agent/examples/extensions/durable-demo.ts),
+or run an offline conversation directly:
+
+```sh
+cargo run -p pi-durable --example conversation -- "Hello"
+```
+
+Current scope, test counts and open items are in
+[`porting/durable/STATUS.md`](porting/durable/STATUS.md).
 
 ## Parity with TypeScript pi
 

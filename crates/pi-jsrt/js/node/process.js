@@ -186,6 +186,36 @@ internal.runTicks = () => {
   tickHead = 0;
 };
 
+/**
+ * `process.env` as Node keeps it: values are strings, and every assignment or deletion reaches the
+ * runtime (`ops.setEnv`), so `process.env.TZ = "Asia/Kolkata"` changes the runtime's timezone.
+ */
+function liveEnv(values) {
+  return new Proxy(values, {
+    set(target, key, value) {
+      if (typeof key === "symbol") throw new TypeError("Cannot convert a Symbol value to a string");
+      const text = String(value);
+      target[key] = text;
+      ops.setEnv(key, text);
+      return true;
+    },
+    defineProperty(target, key, descriptor) {
+      if (typeof key === "symbol" || !("value" in descriptor)) {
+        throw new TypeError("'process.env' only accepts a configurable, writable, and enumerable data descriptor");
+      }
+      const text = String(descriptor.value);
+      Object.defineProperty(target, key, { value: text, writable: true, enumerable: true, configurable: true });
+      ops.setEnv(key, text);
+      return true;
+    },
+    deleteProperty(target, key) {
+      delete target[key];
+      if (typeof key === "string") ops.setEnv(key, undefined);
+      return true;
+    },
+  });
+}
+
 const process = new EventEmitter();
 const startTime = ops.now();
 let exitCode;
@@ -209,7 +239,7 @@ Object.assign(process, {
   execArgv: [],
   argv: Array.from(config.argv),
   argv0: config.argv[0] ?? "pi",
-  env: config.env,
+  env: liveEnv(config.env),
   features: { inspector: false, ipv6: true, tls: true, typescript: "strip" },
   config: { variables: {} },
   allowedNodeEnvironmentFlags: new Set(),

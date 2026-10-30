@@ -710,8 +710,11 @@ mod tests {
     fn deflate_round_trips_and_matches_zlib_bytes() {
         // Node: zlib.deflateSync("abc").toString("hex")
         assert_eq!(hex(&process(DEFLATE, -1, b"abc").unwrap()), "789c4b4c4a0600024d0127");
-        assert_eq!(hex(&process(GZIP, -1, b"abc").unwrap()), "1f8b08000000000000034b4c4a0600c241243503000000");
-        assert_eq!(hex(&process(GZIP, 9, b"abc").unwrap()), "1f8b08000000000002034b4c4a0600c241243503000000");
+        // Node on macOS uses the Darwin OS byte (0x13); the Linux fixture uses 0x03.
+        let gzip_hex=if cfg!(target_os="macos") { "1f8b08000000000000134b4c4a0600c241243503000000" } else { "1f8b08000000000000034b4c4a0600c241243503000000" };
+        assert_eq!(hex(&process(GZIP, -1, b"abc").unwrap()), gzip_hex);
+        let gzip_level9_hex=if cfg!(target_os="macos") { "1f8b08000000000002134b4c4a0600c241243503000000" } else { "1f8b08000000000002034b4c4a0600c241243503000000" };
+        assert_eq!(hex(&process(GZIP, 9, b"abc").unwrap()), gzip_level9_hex);
         let big: Vec<u8> = (0..200_000u32).map(|i| (i % 251) as u8 ^ (i / 1000) as u8).collect();
         for (c, d) in [(DEFLATE, INFLATE), (GZIP, GUNZIP), (DEFLATERAW, INFLATERAW), (GZIP, UNZIP), (DEFLATE, UNZIP), (BROTLI_ENCODE, BROTLI_DECODE), (ZSTD_COMPRESS, ZSTD_DECOMPRESS)] {
             let z = process(c, -1, &big).unwrap();

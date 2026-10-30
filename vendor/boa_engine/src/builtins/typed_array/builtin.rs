@@ -26,7 +26,7 @@ use crate::{
     string::StaticJsStrings,
     value::IntegerOrInfinity,
 };
-use crate::{builtins::array_buffer::utils::memmove_naive, value::JsVariant};
+use crate::{builtins::array_buffer::utils::memmove_naive, object::IndexedProperties, value::JsVariant};
 
 /// The JavaScript `%TypedArray%` object.
 ///
@@ -1923,6 +1923,62 @@ impl BuiltinTypedArray {
         Ok(())
     }
 
+    /// The dense-number fast path of [`Self::set_typed_array_from_array_like`]: returns whether
+    /// it applied (after the caller's range checks; `false` leaves everything untouched).
+    fn set_from_dense_numbers(
+        target: &JsObject<TypedArray>,
+        target_offset: u64,
+        src: &JsObject,
+        src_length: u64,
+        context: &mut Context,
+    ) -> JsResult<bool> {
+        let kind = target.borrow().data().kind();
+        if kind.content_type() == ContentType::BigInt || !src.is_array() {
+            return Ok(false);
+        }
+        let src = src.borrow();
+        let (ints, floats) = match &src.properties().indexed_properties {
+            IndexedProperties::DenseI32(values) if values.len() as u64 == src_length => {
+                (Some(values), None)
+            }
+            IndexedProperties::DenseF64(values) if values.len() as u64 == src_length => {
+                (None, Some(values))
+            }
+            _ => return Ok(false),
+        };
+        let number = |k: usize| match (ints, floats) {
+            (Some(values), _) => f64::from(values[k]),
+            (_, Some(values)) => values[k],
+            _ => unreachable!(),
+        };
+        let array = target.borrow();
+        let mut buffer = array.data().viewed_array_buffer().as_buffer_mut();
+        let Some(mut buffer) = buffer.bytes(Ordering::Relaxed) else {
+            return Ok(true);
+        };
+        let offset = array.data().byte_offset();
+        let size = kind.element_size();
+        for k in 0..src_length as usize {
+            // ToNumber of a number runs no JS, so the borrows above stay valid.
+            let element = kind.get_element(&JsValue::from(number(k)), context)?;
+            let Some(index) = array
+                .data()
+                .validate_index((target_offset + k as u64) as f64, buffer.len())
+            else {
+                continue;
+            };
+            let byte_index = ((index * size) + offset) as usize;
+            // SAFETY: as in `typed_array_set_element`: the TypedArray guarantees alignment and
+            // `validate_index` guarantees the index is in bounds.
+            unsafe {
+                buffer
+                    .subslice_mut(byte_index..)
+                    .set_value(element, Ordering::Relaxed);
+            }
+        }
+        Ok(true)
+    }
+
     /// `SetTypedArrayFromArrayLike ( target, targetOffset, source )`
     ///
     /// More information:
@@ -1979,6 +2035,15 @@ impl BuiltinTypedArray {
             return Err(JsNativeError::range()
                 .with_message("Source object and target offset longer than target typed array")
                 .into());
+        }
+
+        // Fast path (not in the spec): a dense array of numbers into a Number typed array. Its
+        // elements are own data values (no getters, holes or proxy traps) and ToNumber of a
+        // number has no side effects, so steps 8-9 cannot observe or change anything else: the
+        // elements are converted and stored in one buffer borrow instead of one generic `Get`
+        // and `IntegerIndexedElementSet` per element.
+        if Self::set_from_dense_numbers(target, *target_offset, &src, src_length, context)? {
+            return Ok(());
         }
 
         // 8. Let k be 0.

@@ -152,11 +152,11 @@ async fn abortable_sleep(ms: f64, signal: Option<&CancellationToken>) -> Result<
             }
             tokio::select! {
                 _ = signal.cancelled() => Err(AbortError),
-                _ = tokio::time::sleep(duration) => Ok(()),
+                _ = crate::utils::wasm::sleep(duration) => Ok(()),
             }
         }
         None => {
-            tokio::time::sleep(duration).await;
+            crate::utils::wasm::sleep(duration).await;
             Ok(())
         }
     }

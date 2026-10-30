@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8"><title>idb</title>
+<script type="module">
+import init,{run,read_js_written,conformance,session_roundtrip,harness_turn,sleep_drop_probe} from "./pkg/pi_durable_indexeddb_browser.js";
+const request=r=>new Promise((ok,no)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});
+async function dump(name){
+ const db=await request(indexedDB.open(name,1));const out={};
+ const tx=db.transaction([...db.objectStoreNames],"readonly");
+ for(const s of db.objectStoreNames){const st=tx.objectStore(s);out[s]={keyPath:st.keyPath,indexes:Object.fromEntries([...st.indexNames].map(i=>[i,st.index(i).keyPath])),rows:await request(st.getAll())};}
+ db.close();return out;
+}
+window.result=(async()=>{
+ await init();
+ const text=await (await fetch("./fixture.json")).text();
+ const fixture=JSON.parse(text);
+ const plain=JSON.parse(await conformance(await (await fetch("./storage-indexeddb.json")).text(),false));
+ const reopen=JSON.parse(await conformance(await (await fetch("./storage-indexeddb-reopen.json")).text(),true));
+ const session=JSON.parse(await session_roundtrip());
+ const harness=JSON.parse(await harness_turn());
+ // Count clearTimeout calls made by dropped and fired sleeps.
+ const realClear=globalThis.clearTimeout;let cleared=0;
+ globalThis.clearTimeout=id=>{cleared++;return realClear(id);};
+ await sleep_drop_probe();
+ globalThis.clearTimeout=realClear;
+ const timers={cleared};
+ const rust=JSON.parse(await run(text));
+ const rustWritten=await dump("rust-written");
+ // A database created and filled by plain JavaScript with the reference schema.
+ await request(indexedDB.deleteDatabase("js-written"));
+ const open=indexedDB.open("js-written",1);
+ open.onupgradeneeded=()=>{const db=open.result;for(const [name,spec] of Object.entries(fixture.stores)){const st=db.createObjectStore(name,{keyPath:spec.keyPath});for(const [i,kp] of Object.entries(spec.indexes))st.createIndex(i,kp);}};
+ const db=await request(open);
+ const tx=db.transaction([...db.objectStoreNames],"readwrite");
+ for(const [name,spec] of Object.entries(fixture.finalStores))for(const row of spec.rows)tx.objectStore(name).put(row);
+ await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error);});db.close();
+ const js=JSON.parse(await read_js_written(text));
+ return JSON.stringify({plain,reopen,session,harness,timers,rust,js,rustWritten});
+})().catch(e=>JSON.stringify({error:String(e&&e.stack||e)}));
+</script>

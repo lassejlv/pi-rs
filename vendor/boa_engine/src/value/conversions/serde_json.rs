@@ -135,7 +135,7 @@ impl JsValue {
             JsVariant::Object(obj) => {
                 if seen_objects.contains(&obj) {
                     return Err(JsNativeError::typ()
-                        .with_message("cyclic object value")
+                        .with_message("Converting circular structure to JSON")
                         .into());
                 }
                 seen_objects.insert(obj.clone());
@@ -314,7 +314,7 @@ mod tests {
                 .to_json(&mut context)
                 .unwrap_err()
                 .to_string()
-                .starts_with("TypeError: cyclic object value"),
+                .starts_with("TypeError: Converting circular structure to JSON"),
         );
     }
 

@@ -180,8 +180,9 @@ async fn rejects_invalid_text_and_image_arguments(backend: Backend) {
     assert!(result.ok(), "{:?}", result.error());
     assert!(result.output.is_empty());
     let errors: Vec<String> = serde_json::from_value(result.value().unwrap().clone()).unwrap();
-    // The engine's own message: QuickJS says "circular", Boa "cyclic object value".
-    assert!(errors[0].starts_with("TypeError: ") && errors[0].contains("cyclic"), "{}", errors[0]);
+    // The engine's own message: QuickJS and V8 say "circular", and so does the patched Boa
+    // ("Converting circular structure to JSON", vendor/boa_engine/PATCH.md).
+    assert!(errors[0].starts_with("TypeError: ") && errors[0].contains("circular"), "{}", errors[0]);
     let mut expected = vec![
         "TypeError: image expects a non-empty image URL string, an object with image_url, or an image block { type: \"image\", data, mimeType }".to_string(),
         "TypeError: remote image URLs are not supported in tool outputs. Pass a base64 data URI instead".to_string(),
@@ -787,8 +788,12 @@ async fn ends_deep_recursion_with_a_range_error(backend: Backend) {
     "#,
     )
     .await;
+    // Catchable, as in QuickJS (vendor/boa_engine/PATCH.md).
+    assert_matches(&result, json!({ "ok": true, "value": ["RangeError", true] }));
+    // Uncaught, it ends the script as a script error.
+    let uncaught = run(&sandbox, "function dive() { dive(); } dive();").await;
     assert_matches(
-        &result,
+        &uncaught,
         json!({ "ok": false, "error": { "kind": "script", "name": "RangeError", "message": "Maximum call stack size exceeded" } }),
     );
 }

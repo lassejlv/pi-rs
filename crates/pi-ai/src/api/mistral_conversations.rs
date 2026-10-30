@@ -33,7 +33,10 @@ use crate::utils::headers::headers_to_record;
 use crate::utils::identity::{ClientIdentityTarget, get_identity_headers};
 use crate::utils::json_parse::{parse_streaming_json_object, parse_tool_call_arguments};
 use crate::utils::sanitize_unicode::sanitize_surrogates;
-use crate::utils::text::{get_system_message_text, render_system_message_update};
+use crate::utils::text::{
+    get_system_message_text, get_system_message_text_is_empty, render_system_message_update,
+    render_system_message_update_is_empty,
+};
 use crate::utils::transcript::{get_current_tools, resolve_transcript};
 
 const MISTRAL_TOOL_CALL_ID_LENGTH: usize = 9;
@@ -142,7 +145,8 @@ fn to_chat_messages(messages: &[Message], supports_images: bool) -> Vec<Value> {
         match message {
             Message::System(system) => {
                 let text = if index == 0 { get_system_message_text(system) } else { render_system_message_update(system) };
-                if !text.is_empty() {
+                let empty = if index == 0 { get_system_message_text_is_empty(system) } else { render_system_message_update_is_empty(system) };
+                if !empty {
                     result.push(json!({ "role": "system", "content": sanitize_surrogates(&text) }));
                 }
             }
@@ -171,12 +175,12 @@ fn to_chat_messages(messages: &[Message], supports_images: bool) -> Vec<Value> {
                 for block in &assistant.content {
                     match block {
                         AssistantContent::Text(t) => {
-                            if !t.text.trim().is_empty() {
+                            if !t.is_blank() {
                                 parts.push(json!({ "type": "text", "text": sanitize_surrogates(&t.text) }));
                             }
                         }
                         AssistantContent::Thinking(t) => {
-                            if !t.thinking.trim().is_empty() {
+                            if !t.is_blank() {
                                 parts.push(json!({ "type": "thinking", "thinking": [{ "type": "text", "text": sanitize_surrogates(&t.thinking) }] }));
                             }
                         }
@@ -575,7 +579,7 @@ async fn request_mistral_stream(
     }
     // The timeout covers only the wait for response headers; long streams must not be cut off.
     let timeout_ms = options.timeout_ms.unwrap_or(DEFAULT_HEADER_TIMEOUT_MS);
-    let send = tokio::time::timeout(Duration::from_millis(timeout_ms), request.send());
+    let send = crate::utils::wasm::timeout(Duration::from_millis(timeout_ms), request.send());
     let response = match &options.signal {
         Some(signal) => {
             if signal.is_cancelled() {
@@ -604,7 +608,7 @@ async fn request_mistral_stream(
         return Err(MistralHttpError { status_code: status.as_u16(), body, message }.into());
     }
     Ok(MistralEventReader {
-        body: Box::pin(response.bytes_stream()),
+        body: Box::pin(crate::utils::wasm::assert_send(response.bytes_stream())),
         buffer: String::new(),
         pending: Vec::new(),
         signal: options.signal.clone(),
@@ -868,7 +872,7 @@ async fn run_stream(model: Model, context: TranscriptContext, options: StreamOpt
 /// Stream responses from the native Mistral chat completions endpoint.
 pub fn stream(model: &Model, context: &TranscriptContext, options: StreamOptions) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

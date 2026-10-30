@@ -321,7 +321,7 @@ fn json_stringify_cyclic_object_throws_type_error() {
     run_test_actions([TestAction::assert_native_error(
         "var a = {}; a.a = a; JSON.stringify(a);",
         JsNativeErrorKind::Type,
-        "cyclic object value",
+        "Converting circular structure to JSON",
     )]);
 }
 
@@ -330,7 +330,7 @@ fn json_stringify_cyclic_array_throws_type_error() {
     run_test_actions([TestAction::assert_native_error(
         "var a = []; a[0] = a; JSON.stringify(a);",
         JsNativeErrorKind::Type,
-        "cyclic object value",
+        "Converting circular structure to JSON",
     )]);
 }
 
@@ -339,6 +339,6 @@ fn json_stringify_cyclic_nested_object_throws_type_error() {
     run_test_actions([TestAction::assert_native_error(
         "var a = {}; var b = { a }; a.b = b; JSON.stringify(a);",
         JsNativeErrorKind::Type,
-        "cyclic object value",
+        "Converting circular structure to JSON",
     )]);
 }

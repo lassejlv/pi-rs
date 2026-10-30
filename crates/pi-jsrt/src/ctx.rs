@@ -3,6 +3,8 @@
 //! These let embedders build host objects directly with Boa while still
 //! interoperating with handles and JSON conversion.
 
+use std::future::Future;
+
 use boa_engine::{Context, JsResult, JsValue};
 use serde_json::Value;
 
@@ -45,4 +47,38 @@ pub fn handle_count(ctx: &Context) -> usize {
 /// Run all pending promise jobs now.
 pub fn run_jobs(ctx: &mut Context) {
     crate::engine::run_microtasks(ctx);
+}
+
+/// Run `f` as the body of a synchronous host function implemented directly with Boa. While it
+/// runs, blocking calls into the runtime from this thread ([`crate::JsHandle::call_blocking`],
+/// [`crate::JsRuntime::with_context_blocking`], [`with_current`]) run re-entrantly on `ctx`
+/// instead of failing with [`crate::Error::Deadlock`]. `f` must reach the context only through
+/// [`with_current`].
+pub fn host_call<R>(ctx: &mut Context, f: impl FnOnce() -> R) -> R {
+    crate::runtime::enter_host_call(ctx, f)
+}
+
+/// Run `f` with the context of the host call executing on this thread (see [`host_call`] and
+/// [`crate::JsRuntime::register_function`]); `None` outside a host call.
+pub fn with_current<R>(f: impl FnOnce(&mut Context) -> R) -> Option<R> {
+    crate::runtime::with_current_ctx(f)
+}
+
+/// Conversion run on the JS thread once a [`spawn_promise`] future completes.
+pub type Settle = Box<dyn FnOnce(&mut Context) -> JsResult<JsValue> + Send>;
+
+/// Spawn `fut` on the runtime's tokio handle and return a promise settled on the JS thread with
+/// the value (or error) its [`Settle`] produces. The pending operation keeps the event loop
+/// alive, like the runtime's own async ops.
+pub fn spawn_promise<F>(ctx: &mut Context, fut: F) -> JsValue
+where
+    F: Future<Output = Settle> + Send + 'static,
+{
+    crate::engine::spawn_promise(ctx, fut)
+}
+
+/// Wait for `value` (awaiting it when it is a promise) and call `done` on the JS thread with the
+/// fulfilled value (`Ok`) or the rejection reason / thrown value (`Err`).
+pub fn when_settled(ctx: &mut Context, value: JsResult<JsValue>, done: impl FnOnce(&mut Context, std::result::Result<JsValue, JsValue>) + 'static) {
+    crate::engine::when_settled(ctx, value, done)
 }
