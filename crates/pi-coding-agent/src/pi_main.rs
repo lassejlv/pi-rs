@@ -690,6 +690,48 @@ fn build_session_options(
     (options, cli_thinking_from_model, diagnostics)
 }
 
+// Explicit tool requests must still work when extension discovery is disabled.
+fn requested_builtin_tool_extensions(tools: Option<&Vec<String>>) -> Vec<String> {
+    [("codemode", "codemode"), ("tool_search", "tool-search")]
+        .into_iter()
+        .filter(|(name, _)| {
+            tools.is_some_and(|tools| {
+                tools
+                    .iter()
+                    .rev()
+                    .find_map(|entry| {
+                        if entry == *name || entry.strip_prefix('+') == Some(*name) {
+                            Some(true)
+                        } else if entry.strip_prefix('-') == Some(*name) {
+                            Some(false)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(false)
+            })
+        })
+        .map(|(_, extension)| format!("builtin:{extension}"))
+        .collect()
+}
+
+#[cfg(test)]
+mod builtin_tool_request_tests {
+    use super::requested_builtin_tool_extensions;
+
+    #[test]
+    fn explicit_builtin_tools_are_loaded_even_without_discovery() {
+        let tools = vec!["+codemode".into(), "+tool_search".into()];
+        assert_eq!(
+            requested_builtin_tool_extensions(Some(&tools)),
+            ["builtin:codemode", "builtin:tool-search"]
+        );
+        let tools = vec!["+codemode".into(), "-codemode".into()];
+        assert!(requested_builtin_tool_extensions(Some(&tools)).is_empty());
+        assert!(requested_builtin_tool_extensions(None).is_empty());
+    }
+}
+
 fn resolve_cli_paths(cwd: &str, paths: Option<&Vec<String>>) -> Option<Vec<String>> {
     paths.map(|paths| {
         paths
@@ -947,7 +989,15 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
         if parsed.help == Some(true) || parsed.list_models.is_some() { AppMode::Print } else { app_mode };
     let project_trust_by_cwd: Arc<Mutex<HashMap<String, bool>>> = Arc::default();
 
-    let resolved_extension_paths = resolve_cli_paths(&cwd, parsed.extensions.as_ref());
+    let mut resolved_extension_paths = resolve_cli_paths(&cwd, parsed.extensions.as_ref());
+    if parsed.no_extensions == Some(true) {
+        let paths = resolved_extension_paths.get_or_insert_with(Vec::new);
+        for path in requested_builtin_tool_extensions(parsed.tools.as_ref()) {
+            if !paths.contains(&path) {
+                paths.push(path);
+            }
+        }
+    }
     let resolved_skill_paths = resolve_cli_paths(&cwd, parsed.skills.as_ref());
     let resolved_prompt_template_paths = resolve_cli_paths(&cwd, parsed.prompt_templates.as_ref());
     let resolved_theme_paths = resolve_cli_paths(&cwd, parsed.themes.as_ref());
@@ -1173,8 +1223,14 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     apply_http_proxy_settings(settings_manager.get_global_settings().http_proxy.as_deref());
     configure_http_dispatcher(Some(settings_manager.get_http_idle_timeout_ms()?))?;
 
+    let runtime_diagnostics = runtime.diagnostics();
+    let mut all_diagnostics = startup_settings_diagnostics.clone();
+    all_diagnostics.extend(runtime_diagnostics.iter().cloned());
+    let startup_diagnostics = deduplicate_diagnostics(&all_diagnostics);
+    let has_runtime_errors = runtime_diagnostics.iter().any(|d| d.r#type == AgentSessionRuntimeDiagnosticType::Error);
+
     if parsed.help == Some(true) {
-        report_diagnostics(&startup_settings_diagnostics);
+        report_diagnostics(&startup_diagnostics);
         let extension_flags: Vec<_> = resource_loader
             .get_extensions()
             .extensions
@@ -1186,7 +1242,7 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     }
 
     if let Some(list_models_arg) = &parsed.list_models {
-        report_diagnostics(&startup_settings_diagnostics);
+        report_diagnostics(&startup_diagnostics);
         let search_pattern = match list_models_arg {
             ArgsListModels::String(pattern) => Some(pattern.as_str()),
             ArgsListModels::Bool(_) => None,
@@ -1216,11 +1272,6 @@ pub async fn main(args: &[String], options: Option<&MainOptions>) -> anyhow::Res
     }
 
     time("resolveModelScope", None);
-    let runtime_diagnostics = runtime.diagnostics();
-    let mut all_diagnostics = startup_settings_diagnostics.clone();
-    all_diagnostics.extend(runtime_diagnostics.iter().cloned());
-    let startup_diagnostics = deduplicate_diagnostics(&all_diagnostics);
-    let has_runtime_errors = runtime_diagnostics.iter().any(|d| d.r#type == AgentSessionRuntimeDiagnosticType::Error);
     if app_mode != AppMode::Interactive || has_runtime_errors {
         report_diagnostics(&startup_diagnostics);
     }

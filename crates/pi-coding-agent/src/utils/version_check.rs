@@ -257,10 +257,14 @@ pub async fn get_latest_pi_version(
     Ok(get_latest_pi_release(current_version, options).await?.map(|release| release.version))
 }
 
-pub async fn check_for_new_pi_version(current_version: &str) -> anyhow::Result<Option<LatestPiRelease>> {
-    check_for_new_pi_version_from(LATEST_VERSION_URL, None, current_version).await
+/// The Rust fork must not advertise releases of the upstream npm application.
+/// Keep explicit release lookups available for management commands, but never query
+/// the upstream endpoint or show its update notifications during startup.
+pub async fn check_for_new_pi_version(_current_version: &str) -> anyhow::Result<Option<LatestPiRelease>> {
+    Ok(None)
 }
 
+#[cfg(test)]
 async fn check_for_new_pi_version_from(
     url: &str,
     client: Option<reqwest::Client>,
@@ -283,6 +287,11 @@ mod tests {
 
     fn client() -> Option<reqwest::Client> {
         Some(reqwest::Client::builder().no_proxy().build().unwrap())
+    }
+
+    #[tokio::test]
+    async fn rust_startup_never_advertises_upstream_releases() {
+        assert_eq!(check_for_new_pi_version("0.0.0").await.unwrap(), None);
     }
 
     #[test]

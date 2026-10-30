@@ -1453,3 +1453,64 @@ async fn drops_the_fullscreen_selection_when_session_entries_are_re_rendered() {
     assert!(!fx.mode.tui().has_active_selection());
     fx.cleanup();
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn markdown_transformers_receive_the_rendered_session_entry_identity() {
+    use pi_coding_agent::core::session_manager::SessionEntry;
+    let _lock = LOCK.lock().await;
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let captured = seen.clone();
+    let factory: ExtensionFactory = Arc::new(move |pi| {
+        let captured = captured.clone();
+        Box::pin(async move {
+            pi.register_markdown_transformer(Arc::new(move |markdown, context| {
+                captured.lock().push((markdown.to_string(), serde_json::to_value(context).unwrap()));
+                markdown.to_string()
+            }))?;
+            Ok(())
+        })
+    });
+    let fx = Fixture::new(FixtureOptions {
+        extensions: vec![TestExtension::new(factory)],
+        settings: Some(json!({"hideThinkingBlock": false})),
+        ..Default::default()
+    }).await;
+    let timestamp = "2025-01-15T10:30:00.000Z";
+    let assistant = json!({
+        "role": "assistant", "content": [
+            {"type": "thinking", "thinking": "reasoning"},
+            {"type": "text", "text": "answer"}
+        ],
+        "api": "openai-responses", "provider": "test", "model": "test",
+        "usage": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "totalTokens": 0,
+                  "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0}},
+        "stopReason": "stop", "timestamp": 123
+    });
+    let entries: Vec<SessionEntry> = serde_json::from_value(json!([
+        {"type": "message", "id": "user-entry", "parentId": null, "timestamp": timestamp,
+         "message": {"role": "user", "content": "restored", "timestamp": 123}},
+        {"type": "message", "id": "skill-entry", "parentId": "user-entry", "timestamp": timestamp,
+         "message": {"role": "user", "content": "<skill name=\"test\" location=\"/tmp/test/SKILL.md\">\ninstructions\n</skill>\n\nskill user text", "timestamp": 123}},
+        {"type": "message", "id": "assistant-one", "parentId": "skill-entry", "timestamp": timestamp,
+         "message": assistant},
+        {"type": "message", "id": "assistant-two", "parentId": "assistant-one", "timestamp": "2025-01-16T00:00:00Z",
+         "message": assistant}
+    ])).unwrap();
+    seen.lock().clear();
+    fx.hooks().render_session_entries(&entries);
+    fx.chat();
+    let contexts = seen.lock().clone();
+    for (id, kind, text, stamp) in [
+        ("user-entry", "user", "restored", timestamp),
+        ("skill-entry", "user", "skill user text", timestamp),
+        ("assistant-one", "assistant-thinking", "reasoning", timestamp),
+        ("assistant-one", "assistant", "answer", timestamp),
+        ("assistant-two", "assistant-thinking", "reasoning", "2025-01-16T00:00:00Z"),
+        ("assistant-two", "assistant", "answer", "2025-01-16T00:00:00Z"),
+    ] {
+        assert!(contexts.iter().any(|(markdown, ctx)| markdown == text
+            && ctx["messageType"] == kind && ctx["messageId"] == id
+            && ctx["timestamp"] == stamp && ctx["isStreaming"] == false), "{contexts:?}");
+    }
+    fx.cleanup();
+}

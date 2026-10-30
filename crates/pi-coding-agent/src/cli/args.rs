@@ -479,7 +479,7 @@ pub fn help_text(extension_flags: Option<&[ExtensionFlag]>) -> String {
                                  Applies to all tools, MCP tools included
   --thinking <level>             Set thinking level: off, minimal, low, medium, high, xhigh, max
   --extension, -e <path>         Load an extension file or builtin:<name> (can be used multiple times)
-  --no-extensions, -ne           Disable extension discovery and built-in extensions (explicit -e paths still work)
+  --no-extensions, -ne           Disable extension discovery and built-in extensions (explicit -e and --tools requests still work)
   --no-mcp                       Disable built-in MCP support: no servers connect and no MCP tools
   --skill <path>                 Load a skill file or directory (can be used multiple times)
   --no-skills, -ns               Disable skills discovery and loading

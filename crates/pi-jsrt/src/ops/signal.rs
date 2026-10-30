@@ -113,9 +113,26 @@ fn start_dispatcher() -> bool {
     static START: Once = Once::new();
     START.call_once(|| {
         let mut fds = [0i32; 2];
-        // SAFETY: pipe2 fills the array on success.
+        #[cfg(any(target_os = "linux", target_os = "android"))]
+        // SAFETY: pipe2 fills the array on success and atomically sets close-on-exec.
         if unsafe { libc::pipe2(fds.as_mut_ptr(), libc::O_CLOEXEC) } != 0 {
             return;
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        // SAFETY: pipe fills the array on success. Unlike pipe2, it is available on macOS.
+        if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+            return;
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        for fd in fds {
+            // SAFETY: these are the descriptors just created above.
+            if unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) } == -1 {
+                unsafe {
+                    libc::close(fds[0]);
+                    libc::close(fds[1]);
+                }
+                return;
+            }
         }
         let (r, w) = (fds[0], fds[1]);
         // SAFETY: plain fcntl on our own descriptor; a full pipe drops signals instead of blocking
@@ -152,8 +169,12 @@ fn start_dispatcher() -> bool {
 }
 
 fn dispatch(ctx: &mut Context, sig: i32) {
-    let Some(internal) = engine::try_internal(ctx) else { return };
-    let Ok(f) = internal.get(js_string!("signalEvent"), ctx) else { return };
+    let Some(internal) = engine::try_internal(ctx) else {
+        return;
+    };
+    let Ok(f) = internal.get(js_string!("signalEvent"), ctx) else {
+        return;
+    };
     let Some(f) = f.as_function() else { return };
     if let Err(e) = f.call(&JsValue::undefined(), &[JsValue::from(sig)], ctx) {
         engine::report_uncaught(ctx, e);

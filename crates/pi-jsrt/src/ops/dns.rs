@@ -381,6 +381,14 @@ fn sockaddr_of(sa: &SocketAddr) -> (libc::sockaddr_storage, libc::socklen_t) {
     match sa {
         SocketAddr::V4(v4) => {
             let sin = libc::sockaddr_in {
+                #[cfg(any(
+                    target_vendor = "apple",
+                    target_os = "freebsd",
+                    target_os = "openbsd",
+                    target_os = "netbsd",
+                    target_os = "dragonfly"
+                ))]
+                sin_len: std::mem::size_of::<libc::sockaddr_in>() as u8,
                 sin_family: libc::AF_INET as libc::sa_family_t,
                 sin_port: v4.port().to_be(),
                 sin_addr: libc::in_addr { s_addr: u32::from_ne_bytes(v4.ip().octets()) },
@@ -392,6 +400,14 @@ fn sockaddr_of(sa: &SocketAddr) -> (libc::sockaddr_storage, libc::socklen_t) {
         }
         SocketAddr::V6(v6) => {
             let sin6 = libc::sockaddr_in6 {
+                #[cfg(any(
+                    target_vendor = "apple",
+                    target_os = "freebsd",
+                    target_os = "openbsd",
+                    target_os = "netbsd",
+                    target_os = "dragonfly"
+                ))]
+                sin6_len: std::mem::size_of::<libc::sockaddr_in6>() as u8,
                 sin6_family: libc::AF_INET6 as libc::sa_family_t,
                 sin6_port: v6.port().to_be(),
                 sin6_flowinfo: v6.flowinfo(),

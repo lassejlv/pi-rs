@@ -18,7 +18,9 @@ use crate::core::package_manager::{
     ProgressEventType,
 };
 use crate::core::project_trust::{AppMode, ResolveProjectTrustedOptions, resolve_project_trusted};
-use crate::core::resource_loader::{DefaultResourceLoader, DefaultResourceLoaderOptions, is_builtin_extension};
+use crate::core::resource_loader::{
+    DefaultResourceLoader, DefaultResourceLoaderOptions, format_package_install_warning, is_builtin_extension,
+};
 use crate::core::settings_manager::{SettingsManager, SettingsManagerCreateOptions, SettingsScope};
 use crate::core::trust_manager::{ProjectTrustStore, has_trust_requiring_project_resources};
 use crate::modes::interactive::components::config_selector::ConfigWriteScope;
@@ -1160,6 +1162,19 @@ pub async fn handle_config_command(
     } else {
         global_resolved_paths.clone()
     };
+
+    let mut install_warnings = std::collections::HashSet::new();
+    for failure in global_resolved_paths
+        .install_failures
+        .iter()
+        .flatten()
+        .chain(project_resolved_paths.install_failures.iter().flatten())
+    {
+        let warning = format_package_install_warning(failure);
+        if install_warnings.insert(warning.clone()) {
+            eprintln!("{}", chalk::yellow(&format!("Warning: {warning}")));
+        }
+    }
 
     let mut resolved_paths = IndexMap::new();
     resolved_paths.insert(ConfigWriteScope::Global, global_resolved_paths);

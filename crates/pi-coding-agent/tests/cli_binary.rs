@@ -41,6 +41,37 @@ fn temp_root() -> (tempfile::TempDir, PathBuf, PathBuf) {
     (dir, agent_dir, project_dir)
 }
 
+#[test]
+fn explicit_codemode_tool_survives_no_extensions() {
+    let (_dir, agent_dir, project_dir) = temp_root();
+    let probe = project_dir.join("probe.js");
+    let result_path = project_dir.join("tools.json");
+    std::fs::write(&probe, format!(
+        "import {{ writeFileSync }} from 'node:fs';\nexport default function(pi) {{ pi.on('session_start', () => writeFileSync({}, JSON.stringify(pi.getActiveTools()))); }}",
+        serde_json::to_string(&result_path).unwrap()
+    )).unwrap();
+    let result = run_pi(
+        &[
+            "--tools",
+            "+codemode",
+            "-ne",
+            "-e",
+            probe.to_str().unwrap(),
+            "--mode",
+            "rpc",
+            "--no-session",
+        ],
+        &project_dir,
+        &agent_dir,
+        true,
+    );
+    assert_eq!(result.code, Some(0), "{}", result.stderr);
+    let tools: Vec<String> =
+        serde_json::from_str(&std::fs::read_to_string(result_path).unwrap()).unwrap();
+    assert!(tools.iter().any(|name| name == "codemode"), "{tools:?}");
+    assert!(tools.iter().any(|name| name == "read"), "{tools:?}");
+}
+
 // session-file-invalid.test.ts
 #[test]
 fn prints_a_friendly_error_and_preserves_non_session_file_content() {

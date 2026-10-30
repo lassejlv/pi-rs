@@ -242,7 +242,9 @@ async fn execute_grep(
     };
     let effective_limit = input.limit.unwrap_or(DEFAULT_LIMIT).max(1.0);
 
+    // Keep the tool contract independent of ambient RIPGREP_CONFIG_PATH settings.
     let mut args: Vec<String> = vec![
+        "--no-config".into(),
         "--json".into(),
         "--line-number".into(),
         "--color=never".into(),
