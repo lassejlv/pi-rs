@@ -13,7 +13,7 @@ Statuses:
 - **E2E (needs credentials)** (other packages): live-provider tests without an offline counterpart.
 - **UNVERIFIED** (other packages): no Rust test names the TS file; the listed provider tests are the likely counterparts and need a case-by-case check.
 
-Summary for `packages/coding-agent/test` (308 files): COVERED: 228, PARTIAL: 36, INTERACTIVE (later audit): 18, IN PROGRESS (extension agent): 14, NOT PORTABLE: 12.
+Summary for `packages/coding-agent/test` (309 files): COVERED: 229, PARTIAL: 36, INTERACTIVE (later audit): 18, IN PROGRESS (extension agent): 14, NOT PORTABLE: 12.
 
 The agent-session suites (`agent-session-*`, `suite/agent-session-*`, `sdk-*` and most `suite/regressions`) were ported by the session-engine agent in `tests/agent_session/`; rows show COVERED where that work has landed. Example-extension and loader tests belong to the extension agent.
 
@@ -221,6 +221,7 @@ Run a ported test with `cargo test -p pi-coding-agent --test <file stem> <name>`
 | `suite/lax-message-content.test.ts` | 6 | COVERED | `tests/agent_session/lax_content.rs`: keeps_valid_message_content_untouched_when_loading_session_entries, normalizes_null_content_in_message_end_extension_replacements, normalizes_null_content_when_loading_custom_message_entries, normalizes_null_or_missing_content_when_loading_session_message_entries |  |
 | `suite/regressions/10285-mcp-tool-renderers.test.ts` | 2 | COVERED | `src/extensions/mcp/tests.rs`: extension_renders_calls_to_mcp_tools_that_are_not_registered<br>`tests/export_regressions.rs`: renders_calls_to_unregistered_mcp_tools_in_html_exports |  |
 | `suite/regressions/11156-pi-ai-models-virtual-module.test.ts` | 2 | NOT PORTABLE |  | jiti virtual module for pi-ai models in the TS loader (JS bridge provides it differently) |
+| `suite/regressions/11227-recovery-omits-tool-results.test.ts` | 1 | COVERED | `tests/agent_session/regressions.rs`: pre_prompt_recovery_of_a_resumed_length_stop_omits_the_truncated_call_and_its_result |  |
 | `suite/regressions/1717-2113-agent-session-event-settlement.test.ts` | 2 | COVERED | `tests/agent_session/regressions.rs`: keeps_persisted_message_order_when_extension_message_end_handlers_yield, runs_tool_call_handlers_after_the_assistant_tool_use_message_is_settled_in_the_session |  |
 | `suite/regressions/2023-queued-slash-command-followup.test.ts` | 1 | COVERED | `tests/agent_session/regressions.rs`: treats_extension_origin_queued_slash_command_follow_ups_as_raw_user_text |  |
 | `suite/regressions/2753-reload-stale-resource-settings.test.ts` | 1 | COVERED | `tests/agent_session/runtime.rs`: applies_updated_top_level_prompt_settings_on_reload_after_startup, branching_allows_forking_from_a_single_message |  |

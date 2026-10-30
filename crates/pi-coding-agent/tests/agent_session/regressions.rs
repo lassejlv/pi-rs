@@ -580,6 +580,67 @@ async fn compacts_length_stop_overflow_before_a_new_prompt_without_continuing_fr
     harness.cleanup();
 }
 
+// #11227: recovery omits tool results with their tool call.
+#[tokio::test]
+async fn pre_prompt_recovery_of_a_resumed_length_stop_omits_the_truncated_call_and_its_result() {
+    let harness = create_harness(HarnessOptions {
+        models: vec![pi_ai::providers::faux::FauxModelDefinition {
+            id: "faux-1".into(),
+            context_window: Some(100_000),
+            max_tokens: Some(1_000),
+            ..Default::default()
+        }],
+        settings: Some(json!({"compaction": {"enabled": true}})),
+        extension_factories: vec![crate::compaction::compactor("summary")],
+        ..Default::default()
+    })
+    .await
+    .unwrap();
+    let now = now_ms();
+    harness.session_manager.append_message(user_blocks("check status", now - 1000)).unwrap();
+    let mut truncated = create_assistant(&harness, StopReason::Length, None, 116, now - 500);
+    truncated.content = vec![pi_ai::providers::faux::faux_tool_call(
+        "bash",
+        json!({"command": "echo"}).as_object().cloned().unwrap(),
+        Some("call_truncated"),
+    )];
+    truncated.usage.input = 100;
+    truncated.usage.output = 16;
+    harness.session_manager.append_message(AgentMessage::Assistant(truncated)).unwrap();
+    harness
+        .session_manager
+        .append_message(agent_message(json!({
+            "role": "toolResult",
+            "toolCallId": "call_truncated",
+            "toolName": "bash",
+            "isError": true,
+            "content": [{"type": "text", "text": "Not executed: output token limit reached."}],
+            "timestamp": now - 400,
+        })))
+        .unwrap();
+    harness.session.agent().set_messages(harness.session_manager.build_session_context().messages);
+
+    let request_messages = Arc::new(Mutex::new(Vec::<pi_ai::types::Message>::new()));
+    let captured = request_messages.clone();
+    harness.set_responses(vec![respond_with(move |context| {
+        *captured.lock() = context.messages.clone();
+        faux_text_message("done")
+    })]);
+
+    harness.session.prompt("continue", None).await.unwrap();
+
+    let request_messages = request_messages.lock().clone();
+    assert!(!request_messages.is_empty());
+    assert!(
+        !request_messages.iter().any(|m| matches!(m, pi_ai::types::Message::ToolResult(_))),
+        "{request_messages:?}"
+    );
+    assert!(!request_messages.iter().any(
+        |m| matches!(m, pi_ai::types::Message::Assistant(a) if a.stop_reason == StopReason::Length)
+    ));
+    harness.cleanup();
+}
+
 // #2023
 #[tokio::test]
 async fn treats_extension_origin_queued_slash_command_follow_ups_as_raw_user_text() {

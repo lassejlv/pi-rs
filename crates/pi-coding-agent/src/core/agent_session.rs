@@ -879,7 +879,6 @@ struct SessionState {
     /// Messages whose turn_end boundary already ran in `finish_turn`.
     boundary_dispatched_messages: Vec<AgentMessage>,
     last_assistant_message: Option<AssistantMessage>,
-    last_assistant_tool_results: Vec<AgentMessage>,
     last_activity_outcome: AgentActivityOutcome,
     is_before_settle: bool,
     abort_during_before_settle: bool,
@@ -1014,7 +1013,6 @@ impl AgentSession {
                 message_end_replacement: None,
                 boundary_dispatched_messages: Vec::new(),
                 last_assistant_message: None,
-                last_assistant_tool_results: Vec::new(),
                 last_activity_outcome: AgentActivityOutcome::Completed,
                 is_before_settle: false,
                 abort_during_before_settle: false,
@@ -2248,12 +2246,7 @@ impl AgentSession {
         // A turn ends after its assistant message and every tool result has been appended,
         // so this is the first point in the run where a context-only custom message can be
         // inserted without landing between a tool call and its result.
-        if let AgentEvent::TurnEnd { tool_results, .. } = &event {
-            self.state.lock().last_assistant_tool_results = tool_results
-                .iter()
-                .cloned()
-                .map(AgentMessage::ToolResult)
-                .collect();
+        if let AgentEvent::TurnEnd { .. } = &event {
             self.flush_pending_custom_messages();
         }
     }
@@ -2317,13 +2310,49 @@ impl AgentSession {
         None
     }
 
-    fn omit_recovery_attempt(
-        &self,
-        message: &AssistantMessage,
-        tool_results: &[AgentMessage],
-    ) -> anyhow::Result<()> {
-        let mut targets = vec![AgentMessage::Assistant(message.clone())];
-        targets.extend(tool_results.iter().cloned());
+    /// Persistently omit a failed attempt and its tool results from model context. Results are
+    /// found in the projected context, so the pair stays together whether the attempt comes from
+    /// the current run or a resumed session. An unpaired result fails the next request (#11227).
+    fn omit_recovery_attempt(&self, message: &AssistantMessage) -> anyhow::Result<()> {
+        let tool_call_ids: HashSet<&str> = message
+            .content
+            .iter()
+            .filter_map(|block| match block {
+                AssistantContent::ToolCall(call) => Some(call.id.as_str()),
+                _ => None,
+            })
+            .collect();
+        let assistant = AgentMessage::Assistant(message.clone());
+        // A context edit replaces the projected copy, so match it by source entry as well.
+        let entry_id = self.find_persisted_message_entry_id(&assistant);
+        let messages = self.agent.messages();
+        let index = {
+            // TS looks each message up in a WeakMap keyed by identity; Rust keys by value, so
+            // collect the messages mapped to the attempt's source entry first.
+            let state = self.state.lock();
+            let same_entry: Vec<&AgentMessage> = match &entry_id {
+                Some(id) => state
+                    .entry_ids_by_message
+                    .iter()
+                    .filter(|(_, mapped)| mapped == id)
+                    .map(|(m, _)| m)
+                    .collect(),
+                None => Vec::new(),
+            };
+            messages
+                .iter()
+                .position(|m| *m == assistant || same_entry.contains(&m))
+        };
+        let mut targets = vec![assistant];
+        for m in index.map_or(&[][..], |i| &messages[i + 1..]) {
+            match m {
+                AgentMessage::Assistant(_) => break,
+                AgentMessage::ToolResult(result) if tool_call_ids.contains(result.tool_call_id.as_str()) => {
+                    targets.push(m.clone());
+                }
+                _ => {}
+            }
+        }
         let target_ids: Vec<Option<String>> = targets
             .iter()
             .map(|t| self.find_persisted_message_entry_id(t))
@@ -3338,7 +3367,7 @@ impl AgentSession {
     async fn prepare_run(&self, trigger: BeforeAgentStartTrigger) -> anyhow::Result<Vec<AgentMessage>> {
         // Check if we need to compact before sending (catches aborted responses).
         if let Some(last_assistant) = self.find_last_assistant_message() {
-            self.check_compaction(&last_assistant, false, &[]).await;
+            self.check_compaction(&last_assistant, false).await;
         }
 
         let base_options = self.state.lock().base_system_prompt_options.clone();
@@ -3401,13 +3430,9 @@ impl AgentSession {
     }
 
     async fn handle_post_agent_run(&self) -> anyhow::Result<bool> {
-        let (message, tool_results, abort_requested) = {
+        let (message, abort_requested) = {
             let mut state = self.state.lock();
-            (
-                state.last_assistant_message.take(),
-                std::mem::take(&mut state.last_assistant_tool_results),
-                state.agent_run_abort_requested,
-            )
+            (state.last_assistant_message.take(), state.agent_run_abort_requested)
         };
         if abort_requested {
             self.finish_cancelled_retry();
@@ -3440,7 +3465,7 @@ impl AgentSession {
             self.state.lock().retry_attempt = 0;
         }
 
-        if self.check_compaction(&message, true, &tool_results).await {
+        if self.check_compaction(&message, true).await {
             return Ok(!self.state.lock().agent_run_abort_requested);
         }
 
@@ -4643,12 +4668,7 @@ impl AgentSession {
     /// Dispatch automatic compaction after `agent_end` or before prompt submission.
     /// Returns whether the post-run loop should call `agent.continue()` for overflow recovery or
     /// queued messages.
-    async fn check_compaction(
-        &self,
-        assistant_message: &AssistantMessage,
-        skip_aborted_check: bool,
-        tool_results: &[AgentMessage],
-    ) -> bool {
+    async fn check_compaction(&self, assistant_message: &AssistantMessage, skip_aborted_check: bool) -> bool {
         let model = self.model();
         let Ok(settings) = self.compaction_settings(model.as_ref()) else {
             return false;
@@ -4768,7 +4788,7 @@ impl AgentSession {
 
             // Persistently omit the selected final attempt before post-run recovery compaction.
             self.state.lock().overflow_recovery_attempted = true;
-            if let Err(error) = self.omit_recovery_attempt(assistant_message, tool_results) {
+            if let Err(error) = self.omit_recovery_attempt(assistant_message) {
                 tracing::warn!("{error}");
                 return false;
             }
@@ -4821,8 +4841,7 @@ impl AgentSession {
         assistant_message: &AssistantMessage,
         skip_aborted_check: bool,
     ) -> bool {
-        self.check_compaction(assistant_message, skip_aborted_check, &[])
-            .await
+        self.check_compaction(assistant_message, skip_aborted_check).await
     }
 
     /// Test hook: run the private automatic compaction (TS tests call `_runAutoCompaction`).
@@ -5658,7 +5677,7 @@ impl AgentSession {
         });
 
         // Keep the failed attempt in raw history while durably omitting it from model projection.
-        if let Err(error) = self.omit_recovery_attempt(message, &[]) {
+        if let Err(error) = self.omit_recovery_attempt(message) {
             tracing::warn!("{error}");
         }
 
