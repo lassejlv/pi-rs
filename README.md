@@ -138,6 +138,10 @@ Behavior that still differs from TypeScript pi, and why:
   literally instead of failing in `fileURLToPath`.
 - **Extension API details.** `ctx.getSystemPromptOptions()` returns a copy, so mutating it outside
   `before_agent_start` does not change later turns as mutating TypeScript's live object would.
+- **`--no-extensions` with `--tools`.** `--tools codemode` / `--tools tool_search` (with or
+  without `+`) still load the matching built-in extension when `--no-extensions` is set, so the
+  requested tool is available; TypeScript drops it. The `--help` text says so, and the golden
+  help fixture (`tests/fixtures/golden/prompts.json`) is edited to match.
 - **Unverified.** The Bedrock error text when a stream is aborted mid-response (HTTP/2 close) has
   not been compared with the AWS SDK.
 
