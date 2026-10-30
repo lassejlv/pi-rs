@@ -78,8 +78,10 @@ fn retry_classification() {
         "The service is temporarily unavailable. Please retry later.",
         "Service unavailable: The service is temporarily unavailable.",
         "request to https://oauth2.googleapis.com/token failed, reason:",
+        "request to https://oauth2.googleapis.com/token failed, reason: connect ECONNREFUSED 127.0.0.1:9",
         "unknown: Unable to forward upstream stream",
         "upstream_error: Upstream request failed",
+        "upstream_stream_read_error: Upstream response stream was interrupted",
         "Upstream HTTP/2 stream failed",
         "OpenAI Responses stream ended before a terminal response event",
         "The system is currently experiencing high demand and cannot process your request.",
@@ -93,6 +95,7 @@ fn retry_classification() {
     for non_retryable in [
         "429 quota exceeded",
         r#"OpenAI API error (429): {"code":"subscription_sharing_usage_limit_exceeded","message":"Usage limit reached."}"#,
+        r#"OpenAI API error (429): {"code":"subscription_sharing_workplace_individual_usage_limit_exceeded","message":"Usage limit reached."}"#,
         r#"401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_011CU503xyz"}"#,
         "400 image exceeds 5 MB maximum: 5316784 bytes > 5242880 bytes",
     ] {
