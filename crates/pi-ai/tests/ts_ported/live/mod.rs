@@ -20,6 +20,7 @@ use serde_json::{Map, Value, json};
 
 mod abort;
 mod cache;
+mod classifier_images;
 mod handoff;
 mod matrix;
 mod overflow;

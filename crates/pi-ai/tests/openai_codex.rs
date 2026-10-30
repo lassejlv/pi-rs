@@ -298,8 +298,13 @@ async fn session_headers_cache_key_and_overrides() {
 #[tokio::test]
 async fn simple_options_reasoning_and_tool_choice() {
     let server = serve_sequence(vec![Reply::sse(data_sse(&sse_events("completed", None)))]).await;
-    let mut gpt55 = pi_ai::providers::all::get_builtin_model("openai-codex", "gpt-5.5").unwrap();
-    gpt55.base_url = server.base_url.clone();
+    // gpt-5.5 left the openai-codex catalog; TS uses an inline model that maps xhigh.
+    let gpt55: Model = serde_json::from_value(json!({
+        "id": "gpt-5.5", "name": "GPT-5.5", "api": "openai-codex-responses", "provider": "openai-codex",
+        "baseUrl": server.base_url, "reasoning": true, "thinkingLevelMap": { "xhigh": "xhigh" }, "input": ["text"],
+        "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 128000
+    }))
+    .unwrap();
     let mut opts = options(&mock_token("a"), Transport::Sse);
     opts.reasoning = Some(ThinkingLevel::Xhigh);
     opts.tool_choice = Some(ToolChoice::None);

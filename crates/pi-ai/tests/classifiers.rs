@@ -110,6 +110,10 @@ async fn openrouter_serves_system_one() {
     for classifier in get_builtin_classifier_models("openrouter") {
         assert_eq!(classifier.api, "typesafe-system-one");
         assert_eq!(classifier.base_url, "https://openrouter.ai/api/v1");
+        // Explicit, so images keep OpenRouter's form when the baseUrl is overridden.
+        let compat = classifier.compat.as_deref().expect("openrouter classifier compat");
+        assert_eq!(compat.image_input, Some(SystemOneImageInput::StateImageUrls));
+        assert_eq!(compat.send_image_opt_in_header, Some(false));
         assert!(models.get_model("openrouter", &classifier.id).is_none());
         assert_eq!(models.get_model_of_type(ModelType::Classifier, "openrouter", &classifier.id), Some(AnyModel::Classifier(classifier.clone())));
     }
@@ -133,7 +137,7 @@ async fn typesafe_rejects_other_apis_images_and_bad_responses() {
     let mut with_images = typesafe_context();
     with_images.images = Some(vec![ImageContent { data: "aW1hZ2U=".into(), mime_type: "image/png".into() }]);
     let result = typesafe_system_one::classify(&model, &with_images, key("secret")).await;
-    assert_eq!(result.error_message.as_deref(), Some("System One API does not support image input"));
+    assert_eq!(result.error_message.as_deref(), Some("System One API does not support image input for jev-latest"));
     assert!(server.requests().is_empty());
 
     let result = typesafe_system_one::classify(&model, &typesafe_context(), key("secret")).await;
@@ -150,6 +154,144 @@ async fn typesafe_rejects_other_apis_images_and_bad_responses() {
     let result = typesafe_system_one::classify(&model, &typesafe_context(), key("secret")).await;
     assert_eq!(result.stop_reason, ClassifierStopReason::Stop);
     assert!(result.usage.is_none());
+}
+
+fn png(data: &str) -> ImageContent {
+    ImageContent { data: data.into(), mime_type: "image/png".into() }
+}
+
+fn with_images(images: Vec<ImageContent>) -> ClassifierContext {
+    let mut context = typesafe_context();
+    context.images = Some(images);
+    context
+}
+
+fn image_model(base_url: &str) -> ClassifierModel {
+    let mut model = typesafe_model(base_url);
+    model.input = vec![ModelInputModality::Text, ModelInputModality::Image];
+    model
+}
+
+async fn answering_server() -> MockServer {
+    MockServer::start(|_, _| Response::json(200, json!({ "answers": wire_answers() }))).await
+}
+
+fn openrouter_image_state() -> Value {
+    json!([{ "type": "image_url", "image_url": { "url": "data:image/png;base64,cG5n" } }, typesafe_context().state])
+}
+
+#[tokio::test]
+async fn typesafe_sends_images_as_assets_with_the_opt_in_header() {
+    let server = answering_server().await;
+    let model = image_model(&server.url);
+    let jpeg = ImageContent { data: "anBlZw==".into(), mime_type: "image/jpeg".into() };
+    let result = typesafe_system_one::classify(&model, &with_images(vec![png("cG5n"), jpeg]), key("secret")).await;
+    let without_images = typesafe_system_one::classify(&model, &typesafe_context(), key("secret")).await;
+
+    assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{:?}", result.error_message);
+    let first = server.request(0);
+    let body = first.json();
+    let state = Value::Object(typesafe_context().state);
+    assert_eq!(body["state"], json!(["<image-1>", "<image-2>", state]));
+    assert_eq!(
+        body["assets"],
+        json!({
+            "<image-1>": { "type": "image", "format": "png", "data_base64": "cG5n" },
+            "<image-2>": { "type": "image", "format": "jpeg", "data_base64": "anBlZw==" }
+        })
+    );
+    assert_eq!(first.header("typesafe-danger-zone-images"), Some("true"));
+    // Requests without images keep the plain state and send no opt-in header.
+    assert_eq!(without_images.stop_reason, ClassifierStopReason::Stop);
+    let second = server.request(1);
+    assert_eq!(second.json()["state"], state);
+    assert!(second.json().get("assets").is_none());
+    assert_eq!(second.header("typesafe-danger-zone-images"), None);
+}
+
+#[tokio::test]
+async fn typesafe_rejects_image_formats_it_does_not_accept_before_sending() {
+    let server = answering_server().await;
+    let webp = ImageContent { data: "d2VicA==".into(), mime_type: "image/webp".into() };
+    let result = typesafe_system_one::classify(&image_model(&server.url), &with_images(vec![webp]), key("secret")).await;
+
+    assert!(server.requests().is_empty());
+    assert_eq!(result.stop_reason, ClassifierStopReason::Error);
+    assert_eq!(
+        result.error_message.as_deref(),
+        Some("System One API accepts PNG and JPEG images for jev-latest, got image/webp")
+    );
+}
+
+#[tokio::test]
+async fn typesafe_sends_images_to_openrouter_as_image_url_parts_in_the_state() {
+    let server = answering_server().await;
+    let mut model = image_model(&format!("{}/api/v1", server.url));
+    model.id = "typesafe/jev-1.14".into();
+    model.provider = "openrouter".into();
+
+    let result = typesafe_system_one::classify(&model, &with_images(vec![png("cG5n")]), key("secret")).await;
+
+    assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{:?}", result.error_message);
+    // OpenRouter answers 200 for `assets` but drops them, and rejects a top-level `images` list.
+    let request = server.request(0);
+    let body = request.json();
+    assert_eq!(body.as_object().unwrap().keys().collect::<Vec<_>>(), ["model", "state", "questions"]);
+    assert_eq!(body["model"], "typesafe/jev-1.14");
+    assert_eq!(body["state"], openrouter_image_state());
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
+}
+
+#[tokio::test]
+async fn typesafe_sends_openrouters_image_form_to_proxies_and_regional_endpoints() {
+    let server = answering_server().await;
+    // TS uses https://proxy.example.com/v1 and https://us.openrouter.ai/api/v1; the local server
+    // stands in for both, the regional host is matched through a path segment.
+    let compat: ModelCompat =
+        serde_json::from_value(json!({ "imageInput": "state-image-urls", "sendImageOptInHeader": false })).unwrap();
+    let cases = [
+        ("OpenRouter behind a proxy", "openrouter", format!("{}/v1", server.url), None),
+        ("a regional OpenRouter endpoint", "custom", format!("{}/us.openrouter.ai/api/v1", server.url), None),
+        ("a proxy declared through compat", "custom", format!("{}/v1", server.url), Some(compat)),
+    ];
+    for (index, (name, provider, base_url, compat)) in cases.into_iter().enumerate() {
+        let mut model = image_model(&base_url);
+        model.id = "typesafe/jev-1.14".into();
+        model.provider = provider.into();
+        model.compat = compat.map(Box::new);
+        let result = typesafe_system_one::classify(&model, &with_images(vec![png("cG5n")]), key("secret")).await;
+        assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{name}: {:?}", result.error_message);
+        let request = server.request(index);
+        assert_eq!(request.json()["state"], openrouter_image_state(), "{name}");
+        assert!(request.json().get("assets").is_none(), "{name}");
+        assert_eq!(request.header("typesafe-danger-zone-images"), None, "{name}");
+    }
+}
+
+#[tokio::test]
+async fn typesafe_compat_overrides_detected_image_settings_per_field() {
+    let server = answering_server().await;
+    let mut model = image_model(&server.url);
+    // Only the header is overridden; the detected `assets` form stays.
+    model.compat = Some(Box::new(serde_json::from_value(json!({ "sendImageOptInHeader": false })).unwrap()));
+    typesafe_system_one::classify(&model, &with_images(vec![png("cG5n")]), key("secret")).await;
+
+    let request = server.request(0);
+    assert!(request.json().get("assets").is_some());
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
+}
+
+#[tokio::test]
+async fn typesafe_caller_headers_override_the_opt_in_header() {
+    let server = answering_server().await;
+    let mut headers = ProviderHeaders::new();
+    headers.insert("typesafe-danger-zone-images".into(), None);
+    let options = StreamOptions { headers: Some(headers), ..key("secret") };
+    typesafe_system_one::classify(&image_model(&server.url), &with_images(vec![png("cG5n")]), options).await;
+
+    let request = server.request(0);
+    assert!(request.json().get("assets").is_some());
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
 }
 
 #[tokio::test]
@@ -289,7 +431,7 @@ async fn cloudflare_system_one_through_models() {
     let usage = result.usage.unwrap();
     assert_eq!((usage.input, usage.output, usage.total_tokens), (426, 73, 499));
 
-    for (id, price) in [("@cf/cloudflare/clef", 0.24), ("@cf/cloudflare/clef-flash", 0.09)] {
+    for (id, price) in [("@cf/cloudflare/clef", 0.24), ("@cf/cloudflare/clef-flash", 0.038), ("@cf/cloudflare/clef-omni", 0.15)] {
         let Some(AnyModel::Classifier(clef)) = models.get_model_of_type(ModelType::Classifier, "cloudflare-workers-ai", id) else {
             panic!("missing {id}");
         };
@@ -311,6 +453,107 @@ async fn cloudflare_system_one_through_models() {
     missing.id = "missing".into();
     let result = models.classify(&missing, &cloudflare_context(), cloudflare_auth()).await;
     assert!(result.error_message.unwrap().contains("Cloudflare Workers AI error: No such model"));
+}
+
+/// A Workers AI `Models` and its catalog classifiers pointed at a local server that answers like
+/// Clef (direct output) or Jev (run record).
+async fn cloudflare_image_setup() -> (Models, MockServer, impl Fn(&str) -> ClassifierModel) {
+    let server = MockServer::start(|request, _| {
+        if request.json()["model"].as_str().is_some_and(|m| m.starts_with("typesafe/")) {
+            return Response::json(200, json!({ "result": { "state": "Completed", "result": jev_output() }, "success": true, "errors": [], "messages": [] }));
+        }
+        Response::json(200, json!({ "result": clef_output(), "success": true, "errors": [], "messages": [] }))
+    })
+    .await;
+    let models = create_models(CreateModelsOptions::default());
+    models.set_provider(cloudflare_workers_ai_provider());
+    let url = server.url.clone();
+    let lookup = {
+        let models = models.clone();
+        move |id: &str| {
+            let Some(AnyModel::Classifier(model)) = models.get_model_of_type(ModelType::Classifier, "cloudflare-workers-ai", id) else {
+                panic!("missing Cloudflare {id} model");
+            };
+            ClassifierModel { base_url: model.base_url.replace("https://api.cloudflare.com", &url), ..model }
+        }
+    };
+    (models, server, lookup)
+}
+
+fn cloudflare_images(images: Vec<ImageContent>) -> ClassifierContext {
+    let mut context = cloudflare_context();
+    context.images = Some(images);
+    context
+}
+
+#[tokio::test]
+async fn cloudflare_sends_images_to_clef_as_data_urls() {
+    let (models, server, model) = cloudflare_image_setup().await;
+    let webp = ImageContent { data: "d2VicA==".into(), mime_type: "image/webp".into() };
+
+    let result = models.classify(&model("@cf/cloudflare/clef"), &cloudflare_images(vec![png("cG5n"), webp]), cloudflare_auth()).await;
+
+    assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{:?}", result.error_message);
+    // Clef rejects `assets` with a 422, so the state stays as is.
+    let request = server.request(0);
+    let input = &request.json()["input"];
+    assert_eq!(input.as_object().unwrap().keys().collect::<Vec<_>>(), ["state", "questions", "images"]);
+    assert_eq!(input["state"], Value::Object(cloudflare_context().state));
+    assert_eq!(input["images"], json!(["data:image/png;base64,cG5n", "data:image/webp;base64,d2VicA=="]));
+    assert_eq!(request.header("typesafe-danger-zone-images"), None);
+}
+
+#[tokio::test]
+async fn cloudflare_reads_the_image_form_from_compat_before_the_model_id() {
+    let (models, server, model) = cloudflare_image_setup().await;
+    let clef = model("@cf/cloudflare/clef");
+    let jev = model("typesafe/jev");
+    assert_eq!(serde_json::to_value(&clef.compat).unwrap(), json!({ "imageInput": "images" }));
+    assert_eq!(serde_json::to_value(&jev.compat).unwrap(), json!({ "imageInput": "assets" }));
+
+    // A Clef deployment under an ID the prefix check does not recognize.
+    let finetune = ClassifierModel {
+        id: "@cf/acme/clef-finetune".into(),
+        input: vec![ModelInputModality::Text, ModelInputModality::Image],
+        compat: Some(Box::new(serde_json::from_value(json!({ "imageInput": "images" })).unwrap())),
+        ..jev
+    };
+    models.classify(&finetune, &cloudflare_images(vec![png("cG5n")]), cloudflare_auth()).await;
+
+    let input = &server.request(0).json()["input"];
+    assert_eq!(input["images"], json!(["data:image/png;base64,cG5n"]));
+    assert!(input.get("assets").is_none());
+}
+
+#[tokio::test]
+async fn cloudflare_rejects_more_than_four_images_for_clef_before_sending() {
+    let (models, server, model) = cloudflare_image_setup().await;
+
+    let result = models.classify(&model("@cf/cloudflare/clef-flash"), &cloudflare_images(vec![png("cG5n"); 5]), cloudflare_auth()).await;
+
+    assert!(server.requests().is_empty());
+    assert_eq!(result.stop_reason, ClassifierStopReason::Error);
+    assert_eq!(
+        result.error_message.as_deref(),
+        Some("Cloudflare Workers AI accepts at most 4 images for @cf/cloudflare/clef-flash, got 5")
+    );
+}
+
+#[tokio::test]
+async fn cloudflare_sends_images_to_jev_as_system_one_assets() {
+    let (models, server, model) = cloudflare_image_setup().await;
+    for (index, id) in ["typesafe/jev", "typesafe/jev-1.14.0"].into_iter().enumerate() {
+        let result = models.classify(&model(id), &cloudflare_images(vec![png("cG5n")]), cloudflare_auth()).await;
+
+        assert_eq!(result.stop_reason, ClassifierStopReason::Stop, "{id}: {:?}", result.error_message);
+        let request = server.request(index);
+        let body = request.json();
+        assert_eq!(body["model"], id);
+        assert_eq!(body["input"]["state"], json!(["<image-1>", cloudflare_context().state]));
+        assert_eq!(body["input"]["assets"], json!({ "<image-1>": { "type": "image", "format": "png", "data_base64": "cG5n" } }));
+        // Workers AI needs no TypeSafe opt-in header.
+        assert_eq!(request.header("typesafe-danger-zone-images"), None, "{id}");
+    }
 }
 
 // ---------------------------------------------------------------------------

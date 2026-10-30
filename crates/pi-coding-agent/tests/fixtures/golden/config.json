@@ -17073,9 +17073,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17102,9 +17100,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17150,13 +17146,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -17177,9 +17171,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17206,9 +17198,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17254,13 +17244,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -17281,9 +17269,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17310,9 +17296,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17358,13 +17342,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -17385,9 +17367,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17414,9 +17394,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17462,13 +17440,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -17489,9 +17465,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17518,9 +17492,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17566,13 +17538,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -17593,9 +17563,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17622,9 +17590,7 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
@@ -17670,13 +17636,11 @@
     "candidates": [
      "azure/gpt-5.5",
      "cloudflare-ai-gateway/gpt-5.5",
-     "github-copilot/gpt-5.5",
      "openai/gpt-5.5",
-     "openai-codex/gpt-5.5",
      "opencode/gpt-5.5",
      "radius/gpt-5.5"
     ],
-    "usableCount": 7,
+    "usableCount": 5,
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -18710,9 +18674,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -18779,9 +18741,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -18849,9 +18809,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -18916,9 +18874,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -18983,9 +18939,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -19052,9 +19006,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -19122,9 +19074,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -19189,9 +19139,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -23986,9 +23934,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24055,9 +24001,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24125,9 +24069,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24192,9 +24134,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24259,9 +24199,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24328,9 +24266,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24398,9 +24334,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24465,9 +24399,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24532,9 +24464,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24601,9 +24531,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24671,9 +24599,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24738,9 +24664,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24805,9 +24729,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24874,9 +24796,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -24944,9 +24864,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25011,9 +24929,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25078,9 +24994,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25147,9 +25061,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25217,9 +25129,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25284,9 +25194,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25351,9 +25259,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25420,9 +25326,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25490,9 +25394,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25557,9 +25459,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25624,9 +25524,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25693,9 +25591,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25763,9 +25659,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25830,9 +25724,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25897,9 +25789,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -25966,9 +25856,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26036,9 +25924,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26103,9 +25989,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26170,9 +26054,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26239,9 +26121,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26309,9 +26189,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26376,9 +26254,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26443,9 +26319,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26512,9 +26386,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26582,9 +26454,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26649,9 +26519,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26716,9 +26584,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26785,9 +26651,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26855,9 +26719,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26922,9 +26784,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -26989,9 +26849,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27058,9 +26916,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27128,9 +26984,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27195,9 +27049,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27262,9 +27114,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27331,9 +27181,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27401,9 +27249,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27468,9 +27314,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27535,9 +27379,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27604,9 +27446,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27674,9 +27514,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27741,9 +27579,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27808,9 +27644,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27877,9 +27711,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -27947,9 +27779,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28014,9 +27844,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28081,9 +27909,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28150,9 +27976,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28220,9 +28044,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28287,9 +28109,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28354,9 +28174,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28423,9 +28241,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28493,9 +28309,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28560,9 +28374,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28627,9 +28439,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28696,9 +28506,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28766,9 +28574,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -28833,9 +28639,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -30685,7 +30489,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30705,7 +30509,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30744,7 +30548,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30827,7 +30631,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30847,7 +30651,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30886,7 +30690,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30969,7 +30773,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -30989,7 +30793,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -31028,7 +30832,7 @@
    },
    "out": {
     "status": "resolved",
-    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+    "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
     "thinkingLevel": "<undefined>",
     "warning": "<undefined>"
    }
@@ -35026,9 +34830,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35095,9 +34897,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35165,9 +34965,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35232,9 +35030,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35299,9 +35095,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35368,9 +35162,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35438,9 +35230,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -35505,9 +35295,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -39647,9 +39435,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -39715,9 +39501,7 @@
       "openai/gpt-5-pro",
       "openai/gpt-5.1",
       "openai/gpt-5.2",
-      "openai/gpt-5.2-chat-latest",
       "openai/gpt-5.2-pro",
-      "openai/gpt-5.3-chat-latest",
       "openai/gpt-5.3-codex",
       "openai/gpt-5.3-codex-spark",
       "openai/gpt-5.4",
@@ -40274,10 +40058,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "vercel-ai-gateway/anthropic/claude-sonnet-4",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "vercel-ai-gateway/anthropic/claude-sonnet-4.5",
       "thinkingLevel": "<undefined>"
      },
@@ -40477,10 +40257,6 @@
      },
      {
       "model": "github-copilot/claude-sonnet-5.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "opencode/claude-sonnet-4",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -40718,10 +40494,6 @@
       "thinkingLevel": "high"
      },
      {
-      "model": "github-copilot/claude-opus-4.7",
-      "thinkingLevel": "high"
-     },
-     {
       "model": "github-copilot/claude-opus-4.8",
       "thinkingLevel": "high"
      },
@@ -40840,15 +40612,7 @@
       "thinkingLevel": "low"
      },
      {
-      "model": "github-copilot/gpt-5.5",
-      "thinkingLevel": "low"
-     },
-     {
       "model": "openai/gpt-5.5",
-      "thinkingLevel": "low"
-     },
-     {
-      "model": "openai-codex/gpt-5.5",
       "thinkingLevel": "low"
      },
      {
@@ -40864,7 +40628,7 @@
      {
       "type": "warning",
       "code": "ambiguous",
-      "message": "Pattern \"gpt-5.5:low\" matches several providers: azure, cloudflare-ai-gateway, github-copilot, openai, openai-codex, opencode, radius. Use provider/id to choose one.",
+      "message": "Pattern \"gpt-5.5:low\" matches several providers: azure, cloudflare-ai-gateway, openai, opencode, radius. Use provider/id to choose one.",
       "pattern": "gpt-5.5:low"
      },
      {
@@ -40876,7 +40640,7 @@
      {
       "type": "warning",
       "code": "ambiguous",
-      "message": "Pattern \"gpt-5.5:bogus\" matches several providers: azure, cloudflare-ai-gateway, github-copilot, openai, openai-codex, opencode, radius. Use provider/id to choose one.",
+      "message": "Pattern \"gpt-5.5:bogus\" matches several providers: azure, cloudflare-ai-gateway, openai, opencode, radius. Use provider/id to choose one.",
       "pattern": "gpt-5.5:bogus"
      }
     ]
@@ -41003,10 +40767,6 @@
    },
    "out": {
     "scopedModels": [
-     {
-      "model": "baseten/moonshotai/Kimi-K2.6",
-      "thinkingLevel": "<undefined>"
-     },
      {
       "model": "huggingface/moonshotai/Kimi-K2.6",
       "thinkingLevel": "<undefined>"
@@ -41401,10 +41161,6 @@
       "thinkingLevel": "off"
      },
      {
-      "model": "vercel-ai-gateway/anthropic/claude-sonnet-4",
-      "thinkingLevel": "off"
-     },
-     {
       "model": "vercel-ai-gateway/anthropic/claude-sonnet-4.5",
       "thinkingLevel": "off"
      },
@@ -41533,15 +41289,7 @@
       "thinkingLevel": "xhigh"
      },
      {
-      "model": "openai/gpt-5.2-chat-latest",
-      "thinkingLevel": "xhigh"
-     },
-     {
       "model": "openai/gpt-5.2-pro",
-      "thinkingLevel": "xhigh"
-     },
-     {
-      "model": "openai/gpt-5.3-chat-latest",
       "thinkingLevel": "xhigh"
      },
      {
@@ -43353,15 +43101,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "azure/gpt-5.2-chat-latest",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "azure/gpt-5.2-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "azure/gpt-5.3-chat-latest",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -43469,10 +43209,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "baseten/deepseek-ai/DeepSeek-V4-Pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "baseten/deepseek-ai/DeepSeek-V4-Pro-0813",
       "thinkingLevel": "<undefined>"
      },
@@ -43481,27 +43217,19 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "baseten/deepseek-ai/DeepSeek-V4.1-Flash-1017-Fast",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "baseten/deepseek-ai/DeepSeek-V4.1-Flash-Fast",
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "baseten/moonshotai/Kimi-K2.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/moonshotai/Kimi-K2.6",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/moonshotai/Kimi-K2.7-Code",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "baseten/moonshotai/Kimi-K3",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/nvidia/Nemotron-120B-A12B",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -43510,26 +43238,6 @@
      },
      {
       "model": "baseten/openai/gpt-oss-120b",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/thinkingmachines/inkling",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/thinkingmachines/inkling-small",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/zai-org/GLM-4.7",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/zai-org/GLM-5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "baseten/zai-org/GLM-5.1",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -43622,6 +43330,10 @@
      },
      {
       "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "cloudflare-ai-gateway/workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -43797,6 +43509,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "cloudflare-workers-ai/@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "cloudflare-workers-ai/@cf/google/gemma-4-26b-a4b-it",
       "thinkingLevel": "<undefined>"
      },
@@ -43873,6 +43589,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "fireworks/accounts/fireworks/models/deepseek-v4p1-flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "fireworks/accounts/fireworks/models/ember-1",
       "thinkingLevel": "<undefined>"
      },
@@ -43886,6 +43606,10 @@
      },
      {
       "model": "fireworks/accounts/fireworks/models/minimax-m3",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "fireworks/accounts/fireworks/models/muse-spark-open",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -43973,10 +43697,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "github-copilot/claude-opus-4.7",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "github-copilot/claude-opus-4.8",
       "thinkingLevel": "<undefined>"
      },
@@ -44001,18 +43721,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "github-copilot/gemini-3.5-flash",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/gemini-3.6-flash",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/gemini-3.7-flash",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "github-copilot/gemini-3.8-flash",
       "thinkingLevel": "<undefined>"
      },
@@ -44021,15 +43729,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "github-copilot/kimi-k2.7-code",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "github-copilot/kimi-k3",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/gpt-5-mini",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44037,19 +43737,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "github-copilot/gpt-5.4",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/gpt-5.4-mini",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "github-copilot/gpt-5.4-nano",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/gpt-5.5",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44090,10 +43778,6 @@
      },
      {
       "model": "github-copilot/grok-4.7",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "github-copilot/mai-code-1-flash-picker",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44182,6 +43866,10 @@
      },
      {
       "model": "google/gemini-flash-lite-latest",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "google/gemini-pro-latest",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44325,6 +44013,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "huggingface/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "huggingface/google/gemma-3-12b-it",
       "thinkingLevel": "<undefined>"
      },
@@ -44434,6 +44126,10 @@
      },
      {
       "model": "huggingface/Qwen/Qwen3-32B",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "huggingface/Qwen/Qwen3-8B",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44641,6 +44337,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "minimax/MiniMax-M3.1-Flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "minimax-cn/MiniMax-M2.7",
       "thinkingLevel": "<undefined>"
      },
@@ -44650,6 +44350,10 @@
      },
      {
       "model": "minimax-cn/MiniMax-M3",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "minimax-cn/MiniMax-M3.1-Flash",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44773,19 +44477,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "mistral/open-mistral-7b",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "mistral/open-mistral-nemo",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "mistral/open-mixtral-8x22b",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "mistral/open-mixtral-8x7b",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -44917,6 +44609,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "nvidia/stepfun-ai/step-5-preview",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "nvidia/z-ai/glm-5.3",
       "thinkingLevel": "<undefined>"
      },
@@ -44993,15 +44689,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "openai/gpt-5.2-chat-latest",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "openai/gpt-5.2-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "openai/gpt-5.3-chat-latest",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45101,14 +44789,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "openai-codex/gpt-5.3-codex-spark",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "openai-codex/gpt-5.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "openai-codex/gpt-5.6-luna",
       "thinkingLevel": "<undefined>"
      },
@@ -45177,10 +44857,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode/claude-sonnet-4",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "opencode/claude-sonnet-4-5",
       "thinkingLevel": "<undefined>"
      },
@@ -45241,19 +44917,15 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "opencode/beam-free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "opencode/big-pickle",
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode/cat-jam-free",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "opencode/deepseek-v4-flash",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "opencode/deepseek-v4-flash-vision-exp",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45266,6 +44938,10 @@
      },
      {
       "model": "opencode/deepseek-v4.1-flash-free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "opencode/flint-40b-free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45286,6 +44962,10 @@
      },
      {
       "model": "opencode/glm-5.3-flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "opencode/glm-5.3-flash-free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45325,6 +45005,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "opencode/minimax-m3.1-flash-free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "opencode/mistral-large-4",
       "thinkingLevel": "<undefined>"
      },
@@ -45342,14 +45026,6 @@
      },
      {
       "model": "opencode/qwen3.8-max",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "opencode/space-bunny-free",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "opencode/step-5-preview-free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45469,7 +45145,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode/muse-spark-1.3-contributor-free",
+      "model": "opencode/muse-wonder-1.0",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45497,7 +45173,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode-go/cat-jam-free",
+      "model": "opencode-go/beam-free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45561,11 +45237,11 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode-go/space-bunny",
+      "model": "opencode-go/minimax-m3.1-flash-free",
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "opencode-go/step-5-preview-free",
+      "model": "opencode-go/step-5-preview",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45885,10 +45561,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "openrouter/deepseek/deepseek-r1",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "openrouter/deepseek/deepseek-r1-0528",
       "thinkingLevel": "<undefined>"
      },
@@ -45929,11 +45601,19 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "openrouter/deepseek/deepseek-v4.1-flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "openrouter/deepseek/deepseek-v4.1-flash:batch",
       "thinkingLevel": "<undefined>"
      },
      {
       "model": "openrouter/dots-studio/dots-3-note-preview:free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "openrouter/elorian/glimpse",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -45949,23 +45629,11 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "openrouter/google/gemini-2.5-flash-lite:batch",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "openrouter/google/gemini-2.5-flash:batch",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "openrouter/google/gemini-2.5-pro",
       "thinkingLevel": "<undefined>"
      },
      {
       "model": "openrouter/google/gemini-2.5-pro-preview",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "openrouter/google/gemini-2.5-pro:batch",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -46093,6 +45761,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "openrouter/inception/mercury-3",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "openrouter/inclusionai/ling-3.0-flash",
       "thinkingLevel": "<undefined>"
      },
@@ -46190,6 +45862,10 @@
      },
      {
       "model": "openrouter/minimax/minimax-m3",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "openrouter/minimax/minimax-m3.1-flash:free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -46945,6 +46621,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "openrouter/qwen/qwen3.7-plus:batch",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "openrouter/qwen/qwen3.8-2.4t-a95b",
       "thinkingLevel": "<undefined>"
      },
@@ -46966,6 +46646,14 @@
      },
      {
       "model": "openrouter/qwen/qwen3.8-omni-flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "openrouter/recursive/flint-v1.0:free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "openrouter/reflection/beam-1.0-501b-a23b",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47037,6 +46725,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "openrouter/unbiased/pareto-26.10",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "openrouter/unbiased/pareto-26.9",
       "thinkingLevel": "<undefined>"
      },
@@ -47098,6 +46790,10 @@
      },
      {
       "model": "openrouter/xiaomi/mimo-v2.6-pro-ultraspeed",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "openrouter/xingchen-agi/xing4.0-29b-a4b:free",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47197,6 +46893,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "qwen-token-plan/deepseek-v4.1-flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "qwen-token-plan/glm-5",
       "thinkingLevel": "<undefined>"
      },
@@ -47274,6 +46974,10 @@
      },
      {
       "model": "qwen-token-plan-cn/deepseek-v4.1-flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "qwen-token-plan-cn/deepseek-v4.1-flash-1017",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47473,6 +47177,10 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "radius/gpt-6.1-sol",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "radius/grok-4.7",
       "thinkingLevel": "<undefined>"
      },
@@ -47481,11 +47189,15 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "radius/minimax-m3.1-flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "radius/precise",
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "together/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "model": "radius/recursive/flint",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47497,11 +47209,7 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "together/MiniMaxAI/MiniMax-M2.7",
+      "model": "together/meta-models/Muse-Spark-Open-816B-A42B",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47513,15 +47221,11 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "together/nvidia/nemotron-3-ultra-550b-a55b",
+      "model": "together/nvidia/NVIDIA-Nemotron-3.5-Super-VL",
       "thinkingLevel": "<undefined>"
      },
      {
       "model": "together/openai/gpt-oss-120b",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "together/Qwen/Qwen2.5-7B-Instruct-Turbo",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47534,6 +47238,10 @@
      },
      {
       "model": "together/Qwen/Qwen3.7-Max",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "together/reflection/Beam-1.0-501B-A23B",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47761,10 +47469,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "vercel-ai-gateway/anthropic/claude-sonnet-4",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "vercel-ai-gateway/anthropic/claude-sonnet-4.5",
       "thinkingLevel": "<undefined>"
      },
@@ -47858,6 +47562,14 @@
      },
      {
       "model": "vercel-ai-gateway/deepseek/deepseek-v4.1-flash",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "vercel-ai-gateway/deepseek/deepseek-v4.1-flash-1017",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "vercel-ai-gateway/deepseek/deepseek-v4.1-flash-1017-fast",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -47970,6 +47682,10 @@
      },
      {
       "model": "vercel-ai-gateway/inception/mercury-2.5",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "vercel-ai-gateway/inception/mercury-3",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -48090,6 +47806,10 @@
      },
      {
       "model": "vercel-ai-gateway/minimax/minimax-m3",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "vercel-ai-gateway/minimax/minimax-m3.1-flash",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -48553,6 +48273,14 @@
       "thinkingLevel": "<undefined>"
      },
      {
+      "model": "vercel-ai-gateway/reflection/beam",
+      "thinkingLevel": "<undefined>"
+     },
+     {
+      "model": "vercel-ai-gateway/reflection/beam-free",
+      "thinkingLevel": "<undefined>"
+     },
+     {
       "model": "vercel-ai-gateway/sakana/fugu-max",
       "thinkingLevel": "<undefined>"
      },
@@ -48634,10 +48362,6 @@
      },
      {
       "model": "vercel-ai-gateway/spacexai/grok-build-0.1",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "vercel-ai-gateway/stealth/cat-jam",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -48773,18 +48497,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "xiaomi/mimo-v2.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi/mimo-v2.5-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi/mimo-v2.5-pro-ultraspeed",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "xiaomi/mimo-v2.6-flash",
       "thinkingLevel": "<undefined>"
      },
@@ -48797,14 +48509,6 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "xiaomi-token-plan-ams/mimo-v2.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi-token-plan-ams/mimo-v2.5-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "xiaomi-token-plan-ams/mimo-v2.6-flash",
       "thinkingLevel": "<undefined>"
      },
@@ -48813,27 +48517,11 @@
       "thinkingLevel": "<undefined>"
      },
      {
-      "model": "xiaomi-token-plan-cn/mimo-v2.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi-token-plan-cn/mimo-v2.5-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
       "model": "xiaomi-token-plan-cn/mimo-v2.6-flash",
       "thinkingLevel": "<undefined>"
      },
      {
       "model": "xiaomi-token-plan-cn/mimo-v2.6-pro",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi-token-plan-sgp/mimo-v2.5",
-      "thinkingLevel": "<undefined>"
-     },
-     {
-      "model": "xiaomi-token-plan-sgp/mimo-v2.5-pro",
       "thinkingLevel": "<undefined>"
      },
      {
@@ -50826,58 +50514,6 @@
       }
      },
      {
-      "id": "gpt-5.2-chat-latest",
-      "name": "GPT-5.2 Chat",
-      "api": "openai-responses",
-      "baseUrl": "https://proxy.example/v1",
-      "reasoning": true,
-      "input": [
-       "text",
-       "image"
-      ],
-      "contextWindow": 128000,
-      "maxTokens": 16384,
-      "cost": {
-       "input": 1.75,
-       "output": 14,
-       "cacheRead": 0.175,
-       "cacheWrite": 0
-      },
-      "compat": {
-       "supportsStrictMode": true,
-       "supportsOpenAIGrammarTools": true,
-       "openRouterRouting": {
-        "order": [
-         "a"
-        ]
-       }
-      },
-      "thinkingLevelMap": {
-       "off": null,
-       "minimal": null,
-       "low": null,
-       "medium": "medium",
-       "high": null,
-       "xhigh": "xhigh",
-       "max": null
-      },
-      "samplingParams": "<undefined>",
-      "samplingParamsByThinkingLevel": "<undefined>",
-      "promptCache": "<undefined>",
-      "inputLimits": {
-       "maxRequestBytes": 536870912,
-       "images": {
-        "maxPerRequest": 1500,
-        "resize": {
-         "maxWidth": 2000,
-         "maxHeight": 2000,
-         "maxBytes": 4718592,
-         "jpegQuality": 80
-        }
-       }
-      }
-     },
-     {
       "id": "gpt-5.2-pro",
       "name": "GPT-5.2 Pro",
       "api": "openai-responses",
@@ -50912,53 +50548,6 @@
        "high": "high",
        "xhigh": "xhigh",
        "max": null
-      },
-      "samplingParams": "<undefined>",
-      "samplingParamsByThinkingLevel": "<undefined>",
-      "promptCache": "<undefined>",
-      "inputLimits": {
-       "maxRequestBytes": 536870912,
-       "images": {
-        "maxPerRequest": 1500,
-        "resize": {
-         "maxWidth": 2000,
-         "maxHeight": 2000,
-         "maxBytes": 4718592,
-         "jpegQuality": 80
-        }
-       }
-      }
-     },
-     {
-      "id": "gpt-5.3-chat-latest",
-      "name": "GPT-5.3 Chat (latest)",
-      "api": "openai-responses",
-      "baseUrl": "https://proxy.example/v1",
-      "reasoning": false,
-      "input": [
-       "text",
-       "image"
-      ],
-      "contextWindow": 128000,
-      "maxTokens": 16384,
-      "cost": {
-       "input": 1.75,
-       "output": 14,
-       "cacheRead": 0.175,
-       "cacheWrite": 0
-      },
-      "compat": {
-       "supportsStrictMode": true,
-       "supportsOpenAIGrammarTools": true,
-       "openRouterRouting": {
-        "order": [
-         "a"
-        ]
-       }
-      },
-      "thinkingLevelMap": {
-       "off": null,
-       "xhigh": "xhigh"
       },
       "samplingParams": "<undefined>",
       "samplingParamsByThinkingLevel": "<undefined>",
@@ -52501,7 +52090,7 @@
       "cost": {
        "input": 0.075,
        "output": 0.3,
-       "cacheRead": 0,
+       "cacheRead": 0.0375,
        "cacheWrite": 0
       },
       "compat": {
@@ -52575,7 +52164,7 @@
        "text",
        "image"
       ],
-      "contextWindow": 131042,
+      "contextWindow": 131072,
       "maxTokens": 16384,
       "cost": {
        "input": 0.8,

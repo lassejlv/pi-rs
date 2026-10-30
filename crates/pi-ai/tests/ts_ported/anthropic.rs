@@ -69,16 +69,7 @@ fn marks_builtin_anthropic_messages_models_that_use_adaptive_thinking() {
         .map(|m| format!("{}/{}", m.provider, m.id))
         .collect();
     flagged.sort();
-    // The checked-in catalog (identical to the TypeScript one) does not yet contain
-    // MiniMax-M3.1-Flash, which only `scripts/generate-models.ts` produces; check the rest.
-    let all: Vec<String> = get_builtin_providers()
-        .iter()
-        .flat_map(|p| get_builtin_models(p).into_iter().map(move |m| format!("{p}/{}", m.id)))
-        .collect();
     for id in expected {
-        if id.contains("MiniMax-M3.1-Flash") && !all.iter().any(|m| m == id) {
-            continue;
-        }
         assert!(flagged.iter().any(|f| f == id), "missing {id}");
     }
     let pattern = regex::Regex::new(r"(opus[-.](4[-.][678]|5)|sonnet[-.]4[-.]6|sonnet[-.]5|haiku[-.]5[-.]5|fable[-.]5)").unwrap();
