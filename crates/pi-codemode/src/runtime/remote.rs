@@ -44,7 +44,7 @@ use super::host::start_thread_vm;
 use super::protocol::{HostToWorkerMessage, VmStartData, WorkerToHostMessage};
 use super::vm::{DEFAULT_LOOP_ITERATION_LIMIT, DEFAULT_RECURSION_LIMIT, VmHandle, VmLimits};
 
-/// Default interrupt budget of [`serve_codemode_remote`]: loop iterations and promise jobs one
+/// Default interrupt budget of [`serve_codemode_remote`]: instrumented iterations plus 10,000-fuel slices one
 /// execution may run. A remote VM keeps computing after the client's deadline until it calls a
 /// tool, so the budget is what bounds it.
 pub const DEFAULT_INTERRUPT_BUDGET: u64 = 10_000_000;
@@ -168,12 +168,12 @@ pub struct CodemodeServeOptions {
     /// Upper bound for a request's interrupt budget, and the budget when a request names none.
     /// Default: [`DEFAULT_INTERRUPT_BUDGET`].
     pub max_interrupt_budget: Option<u64>,
-    /// Loop iterations one function invocation may run in code the loop instrumentation does not
-    /// reach. Default: [`DEFAULT_LOOP_ITERATION_LIMIT`].
+    /// Interpreter fuel one invocation may use, including generated code and promise jobs.
+    /// Default: [`DEFAULT_LOOP_ITERATION_LIMIT`].
     pub loop_iteration_limit: Option<u64>,
     /// Upper bound for a request's VM memory, and the limit when a request names none.
     pub max_memory_limit_bytes: Option<u64>,
-    /// Maximum JS call depth. Default: [`DEFAULT_RECURSION_LIMIT`].
+    /// Approximate JS call depth, translated to value-stack slots. Default: [`DEFAULT_RECURSION_LIMIT`].
     pub recursion_limit: Option<usize>,
     /// The timezone the VMs' `Date` uses (IANA name or POSIX `TZ` string), the serving host's
     /// own; `None`: this process's `TZ`.

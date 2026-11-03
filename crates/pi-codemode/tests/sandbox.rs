@@ -22,9 +22,8 @@ const WEBP: &str = "UklGRgAAAABXRUJQ";
 
 #[test]
 fn embedded_sources_parse_as_javascript() {
-    let engine = pi_quickjs::Engine::new(pi_quickjs::EngineOptions::default()).unwrap();
-    let flags = (pi_quickjs::rquickjs::qjs::JS_EVAL_TYPE_GLOBAL | pi_quickjs::rquickjs::qjs::JS_EVAL_FLAG_COMPILE_ONLY) as i32;
-    let parsed = engine.context().eval_with_flags(PRELUDE_SOURCE.as_bytes(), "codemode-prelude.js", flags).map(drop);
+    let mut engine = djs_prelude::new_vm(Default::default()).unwrap();
+    let parsed = engine.compile(PRELUDE_SOURCE.as_bytes(), &djs_core::compiler::CompileOptions::eval("codemode-prelude.js"));
     assert!(parsed.is_ok());
 }
 
@@ -857,11 +856,18 @@ async fn ignores_patches_to_built_ins(backend: Backend) {
     let result = run(
         &sandbox,
         r#"
-        Array.prototype.toJSON = () => null;
-        Object.prototype.toJSON = () => 5;
-        Promise.prototype.then = () => {};
-        Map.prototype.get = () => undefined;
-        globalThis.JSON = { stringify: () => "x", parse: () => "x" };
+        // djs is always strict. Failed mutations must throw and leave the prelude intact.
+        for (const mutate of [
+            () => { Array.prototype.toJSON = () => null; },
+            () => { Object.prototype.toJSON = () => 5; },
+            () => { Promise.prototype.then = () => {}; },
+            () => { Map.prototype.get = () => undefined; },
+            () => { globalThis.JSON = { stringify: () => "x", parse: () => "x" }; },
+        ]) {
+            let rejected = false;
+            try { mutate(); } catch (error) { rejected = error instanceof TypeError; }
+            if (!rejected) throw new Error("Built-in mutation was not rejected with TypeError");
+        }
         store("k", [1]);
         return [await tools.echo([2]), JSON.stringify({ a: 1 })];
     "#,

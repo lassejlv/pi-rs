@@ -1,9 +1,9 @@
-//! The default sandbox: each execution gets its own thread and QuickJS VM.
+//! The default sandbox: each execution gets its own thread and djs VM.
 //!
 //! A fresh thread per run keeps termination simple: a runaway script cannot poison a later run.
-//! Stopping sets an interrupt flag that the VM polls at every bridge call, loop iteration, promise
-//! job and in QuickJS's interrupt handler, and does not wait for the thread: a long-running
-//! built-in keeps its thread busy until it returns. Hosts that limit concurrency can track actual thread lifetime with
+//! Stopping sets an interrupt flag that the VM polls at host calls and between interpreter fuel
+//! slices, including promise jobs and generated code, and does not wait for the thread. Hosts
+//! that limit concurrency can track actual thread lifetime with
 //! `on_worker_started` and `acquire_worker`.
 
 use std::sync::Arc;
@@ -42,15 +42,14 @@ pub struct CodemodeSandboxOptions {
     pub timeout_ms: Option<f64>,
     /// See [`CodemodeSandboxBaseOptions::memory_limit_bytes`].
     pub memory_limit_bytes: Option<u64>,
-    /// Loop iterations and promise jobs an execution may run before it fails with
+    /// Instrumented loop iterations plus 10,000-fuel slices an execution may run before it fails with
     /// `kind: "timeout"`, like the TS `interruptBudget`. Default: none; the deadline and abort
     /// signal stop computing scripts.
     pub interrupt_budget: Option<u64>,
-    /// Loop iterations one function invocation may run in code the loop instrumentation does not
-    /// reach (`eval`, `Function`). Default: [`DEFAULT_LOOP_ITERATION_LIMIT`]; `Some(u64::MAX)`
-    /// disables it.
+    /// Interpreter fuel one invocation may use, including generated code and promise jobs.
+    /// Default: [`DEFAULT_LOOP_ITERATION_LIMIT`]; `Some(u64::MAX)` disables it.
     pub loop_iteration_limit: Option<u64>,
-    /// Maximum JS call depth. Default: [`DEFAULT_RECURSION_LIMIT`].
+    /// Approximate JS call depth, translated to value-stack slots. Default: [`DEFAULT_RECURSION_LIMIT`].
     pub recursion_limit: Option<usize>,
     /// See [`AcquireWorker`].
     pub acquire_worker: Option<AcquireWorker>,
