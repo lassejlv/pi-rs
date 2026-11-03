@@ -772,6 +772,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "djs-core"
+version = "0.0.0"
+source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+dependencies = [
+ "libm",
+]
+
+[[package]]
+name = "djs-lzrc"
+version = "0.0.0"
+source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+
+[[package]]
+name = "djs-prelude"
+version = "0.0.0"
+source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+dependencies = [
+ "djs-core",
+ "djs-lzrc",
+]
+
+[[package]]
 name = "dragonbox_ecma"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2578,7 +2600,8 @@ dependencies = [
 name = "pi-codemode"
 version = "1.3.0"
 dependencies = [
- "boa_engine",
+ "djs-core",
+ "djs-prelude",
  "futures",
  "indexmap",
  "libc",

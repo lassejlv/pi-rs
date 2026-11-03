@@ -5,8 +5,8 @@
 //! do. Port of `@earendil-works/pi-codemode`.
 //!
 //! Scripts use `tools`, `ALL_TOOLS`, `text`, `image`, `exit`, `store`, and `load`, and may start
-//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is [Boa](https://boajs.dev),
-//! the engine behind `pi-jsrt`, run directly on a dedicated thread per execution with nothing but
+//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is djs, embedded through
+//! `djs-core` and `djs-prelude`, run directly on a dedicated thread per execution with nothing but
 //! ECMAScript built-ins, `performance.now()`, and the codemode prelude.
 //!
 //! ```no_run
@@ -33,10 +33,10 @@
 //! # Ok(()) }
 //! ```
 //!
-//! Differences from the TS package (QuickJS in wasm) are listed in `PORTING-STATUS.md`. Boa cannot
-//! be interrupted from outside, so the script's loops are instrumented to poll the interrupt flag
-//! and count the interrupt budget; deep recursion ends the script with a `RangeError` it cannot
-//! catch; and there is no heap limit.
+//! Engine differences are documented in `DJS-ENGINE.md`. The VM enforces an arena memory cap,
+//! and fuel bounds generated code and promise jobs. Instrumented loops also count toward the
+//! interrupt budget. Fatal stops cannot be caught by the script.
+
 
 pub mod abort;
 pub mod declarations;

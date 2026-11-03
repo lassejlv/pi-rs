@@ -21,7 +21,7 @@ Tracks what is ported and what is outstanding. Update when finishing a module.
 | pi-mcp | ✅ | JSON-RPC/types/content/client/stdio + OAuth/runtime behavior aligned |
 | pi-agent | ✅ | types, loop, agent, proxy, stream-fn; TS tests ported |
 | pi-jsrt | ✅ | Embedded JS runtime (Boa + oxc), async/blocking handles, host bridge |
-| pi-codemode | ✅ | Types, source/declarations/schema rendering ported |
+| pi-codemode | Native djs milestone | VM replaced with pinned djs; public protocol retained. pi-jsrt/extensions remain on Boa pending upstream ESM. See [scope and semantics](DJS-ENGINE.md). |
 | pi-coding-agent (overall) | 🟡 | Major groups completed; skeleton/history item still marked in-progress |
 | Cross-crate cleanup/parity | ✅ | JSON behavior, fetch error semantics, renderer/flicker fixes, persistence parity verified |
 

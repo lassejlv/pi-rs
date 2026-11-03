@@ -6,7 +6,8 @@ license.workspace = true
 description = "Sandboxed JavaScript execution where the only capability is calling injected tools"
 
 [dependencies]
-boa_engine.workspace = true
+djs-core.workspace = true
+djs-prelude.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_ast.workspace = true
