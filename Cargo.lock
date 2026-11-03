@@ -774,7 +774,7 @@ dependencies = [
 [[package]]
 name = "djs-core"
 version = "0.0.0"
-source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+source = "git+https://github.com/earendil-works/djs.git?rev=23b4548c4dfe40c833ca271d0b008cd08acb2d01#23b4548c4dfe40c833ca271d0b008cd08acb2d01"
 dependencies = [
  "libm",
 ]
@@ -782,12 +782,12 @@ dependencies = [
 [[package]]
 name = "djs-lzrc"
 version = "0.0.0"
-source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+source = "git+https://github.com/earendil-works/djs.git?rev=23b4548c4dfe40c833ca271d0b008cd08acb2d01#23b4548c4dfe40c833ca271d0b008cd08acb2d01"
 
 [[package]]
 name = "djs-prelude"
 version = "0.0.0"
-source = "git+https://github.com/earendil-works/djs.git?rev=65ab48705d07ab42f58f81ba42084ab4c5100175#65ab48705d07ab42f58f81ba42084ab4c5100175"
+source = "git+https://github.com/earendil-works/djs.git?rev=23b4548c4dfe40c833ca271d0b008cd08acb2d01#23b4548c4dfe40c833ca271d0b008cd08acb2d01"
 dependencies = [
  "djs-core",
  "djs-lzrc",

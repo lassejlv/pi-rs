@@ -1,7 +1,8 @@
 # Replace native codemode engine with djs
 
 This change replaces Boa in `pi-codemode` with `djs-core` and `djs-prelude`, pinned
-to `65ab48705d07ab42f58f81ba42084ab4c5100175`. Cargo.lock records canonical git
+to `23b4548c4dfe40c833ca271d0b008cd08acb2d01` from
+[earendil-works/djs#1](https://github.com/earendil-works/djs/pull/1). Cargo.lock records canonical git
 sources; there are no sibling path dependencies. It is based on published main
 `9411c5b` and does not bring in the divergent local-main changes.
 
@@ -70,10 +71,11 @@ and the large output-limit tests remain practical.
 
 ## Remaining full replacement
 
-The pinned djs revision does not expose executable source ESM. Upstream work on a
-binding graph is not sufficient to run extensions. A complete replacement needs
-source compilation/linking, cycles, live bindings, namespaces, synthetic modules,
-dynamic import, import.meta and top-level await first.
+The pinned djs revision executes acyclic source-module graphs with live bindings
+and synthetic host exports. It is an experimental upstream PR, not complete ESM.
+Extensions still need cyclic graph instantiation/evaluation, namespace objects,
+export-star resolution, dynamic import, import.meta, top-level await and TypeScript
+module grammar before their engine can switch.
 
 Then migrate `pi-jsrt/src/loader.rs` from Boa's ModuleLoader, Module parsing,
 load/link/evaluate promises and synthetic initializers to the upstream API while
@@ -85,6 +87,6 @@ operations to suspended dispatch. Verify module, runtime, Node shim and extensio
 suites before switching pi-jsrt. This PR introduces no dummy module APIs or
 partial extension backend.
 
-Parent owns review and publication: upstream djs support first, then this focused
-codemode PR against published main. Full pi-jsrt replacement remains a follow-up
-once those upstream contracts are available.
+The upstream PR remains unmerged; the exact commit is pinned for reproducible
+review and testing. Full pi-jsrt replacement remains a follow-up once the remaining
+upstream module contracts are available.
