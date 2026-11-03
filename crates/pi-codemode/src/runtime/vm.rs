@@ -382,7 +382,11 @@ impl Vm {
     }
     fn set_clock(&mut self) {
         let now = self.clock.unwrap_or_else(wall_time);
-        self.engine.set_now(now);
+        self.engine.set_now(if self.clock.is_some() {
+            now.round()
+        } else {
+            now.trunc()
+        });
         let offset = if self.clock.is_some() {
             0
         } else {
