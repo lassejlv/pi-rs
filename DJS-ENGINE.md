@@ -1,7 +1,7 @@
 # djs engine migration
 
 `pi-codemode` now embeds `djs-core` and `djs-prelude`, pinned to
-`65ab48705d07ab42f58f81ba42084ab4c5100175` in Cargo.toml and Cargo.lock.
+`23b4548c4dfe40c833ca271d0b008cd08acb2d01` in Cargo.toml and Cargo.lock.
 No sibling checkout is required to build. This is the native codemode milestone.
 `pi-jsrt`, `pi-quickjs`, and extension execution still use QuickJS.
 
@@ -50,16 +50,23 @@ djs UTF-16 APIs. There is no new snapshot persistence API.
 - Non-deterministic Date uses the requested/system timezone's offset at the
   execution clock. djs has a fixed-offset hook, so historical dates spanning
   different DST offsets lack full IANA timezone semantics.
+- `Date.now()` and `new Date()` see integer milliseconds. djs returns the
+  supplied clock unchanged, so a deterministic virtual clock is rounded and
+  wall time is truncated before it is installed.
 - Exact error messages and stack columns depend on the engine. SharedArrayBuffer
   is unavailable. The interpreter is optimized in development builds to make
   JavaScript execution and large output-limit tests practical.
 
 ## Remaining pi-jsrt migration
 
-Upstream ES modules must land before switching the extension runtime. The
-read-only `issue/0168-pi-es-modules` work currently implements an arena binding
-graph with live aliases and TDZ; source linking and async evaluation are pending.
-The pinned revision has no usable source ESM embedding API.
+The pin is one commit past `65ab48705d07ab42f58f81ba42084ab4c5100175`: the
+experimental source-module revision from
+[earendil-works/djs#1](https://github.com/earendil-works/djs/pull/1). That pull
+request is closed and unmerged. It executes acyclic source-module graphs with
+live bindings and synthetic host exports. It is not complete ESM. Cycles,
+namespace objects, export-star resolution, dynamic import, `import.meta`,
+top-level await and TypeScript module grammar are still missing. Codemode does
+not load modules. `pi-jsrt` stays on QuickJS until those contracts exist.
 
 Required integration work:
 

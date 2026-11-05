@@ -10,8 +10,8 @@ license = "MIT"
 repository = "https://github.com/lassejlv/pi-rs"
 
 [workspace.dependencies]
-djs-core = { git = "https://github.com/earendil-works/djs.git", rev = "65ab48705d07ab42f58f81ba42084ab4c5100175" }
-djs-prelude = { git = "https://github.com/earendil-works/djs.git", rev = "65ab48705d07ab42f58f81ba42084ab4c5100175" }
+djs-core = { git = "https://github.com/earendil-works/djs.git", rev = "23b4548c4dfe40c833ca271d0b008cd08acb2d01" }
+djs-prelude = { git = "https://github.com/earendil-works/djs.git", rev = "23b4548c4dfe40c833ca271d0b008cd08acb2d01" }
 pi-chord = { path = "crates/pi-chord" }
 pi-durable = { path = "crates/pi-durable" }
 pi-durable-jsrt = { path = "crates/pi-durable-jsrt" }

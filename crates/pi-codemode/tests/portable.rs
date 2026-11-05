@@ -140,8 +140,7 @@ async fn output_flush_threshold_counts_utf16_characters() {
     remote.all_served().await;
 }
 
-/// The memory cap is QuickJS's heap limit: an allocation past it throws QuickJS's
-/// `InternalError: out of memory`.
+/// djs enforces an arena cap; a script allocation past it throws `InternalError`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn caps_the_interrupt_budget_and_memory_at_the_remotes_limits() {
     let remote = RecordingRemote {

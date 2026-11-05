@@ -35,3 +35,38 @@ async fn fuel_budget_stops_generated_loops_and_uninstrumented_microtasks() {
     }
     sandbox.close().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn arena_cap_bounds_ordinary_arrays_without_arraybuffers() {
+    let sandbox = CodemodeSandbox::new(CodemodeSandboxOptions {
+        memory_limit_bytes: Some(4 * 1024 * 1024),
+        ..Default::default()
+    })
+    .expect("create sandbox");
+    let result = sandbox
+        .execute(
+            "try { new Array(2_000_000).fill(1); return 'allocated'; } catch (error) { return error.name; }",
+            CodemodeExecuteOptions::default(),
+        )
+        .await
+        .expect("execute script");
+    assert!(result.ok(), "{result:?}");
+    assert_eq!(result.value(), Some(&serde_json::json!("InternalError")));
+    sandbox.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn date_now_is_an_integer_millisecond() {
+    let sandbox = CodemodeSandbox::new(CodemodeSandboxOptions::default()).expect("create sandbox");
+    let result = sandbox
+        .execute("return Date.now()", CodemodeExecuteOptions::default())
+        .await
+        .expect("execute script");
+    assert!(result.ok(), "{result:?}");
+    let now = result
+        .value()
+        .and_then(|value| value.as_f64())
+        .expect("number");
+    assert!(now.is_finite() && now == now.trunc(), "{now}");
+    sandbox.close().await;
+}
