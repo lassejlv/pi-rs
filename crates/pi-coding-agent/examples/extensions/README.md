@@ -138,6 +138,12 @@ cp permission-gate.ts ~/.pi/agent/extensions/
 | `with-deps/` | Extension with its own package.json and dependencies (demonstrates jiti module resolution) |
 | `file-trigger.ts` | Watches a trigger file and injects contents into conversation |
 
+### Durable storage
+
+| Extension | Description |
+|-----------|-------------|
+| `durable-demo.ts` | `/durable` command backed by native `pi-durable`: a SQLite-persisted counter, or a Harness turn against the faux provider |
+
 ## Writing Extensions
 
 See [docs/extensions.md](../../docs/extensions.md) for full documentation.

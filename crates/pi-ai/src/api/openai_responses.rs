@@ -728,7 +728,7 @@ pub fn stream(
     options: StreamOptions,
 ) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

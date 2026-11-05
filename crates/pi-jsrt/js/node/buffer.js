@@ -465,6 +465,33 @@ for (const name of Object.getOwnPropertyNames(Buffer.prototype)) {
   }
 }
 Buffer.poolSize = 8192;
+// Node's internal per-encoding slice/write methods (used directly by some packages, e.g. ssh2).
+for (const [prefix, enc] of [["utf8", "utf8"], ["latin1", "latin1"], ["ascii", "ascii"], ["hex", "hex"], ["base64", "base64"], ["base64url", "base64url"], ["ucs2", "utf16le"]]) {
+  if (!Buffer.prototype[`${prefix}Slice`]) {
+    Buffer.prototype[`${prefix}Slice`] = function (start = 0, end = this.length) {
+      return this.toString(enc, start, end);
+    };
+  }
+  if (!Buffer.prototype[`${prefix}Write`]) {
+    Buffer.prototype[`${prefix}Write`] = function (string, offset = 0, length = this.length - offset) {
+      return this.write(string, offset, length, enc);
+    };
+  }
+}
+if (!Buffer.copyBytesFrom) {
+  Buffer.copyBytesFrom = (view, offset = 0, length) => {
+    const bytes = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+    const size = view.BYTES_PER_ELEMENT ?? 1;
+    const end = length === undefined ? view.length : offset + length;
+    return Buffer.from(bytes.slice(offset * size, Math.min(end, view.length) * size));
+  };
+}
+// Node's Buffer statics are enumerable own properties; packages copy them with for-in
+// (safer-buffer).
+for (const name of ["from", "copyBytesFrom", "of", "alloc", "allocUnsafe", "allocUnsafeSlow", "isBuffer", "compare", "isEncoding", "concat", "byteLength"]) {
+  const desc = Object.getOwnPropertyDescriptor(Buffer, name);
+  if (desc) Object.defineProperty(Buffer, name, { ...desc, enumerable: true });
+}
 
 class Blob {
   #bytes;

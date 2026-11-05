@@ -146,7 +146,9 @@ function structuredClone(value, options = undefined) {
       seen.set(v, out);
       for (const k of Object.keys(v)) {
         const val = v[k];
-        out[k] = clone(val);
+        // An own "__proto__" key stays a data property, as in the HTML structured clone.
+        if (k === "__proto__") Object.defineProperty(out, k, { value: clone(val), writable: true, enumerable: true, configurable: true });
+        else out[k] = clone(val);
       }
       return out;
     }
@@ -200,9 +202,18 @@ internal.hidden(globalThis, "structuredClone", structuredClone);
     toJSON() {
       return { timeOrigin: this.timeOrigin };
     },
+    // Resource timing (undici reports fetches here) and Node extras; no observers exist.
+    markResourceTiming(timingInfo, requestedUrl, initiatorType, global, cacheMode, bodyInfo, responseStatus) {
+      return { name: String(requestedUrl), entryType: "resource", initiatorType, startTime: timingInfo?.startTime ?? 0, duration: 0, responseStatus };
+    },
+    clearResourceTimings() {},
+    setResourceTimingBufferSize() {},
+    eventLoopUtilization: () => ({ idle: 0, active: 0, utilization: 0 }),
+    timerify: (fn) => fn,
   };
   internal.performance = performance;
-  internal.hidden(globalThis, "performance", performance);
+  // With Node APIs, `performance` is perf_hooks' full implementation (a lazy global).
+  if (!ops.config.nodeCompat) internal.hidden(globalThis, "performance", performance);
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +231,15 @@ internal.hidden(globalThis, "structuredClone", structuredClone);
       return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     },
   };
+  // The rest of SubtleCrypto lives in node/webcrypto.js (loaded on first use; Node
+  // compatibility only), which replaces these forwarders.
+  for (const name of ["generateKey", "importKey", "exportKey", "encrypt", "decrypt", "sign", "verify", "deriveBits", "deriveKey", "wrapKey", "unwrapKey"]) {
+    subtle[name] = async (...args) => {
+      if (!internal.subtleImpl && internal.hasBuiltin?.("crypto")) internal.loadGlue("node/webcrypto.js");
+      if (!internal.subtleImpl) throw new internal.DOMException(`crypto.subtle.${name} is not available`, "NotSupportedError");
+      return internal.subtleImpl[name](...args);
+    };
+  }
   const crypto = {
     randomUUID: () => ops.randomUUID(),
     getRandomValues: (array) => ops.fillRandom(array),
@@ -230,7 +250,7 @@ internal.hidden(globalThis, "structuredClone", structuredClone);
 }
 
 // ---------------------------------------------------------------------------
-// Number/Date locale formatting and a minimal Intl (Boa is built without ICU)
+// Number/Date locale formatting and a minimal Intl (QuickJS has no Intl)
 // ---------------------------------------------------------------------------
 
 function groupDigits(intPart, sep = ",") {

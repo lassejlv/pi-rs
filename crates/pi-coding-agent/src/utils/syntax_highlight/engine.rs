@@ -296,7 +296,9 @@ pub struct LanguageDef {
     pub aliases: Vec<String>,
     pub disable_autodetect: bool,
     pub superset_of: Option<String>,
-    json: Json,
+    /// The definition's JSON object graph, kept as text and parsed when the language is first
+    /// compiled: parsed `Value`s of all ~190 grammars take several times the memory of the text.
+    source: Arc<str>,
     compiled: OnceLock<Result<Arc<CompiledLanguage>, String>>,
 }
 
@@ -579,7 +581,8 @@ impl Compiler {
 }
 
 impl LanguageDef {
-    fn from_json(json: Json) -> Option<Self> {
+    fn from_source(source: Arc<str>) -> Option<Self> {
+        let json: Json = serde_json::from_str(&source).ok()?;
         let name = json.get("name")?.as_str()?.to_string();
         let nodes = json.get("nodes")?.as_array()?;
         let root = json.get("root")?.get("$ref")?.as_u64()? as usize;
@@ -591,7 +594,7 @@ impl LanguageDef {
         };
         let disable_autodetect = root_node.get("disableAutodetect").and_then(Json::as_bool).unwrap_or(false);
         let superset_of = root_node.get("supersetOf").and_then(Json::as_str).map(str::to_string);
-        Some(Self { name, aliases, disable_autodetect, superset_of, json, compiled: OnceLock::new() })
+        Some(Self { name, aliases, disable_autodetect, superset_of, source, compiled: OnceLock::new() })
     }
 
     /// Compile the language (once).
@@ -600,8 +603,12 @@ impl LanguageDef {
     }
 
     fn compile(&self) -> Result<Arc<CompiledLanguage>, String> {
-        let nodes = self.json.get("nodes").and_then(Json::as_array).cloned().unwrap_or_default();
-        let root = self.json.get("root").and_then(|r| r.get("$ref")).and_then(Json::as_u64).unwrap_or(0) as usize;
+        let mut json: Json = serde_json::from_str(&self.source).unwrap_or_default();
+        let root = json.get("root").and_then(|r| r.get("$ref")).and_then(Json::as_u64).unwrap_or(0) as usize;
+        let nodes = match json.get_mut("nodes").map(Json::take) {
+            Some(Json::Array(nodes)) => nodes,
+            _ => Vec::new(),
+        };
         let mut heap = Heap::default();
         for node in &nodes {
             let mut obj = Obj::default();
@@ -686,10 +693,10 @@ static ALL_DEFINITIONS: LazyLock<Vec<Arc<LanguageDef>>> = LazyLock::new(|| {
     if decoder.read_to_string(&mut text).is_err() {
         return Vec::new();
     }
-    let Ok(Json::Array(items)) = serde_json::from_str::<Json>(&text) else {
+    let Ok(items) = serde_json::from_str::<Vec<&serde_json::value::RawValue>>(&text) else {
         return Vec::new();
     };
-    items.into_iter().filter_map(LanguageDef::from_json).map(Arc::new).collect()
+    items.into_iter().filter_map(|item| LanguageDef::from_source(Arc::from(item.get()))).map(Arc::new).collect()
 });
 
 #[derive(Default)]
@@ -738,7 +745,7 @@ pub fn register_all_languages() {
             registry.register(def.clone());
         } else {
             // lib/index.js re-registers every language with a fresh definition.
-            let fresh = LanguageDef::from_json(def.json.clone()).map(Arc::new);
+            let fresh = LanguageDef::from_source(def.source.clone()).map(Arc::new);
             if let Some(fresh) = fresh {
                 registry.register(fresh);
             }

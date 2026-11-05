@@ -10,16 +10,22 @@ license = "MIT"
 repository = "https://github.com/lassejlv/pi-rs"
 
 [workspace.dependencies]
-djs-core = { git = "https://github.com/earendil-works/djs.git", rev = "23b4548c4dfe40c833ca271d0b008cd08acb2d01" }
-djs-prelude = { git = "https://github.com/earendil-works/djs.git", rev = "23b4548c4dfe40c833ca271d0b008cd08acb2d01" }
+djs-core = { git = "https://github.com/earendil-works/djs.git", rev = "65ab48705d07ab42f58f81ba42084ab4c5100175" }
+djs-prelude = { git = "https://github.com/earendil-works/djs.git", rev = "65ab48705d07ab42f58f81ba42084ab4c5100175" }
+pi-chord = { path = "crates/pi-chord" }
+pi-durable = { path = "crates/pi-durable" }
+pi-durable-jsrt = { path = "crates/pi-durable-jsrt" }
+rusqlite = { version = "0.41", features = ["bundled"] }
 pi-ai = { path = "crates/pi-ai" }
 pi-agent = { path = "crates/pi-agent" }
 pi-tui = { path = "crates/pi-tui" }
 pi-mcp = { path = "crates/pi-mcp" }
 pi-codemode = { path = "crates/pi-codemode" }
 pi-jsrt = { path = "crates/pi-jsrt" }
+pi-quickjs = { path = "crates/pi-quickjs" }
 pi-telemetry = { path = "crates/pi-telemetry" }
 pi-json = { path = "crates/pi-json" }
+pi-embed = { path = "crates/pi-embed" }
 pi-coding-agent = { path = "crates/pi-coding-agent" }
 
 tokio = { version = "1", features = ["full"] }
@@ -35,6 +41,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 url = "2"
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+jiff = "0.2"
 ring = "0.17"
 regex = "1"
 once_cell = "1"
@@ -48,9 +55,10 @@ bytes = "1"
 unicode-width = "0.2"
 unicode-segmentation = "1"
 icu_segmenter = "2"
+icu_collator = "~2.3"
 fancy-regex = "0.14"
 libc = "0.2"
-boa_engine = { version = "0.22", features = ["annex-b"] }
+rquickjs = { version = "0.14", default-features = false, features = ["std", "disable-assertions"] }
 oxc_allocator = "0.155"
 oxc_parser = "0.155"
 oxc_semantic = "0.155"
@@ -71,8 +79,9 @@ crc32fast = "1"
 flate2 = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 unicode-normalization = "0.1"
-yaml-rust2 = "0.10"
 notify = "8"
+photon-rs = {version="=0.3.3",default-features=false}
+winapi-util = "0.1"
 ignore = "0.4"
 tempfile = "3"
 semver = "1"
@@ -82,7 +91,7 @@ globset = "0.4"
 [profile.dev]
 debug = "line-tables-only"
 
-# djs executes JavaScript in Rust; optimize the interpreter in development builds.
+# djs executes JavaScript in Rust, so development VMs need an optimized interpreter.
 [profile.dev.package.djs-core]
 opt-level = 3
 debug-assertions = false
@@ -91,35 +100,20 @@ overflow-checks = false
 [profile.dev.package."*"]
 debug = false
 
-# The embedded JavaScript engine parses and compiles every extension module (and pi's bundled
-# glue, TypeBox and marked) when an extension loads; unoptimized, with debug assertions, it is
-# several times slower, which dominates debug builds and tests. Optimize just the engine, its hot
-# dependencies and the TypeScript stripper (release semantics, so behavior is identical).
-[profile.dev.package.boa_engine]
+
+
+# Keep native image preparation within interactive development deadlines.
+[profile.dev.package."image@0.24.9"]
 opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_parser]
+
+[profile.dev.package.photon-rs]
 opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_ast]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_interner]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_gc]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.boa_string]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.regress]
+
+# The embedded JavaScript engine (QuickJS, C) parses and compiles every extension module (and pi's
+# bundled glue, TypeBox and marked) when an extension loads; unoptimized it is several times slower,
+# which dominates debug builds and tests. Optimize just the engine (its C code is compiled with the
+# package's opt-level).
+[profile.dev.package.rquickjs-sys]
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
@@ -143,35 +137,7 @@ overflow-checks = false
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
-[profile.dev.package."fast-float2"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
 [profile.dev.package."num-bigint"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."thin-vec"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.small_btree]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."ryu-js"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.dashmap]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package."intrusive-collections"]
-opt-level = 2
-debug-assertions = false
-overflow-checks = false
-[profile.dev.package.arrayvec]
 opt-level = 2
 debug-assertions = false
 overflow-checks = false
@@ -216,11 +182,270 @@ opt-level = 2
 debug-assertions = false
 overflow-checks = false
 
+# pi-jsrt's node:crypto: big-integer and curve arithmetic, scrypt and the block ciphers are
+# orders of magnitude slower unoptimized (RSA key generation took seconds in debug tests).
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.crypto-bigint]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.elliptic-curve]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.primeorder]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.p256]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.p384]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.p521]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.salsa20]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.scrypt]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.aes]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.ghash]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.polyval]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.chacha20]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.poly1305]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+# pi-jsrt's WebAssembly runs on the wasmi interpreter (undici's HTTP parser, ssh2's poly1305).
+[profile.dev.package.wasmi]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.wasmi_core]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.wasmi_ir]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.wasmi_collections]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.wasmparser]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.brotli]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+[profile.dev.package.brotli-decompressor]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+
 [profile.test]
 debug = "line-tables-only"
 incremental = false
 
 # Vendored crates with local fixes (see vendor/<crate>/PATCH.md).
 [patch.crates-io]
-boa_ast = { path = "vendor/boa_ast" }
-boa_parser = { path = "vendor/boa_parser" }
+rquickjs-sys = { path = "vendor/rquickjs-sys" }
+
+# Release builds: one codegen unit with fat LTO lets LLVM drop and merge code across the
+# workspace's large dependency graph (QuickJS, oxc, ICU4X, RustCrypto, wasmi, rustls), and symbols are
+# stripped. Code is optimized for size, except the hot paths, which keep full speed optimization:
+# the TUI renderer, the JavaScript runtime with its engine and TypeScript stripper, regex engines,
+# JSON, hash tables, crypto, WebAssembly and compression. Measured on x86-64 Linux, the binary is
+# about a fifth smaller than with `opt-level = 3` everywhere while loading extensions ~5% slower;
+# `opt-level = "s"` everywhere saves a few MB more but loads extensions ~15% slower.
+# `panic = "unwind"` stays: tools, extensions and UI callbacks are guarded with `catch_unwind`.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+opt-level = "s"
+
+[profile.release.package.pi-tui]
+opt-level = 3
+
+[profile.release.package.pi-jsrt]
+opt-level = 3
+
+[profile.release.package.rquickjs-sys]
+opt-level = 3
+
+[profile.release.package.rquickjs-core]
+opt-level = 3
+
+[profile.release.package.icu_properties]
+opt-level = 3
+
+[profile.release.package.icu_collections]
+opt-level = 3
+
+[profile.release.package.hashbrown]
+opt-level = 3
+
+[profile.release.package.indexmap]
+opt-level = 3
+
+[profile.release.package."rustc-hash"]
+opt-level = 3
+
+[profile.release.package."num-bigint"]
+opt-level = 3
+
+[profile.release.package.oxc_allocator]
+opt-level = 3
+
+[profile.release.package.oxc_ast]
+opt-level = 3
+
+[profile.release.package.oxc_span]
+opt-level = 3
+
+[profile.release.package.oxc_syntax]
+opt-level = 3
+
+[profile.release.package.oxc_ecmascript]
+opt-level = 3
+
+[profile.release.package.oxc_parser]
+opt-level = 3
+
+[profile.release.package.oxc_semantic]
+opt-level = 3
+
+[profile.release.package.oxc_transformer]
+opt-level = 3
+
+[profile.release.package.oxc_traverse]
+opt-level = 3
+
+[profile.release.package.oxc_codegen]
+opt-level = 3
+
+[profile.release.package."num-bigint-dig"]
+opt-level = 3
+
+[profile.release.package."crypto-bigint"]
+opt-level = 3
+
+[profile.release.package."elliptic-curve"]
+opt-level = 3
+
+[profile.release.package.primeorder]
+opt-level = 3
+
+[profile.release.package.p256]
+opt-level = 3
+
+[profile.release.package.p384]
+opt-level = 3
+
+[profile.release.package.p521]
+opt-level = 3
+
+[profile.release.package."curve25519-dalek"]
+opt-level = 3
+
+[profile.release.package.salsa20]
+opt-level = 3
+
+[profile.release.package.scrypt]
+opt-level = 3
+
+[profile.release.package.aes]
+opt-level = 3
+
+[profile.release.package.ghash]
+opt-level = 3
+
+[profile.release.package.polyval]
+opt-level = 3
+
+[profile.release.package.chacha20]
+opt-level = 3
+
+[profile.release.package.poly1305]
+opt-level = 3
+
+[profile.release.package.wasmi]
+opt-level = 3
+
+[profile.release.package.wasmi_core]
+opt-level = 3
+
+[profile.release.package.wasmi_ir]
+opt-level = 3
+
+[profile.release.package.wasmi_collections]
+opt-level = 3
+
+[profile.release.package.wasmparser]
+opt-level = 3
+
+[profile.release.package.miniz_oxide]
+opt-level = 3
+
+[profile.release.package.zlib-rs]
+opt-level = 3
+
+[profile.release.package.brotli]
+opt-level = 3
+
+[profile.release.package."brotli-decompressor"]
+opt-level = 3
+
+[profile.release.package.serde_json]
+opt-level = 3
+
+[profile.release.package."regex-automata"]
+opt-level = 3
+
+[profile.release.package."regex-syntax"]
+opt-level = 3
+
+[profile.release.package."fancy-regex"]
+opt-level = 3
+
+[profile.release.package."aho-corasick"]
+opt-level = 3
+
+[profile.release.package.memchr]
+opt-level = 3

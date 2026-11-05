@@ -665,15 +665,6 @@ impl Component for EmptyComponent {
     }
 }
 
-/// Text shown in place of a component whose JS code failed.
-struct ErrorComponent(String);
-
-impl Component for ErrorComponent {
-    fn render(&self, width: usize) -> Vec<String> {
-        vec![pi_tui::utils::truncate_to_width(&self.0, width, "...", false)]
-    }
-}
-
 /// Resolve a component description returned by bridge.js (`componentRef`).
 pub(crate) fn component_from_value(bridge: &Arc<Bridge>, value: &Value) -> Option<ComponentRef> {
     if value.is_null() {
@@ -773,9 +764,18 @@ fn mouse_result_from(bridge: &Arc<Bridge>, value: &Value) -> Option<MouseResult>
     })
 }
 
+/// A markdown theme reference from JS (`markdownThemeRef` in pi-tui.js): `None` when absent.
+pub(crate) fn markdown_theme_ref(bridge: &Bridge, value: &Value) -> Option<MarkdownTheme> {
+    match value {
+        Value::Null => None,
+        t if t["builtin"].is_string() => Some(crate::modes::interactive::theme::theme::get_markdown_theme()),
+        t => Some(t["id"].as_u64().and_then(|id| bridge.components.markdown_themes.get(id)).unwrap_or_else(MarkdownTheme::plain)),
+    }
+}
+
 fn render_error(err: anyhow::Error) -> ComponentRef {
     let (message, _) = crate::core::extensions::runner::error_parts(&err);
-    Arc::new(ErrorComponent(format!("[extension render error: {message}]")))
+    Arc::new(RenderFailed { message })
 }
 
 // ---------------------------------------------------------------------------
@@ -1397,11 +1397,7 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow
         "rc" => rust_component_call(bridge, &payload),
         "tui.util" => tui_util(bridge, &payload),
         "tui.markdown" => {
-            let theme = match &payload["theme"] {
-                Value::Null => MarkdownTheme::plain(),
-                t if t["builtin"].is_string() => crate::modes::interactive::theme::theme::get_markdown_theme(),
-                t => t["id"].as_u64().and_then(|id| bridge.components.markdown_themes.get(id)).unwrap_or_else(MarkdownTheme::plain),
-            };
+            let theme = markdown_theme_ref(bridge, &payload["theme"]).unwrap_or_else(MarkdownTheme::plain);
             let markdown = Markdown::new(
                 payload["text"].as_str().unwrap_or_default(),
                 payload["paddingX"].as_u64().unwrap_or(0) as usize,
@@ -1676,7 +1672,10 @@ fn rust_component_new(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<V
                 RustComp::Editor(Editor::new(&tui, editor_theme, editor_options))
             }
         }
-        _ => anyhow::bail!("unknown component kind {kind}"),
+        other => match super::messages::new_component(bridge, other, payload)? {
+            Some(component) => RustComp::Other(component),
+            None => anyhow::bail!("unknown component kind {kind}"),
+        },
     };
     Ok(json!(bridge.components.rust.insert(comp)))
 }
@@ -1781,7 +1780,10 @@ fn rust_component_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<
             let editor = comp.editor().cloned().unwrap_or_else(|| unreachable!("editor-backed component"));
             editor_call(bridge, &editor, &method, payload)
         }
-        RustComp::Other(_) => Err(anyhow::anyhow!("component.{method} is not available")),
+        RustComp::Other(component) => match super::messages::call(component, &method, payload)? {
+            Some(value) => Ok(value),
+            None => Err(anyhow::anyhow!("component.{method} is not available")),
+        },
     }
 }
 

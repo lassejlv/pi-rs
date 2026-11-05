@@ -103,7 +103,9 @@ impl CustomMessageComponent {
             let result =
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| renderer(&self.message, &options, &t)));
             // Fall through to default rendering when the renderer fails or returns nothing.
-            if let Ok(Some(component)) = result {
+            if let Ok(Some(component)) = result
+                && crate::core::extensions::types::render_failure(&component).is_none()
+            {
                 // Custom renderer provides its own styled component
                 self.st.lock().custom_component = Some(component.clone());
                 self.container.add_child(component);

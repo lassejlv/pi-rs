@@ -36,13 +36,19 @@ pub fn create_markdown_transform(
     message_type: CreateMarkdownTransformMessageType,
     is_streaming: bool,
     transformers: &[MarkdownTransformer],
+    message_id: Option<&str>,
+    timestamp: Option<&str>,
 ) -> Arc<dyn Fn(String, i64) -> String + Send + Sync> {
     let transformers: Vec<MarkdownTransformer> = transformers.to_vec();
+    let message_id = message_id.map(str::to_owned);
+    let timestamp = timestamp.map(str::to_owned);
     Arc::new(move |markdown: String, available_width: i64| {
         let context = MarkdownTransformContext {
             message_type: message_type.context_type(),
             is_streaming,
             available_width: available_width.max(0) as usize,
+            message_id: message_id.clone(),
+            timestamp: timestamp.clone(),
         };
         apply_markdown_transformers(markdown, &context, &transformers)
     })
@@ -53,8 +59,10 @@ pub(crate) fn markdown_transform_fn(
     message_type: CreateMarkdownTransformMessageType,
     is_streaming: bool,
     transformers: &[MarkdownTransformer],
+    message_id: Option<&str>,
+    timestamp: Option<&str>,
 ) -> pi_tui::components::markdown::MarkdownTransformFn {
-    let transform = create_markdown_transform(message_type, is_streaming, transformers);
+    let transform = create_markdown_transform(message_type, is_streaming, transformers, message_id, timestamp);
     Arc::new(move |markdown: &str, width: usize| transform(markdown.to_string(), width as i64))
 }
 

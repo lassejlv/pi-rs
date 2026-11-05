@@ -117,12 +117,20 @@ pub async fn wait_for_child_process(
         })
     }
 
+    // Duplicates of the pipes' read ends, only to ask the kernel whether output (or EOF) is still
+    // waiting to be read when the grace period after `exit` runs out (see `pipes_pending`).
+    #[cfg(unix)]
+    let mut watched = Vec::new();
     if let Some(stdout) = child.stdout.take() {
         stdout_ended = false;
+        #[cfg(unix)]
+        watched.extend(dup_pipe(&stdout).map(|fd| (ChildStream::Stdout, fd)));
         readers.push(spawn_reader(stdout, ChildStream::Stdout, tx.clone()));
     }
     if let Some(stderr) = child.stderr.take() {
         stderr_ended = false;
+        #[cfg(unix)]
+        watched.extend(dup_pipe(&stderr).map(|fd| (ChildStream::Stderr, fd)));
         readers.push(spawn_reader(stderr, ChildStream::Stderr, tx.clone()));
     }
     drop(tx);
@@ -163,6 +171,20 @@ pub async fn wait_for_child_process(
                 Err(err) => break Err(anyhow::Error::from(err)),
             },
             _ = &mut idle, if exit.is_some() => {
+                // The pipes are idle only if nothing is left to read. Under load the reader tasks
+                // can lag behind the exit by more than the grace period; output (or EOF) already
+                // sitting in a pipe is not an idle inherited handle, so keep reading.
+                #[cfg(unix)]
+                if pipes_pending(watched.iter().filter_map(|(stream, fd)| {
+                    let ended = match stream {
+                        ChildStream::Stdout => stdout_ended,
+                        ChildStream::Stderr => stderr_ended,
+                    };
+                    (!ended).then(|| std::os::fd::AsFd::as_fd(fd))
+                })) {
+                    idle.as_mut().reset(tokio::time::Instant::now() + Duration::from_millis(EXIT_STDIO_GRACE_MS));
+                    continue;
+                }
                 break Ok(exit.expect("exit status"));
             }
         }
@@ -178,6 +200,28 @@ pub async fn wait_for_child_process(
         reader.abort();
     }
     result
+}
+
+/// A duplicate of a pipe's read end (`None` if `dup` fails; then that pipe is not watched).
+#[cfg(unix)]
+fn dup_pipe(pipe: &impl std::os::fd::AsFd) -> Option<std::os::fd::OwnedFd> {
+    pipe.as_fd().try_clone_to_owned().ok()
+}
+
+/// Whether any of `pipes` (not yet at EOF on our side) has data or EOF ready to read (`poll` with
+/// a zero timeout).
+#[cfg(unix)]
+pub(crate) fn pipes_pending<'a>(pipes: impl Iterator<Item = std::os::fd::BorrowedFd<'a>>) -> bool {
+    use std::os::fd::AsRawFd;
+    let mut fds: Vec<libc::pollfd> = pipes
+        .map(|fd| libc::pollfd { fd: fd.as_raw_fd(), events: libc::POLLIN, revents: 0 })
+        .collect();
+    if fds.is_empty() {
+        return false;
+    }
+    // SAFETY: `fds` is a valid array of `fds.len()` pollfd entries for open descriptors we own.
+    let ready = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, 0) };
+    ready > 0 && fds.iter().any(|fd| fd.revents & (libc::POLLIN | libc::POLLHUP) != 0)
 }
 
 #[cfg(all(test, unix))]

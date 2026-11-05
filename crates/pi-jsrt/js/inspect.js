@@ -290,9 +290,16 @@ function formatRaw(ctx, value, recurseTimes) {
     return `WeakSet { <items unknown> }`;
   } else if (typeof value[Symbol.iterator] === "function" && /Iterator$/.test(Object.prototype.toString.call(value).slice(8, -1))) {
     return `Object [${Object.prototype.toString.call(value).slice(8, -1)}] {}`;
-  } else if (value instanceof Number || value instanceof String || value instanceof Boolean) {
+  } else if (value instanceof DataView) {
+    braces = ["DataView {", "}"];
+    formatter = () => [
+      `byteLength: ${formatPrimitive(ctx, value.byteLength)}`,
+      `byteOffset: ${formatPrimitive(ctx, value.byteOffset)}`,
+      `buffer: ${formatValue(ctx, value.buffer, recurseTimes)}`,
+    ];
+  } else if (value instanceof Number || value instanceof String || value instanceof Boolean || (typeof BigInt === "function" && value instanceof BigInt)) {
     const prim = value.valueOf();
-    base = `[${value instanceof Number ? "Number" : value instanceof String ? "String" : "Boolean"}: ${formatPrimitive(ctx, prim)}]`;
+    base = `[${value instanceof Number ? "Number" : value instanceof String ? "String" : value instanceof Boolean ? "Boolean" : "BigInt"}: ${formatPrimitive(ctx, prim)}]`;
     if (value instanceof String) keys = keys.filter((k) => !/^(0|[1-9][0-9]*)$/.test(k));
     if (keys.length === 0 && symbols.length === 0) return base;
     braces = ["{", "}"];

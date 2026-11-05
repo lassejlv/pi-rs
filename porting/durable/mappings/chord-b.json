@@ -1,0 +1,487 @@
+{
+  "files": [
+    {
+      "reference": "packages/chord/test/delta.test.ts",
+      "cases": [
+        {
+          "name": "immutable tracker lifecycle > keeps a draft alive across await and adopts only a prepared change",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::drafts_survive_await_and_authority_changes_only_after_adoption",
+          "note": "existing; Object.isFrozen assertions and JS object identity of input are embedded-only"
+        },
+        {
+          "name": "immutable tracker lifecycle > aborts and revokes without changing the committed value",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__aborts_and_revokes_without_changing_the_committed_value",
+          "note": "new; proxy revocation of child drafts is embedded-only, Rust asserts the settled-state errors"
+        },
+        {
+          "name": "immutable tracker lifecycle > grows arrays with explicit nulls and revokes drafts after preparation",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__grows_arrays_with_explicit_nulls_and_revokes_drafts_after_preparation",
+          "note": "new; JS `length = 4` mutation replaced by assigning the grown array"
+        },
+        {
+          "name": "immutable tracker lifecycle > normalizes a deep no-op to exact previous identity",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::no_op_adoption_retains_identity_and_stales_competitors",
+          "note": "existing; Arc identity"
+        },
+        {
+          "name": "immutable tracker lifecycle > takes immutable ownership of replacement input and applies no-op normalization",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::replacement_is_a_base_and_takes_candidate_ownership",
+          "note": "existing"
+        },
+        {
+          "name": "immutable tracker lifecycle > shares immutable operation placements with the prepared candidate",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__shares_immutable_operation_placements_with_the_prepared_candidate",
+          "note": "new; isFrozen assertions are embedded-only"
+        },
+        {
+          "name": "immutable tracker lifecycle > rejects foreign, stale, and repeated preparations while allowing competing changes",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__rejects_foreign_stale_and_repeated_preparations_while_allowing_competing_changes",
+          "note": "new faithful port (tracker.rs covers the first half)"
+        },
+        {
+          "name": "immutable tracker lifecycle > invalidates a prepared result when its change is aborted",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__invalidates_a_prepared_result_when_its_change_is_aborted",
+          "note": "new; also tracker.rs::failed_persistence_can_abort_candidate_without_publishing_it"
+        },
+        {
+          "name": "immutable tracker lifecycle > makes competing same-base preparations stale after adopting a no-op",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__makes_competing_same_base_preparations_stale_after_adopting_a_no_op",
+          "note": "new"
+        },
+        {
+          "name": "immutable tracker lifecycle > emits an owned root replacement without traversing large replacement input",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_tracker_lifecycle__emits_an_owned_root_replacement_without_traversing_large_replacement_input",
+          "note": "new"
+        },
+        {
+          "name": "canonical strings > emits append and rolling-window operations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::canonical_strings__emits_append_and_rolling_window_operations",
+          "note": "new"
+        },
+        {
+          "name": "canonical strings > finds bounded overlaps",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::canonical_strings__finds_bounded_overlaps",
+          "note": "new; Rust overlap takes explicit probe/max-candidates (64, 8 are the upstream defaults)"
+        },
+        {
+          "name": "operation application and validation > applies mutable and immutable operations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_application_and_validation__applies_mutable_and_immutable_operations",
+          "note": "new; structuredClone replaced by Value clone"
+        },
+        {
+          "name": "operation application and validation > supports root replacement, root splice, and permutations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_application_and_validation__supports_root_replacement_root_splice_and_permutations",
+          "note": "new; undefined target maps to Null"
+        },
+        {
+          "name": "operation application and validation > rejects unsafe and malformed paths",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_application_and_validation__rejects_unsafe_and_malformed_paths",
+          "note": "new; typed Op cannot hold a string path so that arm is asserted on Op::from_value"
+        },
+        {
+          "name": "operation application and validation > validates immutable operations before traversing the target",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "depends on a JS accessor property on the target counting reads; Rust values have no accessors. Malformed-path rejection is covered by Op::from_value in the case above"
+        },
+        {
+          "name": "operation application and validation > validates decoded and wire vocabularies separately",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_application_and_validation__validates_decoded_and_wire_vocabularies_separately",
+          "note": "new"
+        },
+        {
+          "name": "codec > interns paths, omits adjacent paths, and round-trips",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__interns_paths_omits_adjacent_paths_and_round_trips",
+          "note": "new"
+        },
+        {
+          "name": "codec > resets path dictionaries on a base",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__resets_path_dictionaries_on_a_base",
+          "note": "new"
+        },
+        {
+          "name": "codec > rejects unresolved short forms and unsafe interned paths",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__rejects_unresolved_short_forms_and_unsafe_interned_paths",
+          "note": "new"
+        },
+        {
+          "name": "codec > omits an adjacent repeated path",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__omits_an_adjacent_repeated_path",
+          "note": "new"
+        },
+        {
+          "name": "codec > interns on second use rather than first",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__interns_on_second_use_rather_than_first",
+          "note": "new"
+        },
+        {
+          "name": "codec > does not collide paths containing null characters",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__does_not_collide_paths_containing_null_characters",
+          "note": "new"
+        },
+        {
+          "name": "codec > clears decoder ids on a base batch",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__clears_decoder_ids_on_a_base_batch",
+          "note": "new"
+        },
+        {
+          "name": "codec > makes batches after a base self-contained",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__makes_batches_after_a_base_self_contained",
+          "note": "new"
+        },
+        {
+          "name": "codec > round-trips deterministic mixed operation streams",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::codec__round_trips_deterministic_mixed_operation_streams",
+          "note": "new"
+        },
+        {
+          "name": "immutable application ownership > does not mutate a replacement payload targeted by a later operation",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_application_ownership__does_not_mutate_a_replacement_payload_targeted_by_a_later_operation",
+          "note": "new; also delta.rs::immutable_replacement_payload_and_batched_replay_are_independent"
+        },
+        {
+          "name": "immutable application ownership > adopts a mutable replacement payload rather than copying it",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "asserts that two mutable applies alias one JS replacement object; Rust values are copy-on-write so mutation cannot alias by construction"
+        },
+        {
+          "name": "path and prototype safety > rejects constructor walks and forbidden interned paths",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::path_and_prototype_safety__rejects_constructor_walks_and_forbidden_interned_paths",
+          "note": "new; the Object.prototype.gadget pollution check is embedded-only"
+        },
+        {
+          "name": "path and prototype safety > does not run inherited setters",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "installs a setter on Object.prototype; no prototype chain in Rust"
+        },
+        {
+          "name": "path and prototype safety > allows reserved names inside values without prototype pollution",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::path_and_prototype_safety__allows_reserved_names_inside_values_without_prototype_pollution",
+          "note": "new; reserved keys are kept as ordinary keys inside values"
+        },
+        {
+          "name": "path and prototype safety > imports own properties without invoking inherited setters",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "installs setters on Object.prototype and Array.prototype before track(); no prototype chain in Rust"
+        },
+        {
+          "name": "array index safety > writes an existing index and appends exactly one past the end",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::array_index_safety__writes_an_existing_index_and_appends_exactly_one_past_the_end",
+          "note": "new"
+        },
+        {
+          "name": "array index safety > rejects gaps, huge indices, and string-spelled indices",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::array_index_safety__rejects_gaps_huge_indices_and_string_spelled_indices",
+          "note": "new"
+        },
+        {
+          "name": "array index safety > allows explicit growth values and rejects deletion past the end",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::array_index_safety__allows_explicit_growth_values_and_rejects_deletion_past_the_end",
+          "note": "new"
+        },
+        {
+          "name": "array index safety > applies large splice payloads without spreading them at once",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::array_index_safety__applies_large_splice_payloads_without_spreading_them_at_once",
+          "note": "new; also delta.rs::arrays_remain_dense_and_large_splices_do_not_overflow_the_stack"
+        },
+        {
+          "name": "operation structure safety > rejects unknown verbs, malformed tuples, paths, and splice payloads",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_structure_safety__rejects_unknown_verbs_malformed_tuples_paths_and_splice_payloads",
+          "note": "new; asserted on Op::from_value (the typed Op rejects them at decode)"
+        },
+        {
+          "name": "operation structure safety > rejects invalid append and truncation operations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_structure_safety__rejects_invalid_append_and_truncation_operations",
+          "note": "new"
+        },
+        {
+          "name": "operation structure safety > clamps splice removal past the end",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_structure_safety__clamps_splice_removal_past_the_end",
+          "note": "new"
+        },
+        {
+          "name": "operation assertions > accepts decoded operations and rejects wire-only forms",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::operation_assertions__accepts_decoded_operations_and_rejects_wire_only_forms",
+          "note": "new; also delta.rs::decoded_vocabulary_rejects_wire_only_forms"
+        },
+        {
+          "name": "operation assertions > does not recursively inspect operation payloads",
+          "class": "n/a",
+          "rust": null,
+          "note": "payloads are Map/Date JS objects; Rust payloads are always JSON values so there is no non-JSON payload to tolerate"
+        }
+      ]
+    },
+    {
+      "reference": "packages/chord/test/delta-apply-immutable.test.ts",
+      "cases": [
+        {
+          "name": "checked immutable operation application > copies each touched container once while preserving input and payload ownership",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__copies_each_touched_container_once_while_preserving_input_and_payload_ownership",
+          "note": "new; frozen inputs replaced by unchanged-input assertions, JS identity by Arc pointer identity"
+        },
+        {
+          "name": "checked immutable operation application > protects root replacement payloads before later object and array edits",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__protects_root_replacement_payloads_before_later_object_and_array_edits",
+          "note": "new"
+        },
+        {
+          "name": "checked immutable operation application > shares one private copy-on-write scope across batch partitions",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__shares_one_private_copy_on_write_scope_across_batch_partitions",
+          "note": "new"
+        },
+        {
+          "name": "checked immutable operation application > handles tracker-produced batches across arbitrary revision boundaries",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__handles_tracker_produced_batches_across_arbitrary_revision_boundaries",
+          "note": "new; draft mutation expressed on a serde mirror assigned to the draft"
+        },
+        {
+          "name": "checked immutable operation application > does not expose partial application when validation or iteration fails",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__does_not_expose_partial_application_when_validation_or_iteration_fails",
+          "note": "new; fixed a real gap (see source fixes). Throwing generator and getter-read-count arms are embedded-only; iterator lazy-stop and drop are asserted with a Drop probe"
+        },
+        {
+          "name": "checked immutable operation application > allows one immutable batch to fan out without mutating shared payloads",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::checked_immutable_operation_application__allows_one_immutable_batch_to_fan_out_without_mutating_shared_payloads",
+          "note": "new"
+        },
+        {
+          "name": "immutable application complexity > appends to an array not yet copied in one copy, sharing everything else",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_application_complexity__appends_to_an_array_not_yet_copied_in_one_copy_sharing_everything_else",
+          "note": "new; includes the PathError vs UnsafePathError table"
+        },
+        {
+          "name": "immutable application complexity > copies a wide object once rather than once per repeated write",
+          "class": "embedded-only",
+          "rust": "crates/pi-chord/tests/delta.rs::immutable_application_complexity__copies_a_wide_object_once_rather_than_once_per_repeated_write",
+          "note": "the assertion counts Object.keys calls (JS instrumentation); the Rust test pins only the observable result/sharing contract"
+        }
+      ]
+    },
+    {
+      "reference": "packages/chord/test/delta-diff.test.ts",
+      "cases": [
+        {
+          "name": "immutable revision diff > emits sets and deletes",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__emits_sets_and_deletes",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > emits string append and front truncation",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__emits_string_append_and_front_truncation",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > represents array insertion, removal, and shift with splices",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__represents_array_insertion_removal_and_shift_with_splices",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > collapses a same-length queue update to two splices",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__collapses_a_same_length_queue_update_to_two_splices",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > emits a permutation for a pure reorder",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__emits_a_permutation_for_a_pure_reorder",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > normalizes reordered distinct deeply-equal objects to a no-op",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__normalizes_reordered_distinct_deeply_equal_objects_to_a_no_op",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > validates and encodes permutations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__validates_and_encodes_permutations",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > emits nothing for deeply equal reconstructed values",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__emits_nothing_for_deeply_equal_reconstructed_values",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > keeps a leaf edit inside a reconstructed array narrow",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_a_leaf_edit_inside_a_reconstructed_array_narrow",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > emits payload-free splices for scattered removals",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__emits_payload_free_splices_for_scattered_removals",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > encodes front removal canonically",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_removal_canonically",
+          "note": "new; the five it.each rows run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > encodes tail removal canonically",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_removal_canonically",
+          "note": "new; the five it.each rows run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > encodes middle removal canonically",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_removal_canonically",
+          "note": "new; the five it.each rows run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > encodes all removal canonically",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_removal_canonically",
+          "note": "new; the five it.each rows run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > encodes none removal canonically",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_removal_canonically",
+          "note": "new; the five it.each rows run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > does not field-diff unrelated shifted objects with common fields",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__does_not_field_diff_unrelated_shifted_objects_with_common_fields",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > does not treat coincidental id or key fields as structural identity",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__does_not_treat_coincidental_id_or_key_fields_as_structural_identity",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > combines removals, append, and a shared-subtree survivor edit",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__combines_removals_append_and_a_shared_subtree_survivor_edit",
+          "note": "Exact upstream ops. diff.rs is now a literal port of diff.ts: JS identity (===) is Arc::ptr_eq for containers and value equality for scalars, so the shared `stable` subtree aligns the edited c. Test builds values with shared Arcs as upstream shares references."
+        },
+        {
+          "name": "immutable revision diff > does not retain a 262144-byte removed-neighbor payload",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__does_not_retain_a_removed_neighbor_payload",
+          "note": "new; it.each sizes run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > does not retain a 1048576-byte removed-neighbor payload",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__does_not_retain_a_removed_neighbor_payload",
+          "note": "new; it.each sizes run in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > keeps push, pop, and middle removal narrow at 1,001 items",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_push_pop_and_middle_removal_narrow",
+          "note": "new; both sizes in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > keeps push, pop, and middle removal narrow at 10,000 items",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_push_pop_and_middle_removal_narrow",
+          "note": "new; both sizes in one Rust test"
+        },
+        {
+          "name": "immutable revision diff > keeps forty-thousand-row sparse edits narrow",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_forty_thousand_row_sparse_edits_narrow",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > keeps a reconstructed large-array leaf edit narrow",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_a_reconstructed_large_array_leaf_edit_narrow",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > splices an ambiguous equal-count moved-and-edited gap",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__splices_an_ambiguous_equal_count_moved_and_edited_gap",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > keeps a large rotation payload-free",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__keeps_a_large_rotation_payload_free",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > encodes five hundred unshifts without snapshotting retained rows",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__encodes_five_hundred_unshifts_without_snapshotting_retained_rows",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > bounds wide-object operation emission with a root replacement",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__bounds_wide_object_operation_emission_with_a_root_replacement",
+          "note": "new"
+        },
+        {
+          "name": "immutable revision diff > bounds a wide normalized array fallback with a root replacement",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/delta_diff.rs::immutable_revision_diff__bounds_a_wide_normalized_array_fallback_with_a_root_replacement",
+          "note": "new"
+        }
+      ]
+    }
+  ]
+}

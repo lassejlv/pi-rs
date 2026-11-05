@@ -41,9 +41,9 @@ fn home_dir() -> String {
     dirs::home_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
-/// JS `localeCompare` approximation for sorting labels.
+/// JS `localeCompare` (ICU root collation) for sorting labels.
 pub(crate) fn locale_compare(a: &str, b: &str) -> std::cmp::Ordering {
-    a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| b.cmp(a))
+    pi_tui::collation::locale_compare(a, b)
 }
 
 /// `path.posix.parse(p)`: `(dir, name)`.

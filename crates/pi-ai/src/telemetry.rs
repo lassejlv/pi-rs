@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Weak};
-use std::time::Instant;
+use web_time::Instant;
 
 use indexmap::IndexMap;
 use parking_lot::Mutex;
@@ -275,7 +275,7 @@ pub fn observe_model_request_with_clock(
         "api" => requested_model.api.as_str(),
         "reasoning" => scalar_reasoning(options),
     };
-    let parent = telemetry.unwrap_or_else(noop_telemetry_context);
+    let parent = telemetry.unwrap_or_else(|| noop_telemetry_context());
     let starter = create_typed_span_starter(parent, &[&AI_TELEMETRY_SCHEMA]);
     let name = if poll { "pi.ai.poll" } else { "pi.ai.request" };
     let span = starter.context().begin_span(SpanOptions::new(name).attributes(start_attributes));
@@ -341,12 +341,14 @@ pub fn observe_model_request_with_clock(
                 "response.id" => message.response_id.as_deref(),
             });
             if stop == "error" {
-                let error_message: String = message
-                    .error_message
-                    .as_deref()
-                    .map(|m| m.encode_utf16().take(500).collect::<Vec<u16>>())
-                    .map(|units| String::from_utf16_lossy(&units))
-                    .unwrap_or_default();
+                // `slice(0, 500)` may split a surrogate pair; keep the unit as JavaScript does.
+                let error_message = pi_json::strict::JsonString::from_utf16(
+                    message
+                        .error_message
+                        .as_deref()
+                        .map(|m| m.encode_utf16().take(500).collect::<Vec<u16>>())
+                        .unwrap_or_default(),
+                );
                 state.span.set_status(SpanStatus::error(SpanError::new("provider_error", error_message)));
             }
             let mut duration_attributes = base_for_result();

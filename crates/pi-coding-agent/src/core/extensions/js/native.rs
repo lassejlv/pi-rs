@@ -32,6 +32,7 @@ use tokio_util::sync::CancellationToken;
 use super::api::{opt, str_arg};
 use super::provider::{register_stream, stream_options_from_json, stream_options_to_json};
 use super::{AsyncRustCallback, Bridge, SignalGuard, tokio_spawn};
+use crate::core::extensions::types::{ProviderConfig, ProviderOAuthConfig, RefreshModelsFn, StreamSimpleFn};
 
 /// A Rust object kept for JavaScript proxies.
 #[derive(Clone)]
@@ -40,6 +41,12 @@ pub(crate) enum Native {
     Streams(Arc<dyn ProviderStreams>),
     AuthContext(Arc<dyn AuthContext>),
     Interaction(ProviderAuthInteraction),
+    /// Parts of a registered provider config that did not come from this runtime.
+    StreamSimple(StreamSimpleFn),
+    Refresh(RefreshModelsFn),
+    Images(Arc<dyn ProviderImages>),
+    Classifier(Arc<dyn ProviderClassifier>),
+    OAuth(ProviderOAuthConfig),
 }
 
 fn js_error_message(err: &anyhow::Error) -> String {
@@ -414,7 +421,7 @@ fn auth_result_from_js(value: &Value) -> Option<AuthResult> {
     })
 }
 
-fn auth_result_to_js(result: &AuthResult) -> Value {
+pub(crate) fn auth_result_to_js(result: &AuthResult) -> Value {
     let mut out = Map::new();
     out.insert("auth".into(), model_auth_to_js(&result.auth));
     if let Some(env) = &result.env {
@@ -436,7 +443,7 @@ fn auth_check_from_js(value: &Value) -> Option<AuthCheck> {
     })
 }
 
-fn auth_check_to_js(check: &AuthCheck) -> Value {
+pub(crate) fn auth_check_to_js(check: &AuthCheck) -> Value {
     let mut out = json!({ "type": check.auth_type.as_str() });
     if let Some(s) = &check.source {
         out["source"] = json!(s);
@@ -979,7 +986,31 @@ pub(crate) fn native_provider(bridge: &Arc<Bridge>, desc: &Value) -> anyhow::Res
     {
         return Ok(provider);
     }
-    Ok(Arc::new(JsProvider::new(bridge, desc)?))
+    let provider = JsProvider::new(bridge, desc)?;
+    let handle = provider.handle.clone();
+    let provider: Arc<dyn Provider> = Arc::new(provider);
+    bridge.origins.record(&provider, handle);
+    Ok(provider)
+}
+
+/// A Rust provider as a JavaScript value: the extension's own object when it registered the
+/// provider from this runtime, otherwise one `RustProvider` per provider (stable identity).
+pub(crate) fn provider_to_js(bridge: &Arc<Bridge>, provider: Arc<dyn Provider>) -> Value {
+    if let Some(origin) = bridge.origins.get(&provider) {
+        return json!({ "object": origin });
+    }
+    let key = Arc::as_ptr(&provider) as *const () as usize;
+    let existing = bridge.native_provider_ids.lock().get(&key).copied();
+    if let Some(id) = existing
+        && matches!(bridge.natives.get(id), Some(Native::Provider(_)))
+    {
+        return json!({ "native": id });
+    }
+    let desc = describe_provider(bridge, provider);
+    if let Some(id) = desc["native"].as_u64() {
+        bridge.native_provider_ids.lock().insert(key, id);
+    }
+    json!({ "desc": desc })
 }
 
 /// `ProviderStreams` from a description (`describeStreams` in bridge.js): Rust streams behind a
@@ -1030,6 +1061,9 @@ pub(crate) fn describe_provider(bridge: &Arc<Bridge>, provider: Arc<dyn Provider
         "name": provider.name(),
         "auth": { "apiKey": api_key, "oauth": oauth },
         "refresh": provider.supports_refresh(),
+        // `filter_models` returns `None` when the provider has no filter (TS: `filterModels` undefined).
+        "filter": provider.filter_models(&[], None).is_some(),
+        "filterAll": provider.filter_all_models(&[], None).is_some(),
         "fetchDeferred": provider.supports_fetch_deferred(),
         "cancelDeferred": provider.supports_cancel_deferred(),
         "images": provider.supports_images(),
@@ -1045,6 +1079,137 @@ pub(crate) fn describe_provider(bridge: &Arc<Bridge>, provider: Arc<dyn Provider
     out
 }
 
+// ---------------------------------------------------------------------------
+// Registered provider configs as JavaScript values (`ctx.modelRegistry.getRegisteredProviderConfig`)
+// ---------------------------------------------------------------------------
+
+/// A function or object of a provider config for JavaScript: the extension's own value when it
+/// came from this runtime, otherwise a `{ "$native": id }` proxy over the Rust object.
+fn config_part<T: ?Sized>(bridge: &Bridge, object: &Arc<T>, native: impl FnOnce() -> Native) -> Value {
+    match bridge.origins.get(object) {
+        Some(origin) => origin,
+        None => json!({ "$native": bridge.natives.insert(native()) }),
+    }
+}
+
+/// A registered provider config as the JSON `providerConfigFromHost` (pi-ai/rust.js) turns into
+/// the config object TS's `getRegisteredProviderConfig()` returns: only defined fields, the
+/// extension's own functions and objects.
+pub(crate) fn provider_config_to_js(bridge: &Arc<Bridge>, config: &ProviderConfig) -> Value {
+    let mut out = Map::new();
+    if let Some(v) = &config.name {
+        out.insert("name".into(), json!(v));
+    }
+    if let Some(v) = &config.base_url {
+        out.insert("baseUrl".into(), json!(v));
+    }
+    if let Some(v) = &config.api_key {
+        out.insert("apiKey".into(), json!(v));
+    }
+    if let Some(v) = &config.api {
+        out.insert("api".into(), json!(v));
+    }
+    if let Some(f) = &config.stream_simple {
+        out.insert("streamSimple".into(), config_part(bridge, f, || Native::StreamSimple(f.clone())));
+    }
+    if let Some(map) = &config.images {
+        let parts: Map<String, Value> = map
+            .iter()
+            .map(|(api, images)| (api.clone(), config_part(bridge, images, || Native::Images(images.clone()))))
+            .collect();
+        out.insert("images".into(), Value::Object(parts));
+    }
+    if let Some(map) = &config.classifiers {
+        let parts: Map<String, Value> = map
+            .iter()
+            .map(|(api, classifier)| (api.clone(), config_part(bridge, classifier, || Native::Classifier(classifier.clone()))))
+            .collect();
+        out.insert("classifiers".into(), Value::Object(parts));
+    }
+    if let Some(v) = &config.headers {
+        out.insert("headers".into(), serde_json::to_value(v).unwrap_or(Value::Null));
+    }
+    if let Some(v) = config.auth_header {
+        out.insert("authHeader".into(), json!(v));
+    }
+    if let Some(v) = &config.models {
+        out.insert("models".into(), serde_json::to_value(v).unwrap_or(Value::Null));
+    }
+    if let Some(f) = &config.refresh_models {
+        out.insert("refreshModels".into(), config_part(bridge, f, || Native::Refresh(f.clone())));
+    }
+    if let Some(oauth) = &config.oauth {
+        let value = match bridge.origins.get(&oauth.login) {
+            Some(origin) => origin,
+            None => {
+                let mut o = json!({
+                    "name": oauth.name,
+                    "$oauth": bridge.natives.insert(Native::OAuth(oauth.clone())),
+                    "modifyModels": oauth.modify_models.is_some(),
+                });
+                if let Some(v) = oauth.is_subscription {
+                    o["isSubscription"] = json!(v);
+                }
+                if let Some(v) = oauth.uses_callback_server {
+                    o["usesCallbackServer"] = json!(v);
+                }
+                o
+            }
+        };
+        out.insert("oauth".into(), value);
+    }
+    Value::Object(out)
+}
+
+/// JavaScript legacy OAuth login callbacks (`{ onAuth, onPrompt, ... }`) for a Rust login.
+struct JsOAuthLoginCallbacks {
+    handle: JsHandle,
+    manual: bool,
+    signal: Option<CancellationToken>,
+}
+
+#[async_trait]
+impl pi_ai::auth::extension_oauth_types::OAuthLoginCallbacks for JsOAuthLoginCallbacks {
+    fn on_auth(&self, info: pi_ai::auth::extension_oauth_types::OAuthAuthInfo) {
+        super::api::post_call(&self.handle, Some("onAuth"), vec![serde_json::to_value(info).unwrap_or(Value::Null)]);
+    }
+
+    fn on_device_code(&self, info: pi_ai::auth::extension_oauth_types::OAuthDeviceCodeInfo) {
+        super::api::post_call(&self.handle, Some("onDeviceCode"), vec![serde_json::to_value(info).unwrap_or(Value::Null)]);
+    }
+
+    async fn on_prompt(&self, prompt: pi_ai::auth::extension_oauth_types::OAuthPrompt) -> anyhow::Result<String> {
+        let value = self.handle.call_method("onPrompt", vec![serde_json::to_value(prompt)?]).await.map_err(super::js_error)?;
+        Ok(value.as_str().unwrap_or_default().to_string())
+    }
+
+    fn on_progress(&self, message: &str) {
+        super::api::post_call(&self.handle, Some("onProgress"), vec![json!(message)]);
+    }
+
+    async fn on_manual_code_input(&self) -> Option<anyhow::Result<String>> {
+        if !self.manual {
+            return None;
+        }
+        Some(
+            self.handle
+                .call_method("onManualCodeInput", vec![])
+                .await
+                .map(|v| v.as_str().unwrap_or_default().to_string())
+                .map_err(super::js_error),
+        )
+    }
+
+    async fn on_select(&self, prompt: pi_ai::auth::extension_oauth_types::OAuthSelectPrompt) -> anyhow::Result<Option<String>> {
+        let value = self.handle.call_method("onSelect", vec![serde_json::to_value(prompt)?]).await.map_err(super::js_error)?;
+        Ok(value.as_str().map(str::to_string))
+    }
+
+    fn signal(&self) -> Option<CancellationToken> {
+        self.signal.clone()
+    }
+}
+
 fn resolve_input(bridge: &Arc<Bridge>, payload: &Value) -> ApiKeyResolveInput {
     let ctx: Arc<dyn AuthContext> = match bridge.handle(&payload["ctx"]) {
         Some(handle) => Arc::new(JsAuthContext { bridge: bridge.clone(), handle }),
@@ -1057,7 +1222,7 @@ fn resolve_input(bridge: &Arc<Bridge>, payload: &Value) -> ApiKeyResolveInput {
     }
 }
 
-fn js_interaction(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<ProviderAuthInteraction> {
+pub(crate) fn js_interaction(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<ProviderAuthInteraction> {
     let handle = bridge.handle(&payload["interaction"]).ok_or_else(|| anyhow::anyhow!("login() expects an interaction"))?;
     Ok(ProviderAuthInteraction {
         interaction: Arc::new(JsAuthInteraction { bridge: bridge.clone(), handle }),
@@ -1096,6 +1261,9 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow
                     "streamSimple" => streams.stream_simple(&model, &transcript_from_js(&payload["context"])?, options),
                     _ => streams.stream(&model, &transcript_from_js(&payload["context"])?, options),
                 },
+                Some(Native::StreamSimple(stream_simple)) => {
+                    stream_simple(model, transcript_from_js(&payload["context"])?, Some(options))
+                }
                 _ => anyhow::bail!("unknown provider"),
             };
             Ok(json!(register_stream(bridge, stream)))
@@ -1121,6 +1289,21 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow
                 gateway: o["gateway"].as_str().map(str::to_string),
             };
             Ok(describe_provider(bridge, pi_ai::providers::radius::radius_provider(options)))
+        }
+        "aip.cfg.oauthSync" => {
+            let Some(Native::OAuth(oauth)) = bridge.natives.get(payload["id"].as_u64().unwrap_or_default()) else {
+                anyhow::bail!("unknown oauth config");
+            };
+            let credentials: pi_ai::auth::types::OAuthCredentials = serde_json::from_value(payload["credentials"].clone())?;
+            match str_arg(&payload, "m").as_str() {
+                "getApiKey" => Ok(json!((oauth.get_api_key)(&credentials))),
+                "modifyModels" => {
+                    let models: Vec<Model> = serde_json::from_value(payload["models"].clone())?;
+                    let modify = oauth.modify_models.as_ref().ok_or_else(|| anyhow::anyhow!("modifyModels is not defined"))?;
+                    Ok(serde_json::to_value(modify(models, &credentials))?)
+                }
+                m => Err(anyhow::anyhow!("unknown oauth method {m}")),
+            }
         }
         "aip.interaction.notify" => {
             if let Some(Native::Interaction(interaction)) = bridge.natives.get(payload["id"].as_u64().unwrap_or_default()) {
@@ -1253,7 +1436,7 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
             }
         }
         "aip.p.refreshModels" => {
-            let provider = provider_of(&bridge, &payload)?;
+            let native = bridge.natives.get(payload["id"].as_u64().unwrap_or_default());
             let ctx = &payload["context"];
             let publish = bridge.handle(&ctx["publish"]).ok_or_else(|| anyhow::anyhow!("refreshModels() needs context.publish"))?;
             let b = bridge.clone();
@@ -1299,8 +1482,14 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
                 signal: bridge.token(&ctx["signal"]).unwrap_or_default(),
                 base_url: ctx["baseUrl"].as_str().map(str::to_string),
             };
-            provider.refresh_models(context).await?;
-            Ok(Value::Null)
+            match native {
+                Some(Native::Provider(provider)) => {
+                    provider.refresh_models(context).await?;
+                    Ok(Value::Null)
+                }
+                Some(Native::Refresh(refresh)) => Ok(serde_json::to_value(refresh(context).await?)?),
+                _ => Err(anyhow::anyhow!("unknown provider")),
+            }
         }
         "aip.p.cancelDeferred" => {
             let model: Model = serde_json::from_value(payload["model"].clone())?;
@@ -1314,18 +1503,50 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
             Ok(Value::Null)
         }
         "aip.p.generateImages" => {
-            let provider = provider_of(&bridge, &payload)?;
+            let native = bridge.natives.get(payload["id"].as_u64().unwrap_or_default());
             let model: ImageModel = serde_json::from_value(payload["model"].clone())?;
             let context: ImagesContext = serde_json::from_value(payload["context"].clone())?;
             let options = options_from_js(&bridge, &payload["options"]);
-            Ok(serde_json::to_value(provider.generate_images(&model, &context, options).await)?)
+            let result = match native {
+                Some(Native::Provider(provider)) => provider.generate_images(&model, &context, options).await,
+                Some(Native::Images(images)) => images.generate_images(&model, &context, options).await,
+                _ => anyhow::bail!("unknown provider"),
+            };
+            Ok(serde_json::to_value(result)?)
         }
         "aip.p.classify" => {
-            let provider = provider_of(&bridge, &payload)?;
+            let native = bridge.natives.get(payload["id"].as_u64().unwrap_or_default());
             let model: ClassifierModel = serde_json::from_value(payload["model"].clone())?;
             let context: ClassifierContext = serde_json::from_value(payload["context"].clone())?;
             let options = options_from_js(&bridge, &payload["options"]);
-            Ok(serde_json::to_value(provider.classify(&model, &context, options).await)?)
+            let result = match native {
+                Some(Native::Provider(provider)) => provider.classify(&model, &context, options).await,
+                Some(Native::Classifier(classifier)) => classifier.classify(&model, &context, options).await,
+                _ => anyhow::bail!("unknown provider"),
+            };
+            Ok(serde_json::to_value(result)?)
+        }
+        "aip.cfg.oauth" => {
+            let Some(Native::OAuth(oauth)) = bridge.natives.get(payload["id"].as_u64().unwrap_or_default()) else {
+                anyhow::bail!("unknown oauth config");
+            };
+            let credentials = || serde_json::from_value::<pi_ai::auth::types::OAuthCredentials>(payload["credentials"].clone());
+            match str_arg(&payload, "m").as_str() {
+                "login" => {
+                    let handle = bridge.handle(&payload["callbacks"]).ok_or_else(|| anyhow::anyhow!("login() expects callbacks"))?;
+                    let callbacks = Arc::new(JsOAuthLoginCallbacks {
+                        handle,
+                        manual: payload["manual"].as_bool().unwrap_or(false),
+                        signal: bridge.token(&payload["signal"]),
+                    });
+                    Ok(serde_json::to_value((oauth.login)(callbacks).await?)?)
+                }
+                "refreshToken" => {
+                    let signal = bridge.token(&payload["signal"]).unwrap_or_default();
+                    Ok(serde_json::to_value((oauth.refresh_token)(credentials()?, signal).await?)?)
+                }
+                m => Err(anyhow::anyhow!("unknown oauth method {m}")),
+            }
         }
         "aip.p.stream" | "aip.compat.stream" => dispatch(&bridge, op, payload),
         "aip.images.openrouter" => {

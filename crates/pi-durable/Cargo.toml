@@ -1,0 +1,135 @@
+[package]
+name = "pi-durable"
+description = "Native durable conversation, task and document runtime for Pi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# Build layout. There are no default features; native-only code is selected by
+# target, not by feature, so native builds are unaffected by anything below.
+# - Native (any non-wasm32 target): everything, including the agent harness,
+#   code mode, tools, images, native environments and native SQLite.
+# - wasm32-unknown-unknown: everything except what needs the OS — tools,
+#   images, native environments (process/filesystem/watch) and native SQLite.
+#   The harness, scheduler, code mode, sessions and storage (memory, JSONL over a
+#   host FileSystem, SQLite over a host database, IndexedDB) build; pi-ai uses
+#   reqwest's fetch backend there (see pi-ai's utils/wasm.rs).
+#   Host bindings are opt-in features, each a no-op off wasm32:
+#     `indexeddb`  browser IndexedDB (`storage::indexeddb::web`)
+#     `cloudflare` Cloudflare Workers JavaScript bindings
+#   e.g. `cargo check -p pi-durable --target wasm32-unknown-unknown --features indexeddb`.
+[features]
+# Interception points for unchanged upstream tests that patch transaction methods.
+# Absent from production builds.
+stock-test-probes = []
+# Browser IndexedDB binding for `storage::indexeddb` (wasm32 only; no-op elsewhere).
+indexeddb = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+# Cloudflare Workers binding for `worker::js` and `storage::sqlite::cloudflare_js` (wasm32 only; no-op elsewhere).
+cloudflare = ["dep:wasm-bindgen", "dep:js-sys"]
+
+[dependencies]
+pi-chord.workspace = true
+pi-ai.workspace = true
+pi-codemode.workspace = true
+icu_collator.workspace = true
+pi-telemetry.workspace = true
+pi-json.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio-util.workspace = true
+async-trait.workspace = true
+parking_lot.workspace = true
+futures.workspace = true
+indexmap.workspace = true
+url.workspace = true
+uuid.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+base64.workspace = true
+# std::time clocks on native; the JavaScript clock on wasm32, where std::time panics.
+web-time = "1.1"
+
+# Native-only: the full tokio runtime, process/filesystem/watch environments
+# and image processing. On wasm32 these
+# modules are compiled out (see lib.rs); native builds are unchanged.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio.workspace = true
+libc.workspace = true
+notify.workspace = true
+ignore.workspace = true
+photon-rs.workspace = true
+dirs.workspace = true
+
+# wasm32-unknown-unknown: the portable tokio subset (no reactor, process or fs)
+# and JavaScript-hosted randomness. Browser bindings stay behind `indexeddb`.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1", default-features = false, features = ["sync", "macros", "rt", "time"] }
+uuid = { workspace = true, features = ["js"] }
+wasm-bindgen = { version = "0.2.129", optional = true }
+# The executor and timers run on the JavaScript microtask queue on every wasm32 build.
+wasm-bindgen-futures = "0.4.79"
+js-sys = { version = "0.3.106", optional = true }
+web-sys = { version = "0.3.106", optional = true, features = [
+    "DomException",
+    "Event",
+    "IdbCursor",
+    "IdbCursorDirection",
+    "IdbCursorWithValue",
+    "IdbDatabase",
+    "IdbFactory",
+    "IdbIndex",
+    "IdbKeyRange",
+    "IdbObjectStore",
+    "IdbObjectStoreParameters",
+    "IdbOpenDbRequest",
+    "IdbRequest",
+    "IdbTransaction",
+    "IdbTransactionMode",
+    "IdbVersionChangeEvent",
+] }
+
+[target.'cfg(windows)'.dependencies]
+winapi-util.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+rusqlite.workspace = true
+tempfile.workspace = true
+
+[[bench]]
+name = "codemode"
+harness = false
+
+[[bench]]
+name = "document_append"
+harness = false
+
+[[bench]]
+name = "nested_images"
+harness = false
+
+[[bench]]
+name = "nested_tools"
+harness = false
+
+[[bench]]
+name = "scheduler_fanout"
+harness = false
+
+[[bench]]
+name = "scheduler_memory"
+harness = false
+
+[[bench]]
+name = "session_document_cache"
+harness = false
+
+[[bench]]
+name = "storage"
+harness = false
+
+[[bench]]
+name = "tool_output"
+harness = false
+

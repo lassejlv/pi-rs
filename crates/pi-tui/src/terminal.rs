@@ -45,6 +45,18 @@ fn is_keyboard_protocol_negotiation_sequence_prefix(sequence: &str) -> bool {
     }
 }
 
+/// Descriptor of the process's real stdout for [`Terminal::restore_on_exit`]. Node's
+/// `restoreOnExit` writes with `fs.writeSync(process.stdout.fd)`, which bypasses an app that
+/// redirects `process.stdout.write`; apps that move fd 1 (pi's stdout takeover) register the
+/// descriptor holding the real stdout here.
+#[cfg_attr(not(unix), allow(dead_code))]
+static EXIT_RESTORE_FD: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(1);
+
+/// Set the descriptor exit-time terminal restoration writes to (1 by default).
+pub fn set_exit_restore_fd(fd: i32) {
+    EXIT_RESTORE_FD.store(fd, std::sync::atomic::Ordering::SeqCst);
+}
+
 /// Called when the process's stdin reaches end of file while a `ProcessTerminal` reads it
 /// (Node's `process.stdin` `"end"` event).
 pub type StdinEndHandler = Arc<dyn Fn() + Send + Sync>;
@@ -242,12 +254,31 @@ mod process {
     static WINCH_WRITE_FD: AtomicI32 = AtomicI32::new(-1);
     static WINCH_READ_FD: AtomicI32 = AtomicI32::new(-1);
 
-    extern "C" fn on_sigwinch(_: libc::c_int) {
+    /// The SIGWINCH handler installed before ours (e.g. pi-jsrt's for an extension's
+    /// `process.on('SIGWINCH')`), chained like libuv chains to a previous handler.
+    static PREVIOUS_WINCH: std::sync::OnceLock<libc::sigaction> = std::sync::OnceLock::new();
+
+    extern "C" fn on_sigwinch(sig: libc::c_int, info: *mut libc::siginfo_t, uctx: *mut libc::c_void) {
         let fd = WINCH_WRITE_FD.load(Ordering::Relaxed);
         if fd >= 0 {
             let b = [1u8];
             unsafe {
                 libc::write(fd, b.as_ptr() as *const libc::c_void, 1);
+            }
+        }
+        if let Some(old) = PREVIOUS_WINCH.get()
+            && old.sa_sigaction != libc::SIG_DFL
+            && old.sa_sigaction != libc::SIG_IGN
+        {
+            // SAFETY: calling the previously installed handler with the convention its flags declare.
+            unsafe {
+                if old.sa_flags & libc::SA_SIGINFO != 0 {
+                    let f: extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut libc::c_void) = std::mem::transmute(old.sa_sigaction);
+                    f(sig, info, uctx);
+                } else {
+                    let f: extern "C" fn(libc::c_int) = std::mem::transmute(old.sa_sigaction);
+                    f(sig);
+                }
             }
         }
     }
@@ -278,8 +309,12 @@ mod process {
         unsafe {
             let mut action: libc::sigaction = std::mem::zeroed();
             action.sa_sigaction = on_sigwinch as *const () as usize;
-            action.sa_flags = libc::SA_RESTART;
+            action.sa_flags = libc::SA_RESTART | libc::SA_SIGINFO;
             libc::sigemptyset(&mut action.sa_mask);
+            let mut old: libc::sigaction = std::mem::zeroed();
+            if libc::sigaction(libc::SIGWINCH, std::ptr::null(), &mut old) == 0 {
+                let _ = PREVIOUS_WINCH.set(old);
+            }
             libc::sigaction(libc::SIGWINCH, &action, std::ptr::null_mut());
         }
         r
@@ -576,9 +611,12 @@ mod process {
             let handler = self.lock().input_handler.clone();
             if let Some(handler) = handler {
                 for sequence in sequences {
-                    // Native Shift+Enter detection requires platform helpers (macOS/Windows);
-                    // the modifier is never reported as pressed here.
-                    let input = normalize_native_shift_enter_input(&sequence, false, false);
+                    // Apple Terminal (and Windows consoles) send "\r" for Shift+Enter too; ask
+                    // the system whether Shift is held.
+                    let should_detect = sequence == "\r" && (is_apple_terminal_session() || cfg!(windows));
+                    let shift = should_detect
+                        && crate::native_platform::is_native_modifier_pressed(crate::native_platform::ModifierKey::Shift);
+                    let input = normalize_native_shift_enter_input(&sequence, should_detect, shift);
                     handler(input);
                 }
             }
@@ -645,7 +683,9 @@ mod process {
                 }
                 self.forward(forward);
 
-                if fds[0].revents & (libc::POLLIN | libc::POLLHUP | libc::POLLERR) != 0 {
+                // POLLNVAL: macOS poll() rejects device files such as /dev/null; read() then reports EOF
+                // instead of the loop spinning on an instantly-ready descriptor.
+                if fds[0].revents & (libc::POLLIN | libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) != 0 {
                     let n = unsafe { libc::read(libc::STDIN_FILENO, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) };
                     if n == 0 {
                         // EOF: stop polling stdin.
@@ -807,7 +847,7 @@ mod process {
                 sequence.push_str("\x1b[>4;0m");
             }
             sequence.push_str(after);
-            self.raw_write(&sequence);
+            write_all_fd(EXIT_RESTORE_FD.load(std::sync::atomic::Ordering::SeqCst), sequence.as_bytes());
             if let Some(t) = state.saved_termios {
                 unsafe {
                     libc::tcsetattr(libc::STDIN_FILENO, libc::TCSADRAIN, &t);

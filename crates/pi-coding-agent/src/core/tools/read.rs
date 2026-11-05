@@ -391,6 +391,8 @@ pub fn create_read_tool_definition(cwd: &str, options: Option<&ReadToolOptions>)
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(READ_SNIPPET.to_string());
     definition.prompt_guidelines = Some(READ_GUIDELINES.iter().map(|s| s.to_string()).collect());
     definition.output_schema = Some(read_output_schema());

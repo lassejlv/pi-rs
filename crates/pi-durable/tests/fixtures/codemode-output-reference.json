@@ -1,0 +1,6084 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "sha256": "eab0bcbb9ee871a5c686f6b0e12ff4549d28ee15fa640b0411eb56ff7933423d",
+  "cases": [
+    {
+      "result": {
+        "ok": false,
+        "output": [],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nstored stack\n\nNo tool calls were made.\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 47)\nTotal output lines: 5\n\n…47 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 3\n\n==…10 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 15)\nTotal output lines: 5\n\n==> text 1/3 <==\none…5 tokens truncated…==> text 3/3 <==\ntwo\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/3 <==\none\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 2/3 <==\ntwo\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 3/3 <==\nnull"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>\nScript error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 29)\nTotal output lines: 9\n\n…29 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 72)\nTotal output lines: 20\n\na\ud800…71 tokens truncated…).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "return\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 16)\nTotal output lines: 4\n\n…16 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nnull"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 20)\nTotal output lines: 7\n\n==…19 tokens truncated…ll\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n\n==> text 2/3 <==\ntwo\n==> text 3/3 <==\nreturn\ud800"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 7\n\n==> text 1/3 <==\none…7 tokens truncated…text 3/3 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "two\n<console_output>\none\nthree\n</console_output>"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nScript error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 56)\nTotal output lines: 23\n\n…56 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "return\ud800"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 2)\nTotal output lines: 1\n\nre…1 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": []
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\n==> text 2/2 <==\nnull\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo\nScript error:\nstored stack\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 28)\nTotal output lines: 9\n\n…28 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 5\n\n==…10 tokens truncated…wo\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 29)\nTotal output lines: 8\n\n==> text 1/2 <==\ntwo…19 tokens truncated…ee\n</console_output>\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nreturn\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 4\n\n…17 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "null"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 3\n\n==> text 1/2 <==\n==>…1 tokens truncated…text 2/2 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo\nScript error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 27)\nTotal output lines: 9\n\n…27 tokens truncated…\n\n[Could not save the full output: write failed\ud800]\n[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nreturn\ud800\n<console_output>\none\nthree\n</console_output>\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 57)\nTotal output lines: 9\n\n==…56 tokens truncated…).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 38)\nTotal output lines: 20\n\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00…28 tokens truncated…c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "null"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 18)\nTotal output lines: 4\n\n…18 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 61)\nTotal output lines: 8\n\n==> text 1/4 <==\none…51 tokens truncated…t with image(block).\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/3 <==\none\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 2/3 <==\ntwo\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 3/3 <==\nreturn\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>\nScript error:\nstored stack\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 26)\nTotal output lines: 9\n\n…26 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nnull"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 48)\nTotal output lines: 22\n\n==…47 tokens truncated…ll\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "return\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": []
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Note: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 34)\nTotal output lines: 1\n\nNote: models.ge…27 tokens truncated…h image(block).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 4\n\n…17 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 21)\nTotal output lines: 7\n\n==…20 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 5\n\n==> text 1/2 <==\none…1 tokens truncated…==> text 2/2 <==\ntwo\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nnull\n<console_output>\none\nthree\n</console_output>"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nScript error:\nScript aborted: failure\ud800\n\nNo tool calls were made.\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 88)\nTotal output lines: 24\n\n…88 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\n==> text 2/2 <==\nreturn\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo\nScript error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 33)\nTotal output lines: 9\n\n…33 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n\n==> text 2/3 <==\ntwo\n==> text 3/3 <==\nnull"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 16)\nTotal output lines: 7\n\n==…15 tokens truncated…ll\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nreturn\ud800\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 23)\nTotal output lines: 8\n\n==> text 1/2 <==\ntwo…13 tokens truncated…ee\n</console_output>\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nstored stack\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 13)\nTotal output lines: 4\n\n…13 tokens truncated…\n\n[Could not save the full output: write failed\ud800]\n[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "return\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 2)\nTotal output lines: 1\n\nre…1 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Note: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 34)\nTotal output lines: 1\n\nNote: models.generat…24 tokens truncated…t with image(block).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nnull"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo\nScript error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 28)\nTotal output lines: 9\n\n…28 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 12)\nTotal output lines: 5\n\ntw…11 tokens truncated…t>\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 54)\nTotal output lines: 22\n\n==> text 1/2 <==\na\ud800b…44 tokens truncated…:2,\"\\ud800\":\"value\"}\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "return\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 16)\nTotal output lines: 4\n\n…16 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\nnull"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 10)\nTotal output lines: 3\n\n==…9 tokens truncated…ll\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 21)\nTotal output lines: 7\n\n==> text 1/4 <==\none…11 tokens truncated…text 4/4 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\none\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 2/2 <==\ntwo\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>\nScript error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made.\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 64)\nTotal output lines: 10\n\n…64 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 49)\nTotal output lines: 22\n\n==…48 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "null"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nstored stack\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 13)\nTotal output lines: 4\n\n…13 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 49)\nTotal output lines: 6\n\n==…48 tokens truncated…).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n\n==> text 2/3 <==\ntwo\n==> text 3/3 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 23)\nTotal output lines: 7\n\n==> text 1/3 <==\none…13 tokens truncated…:2,\"\\ud800\":\"value\"}\n\n[Could not save the full output: write failed\ud800]\n[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nreturn\ud800\n<console_output>\none\nthree\n</console_output>"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nScript error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 55)\nTotal output lines: 23\n\n…55 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "null"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "return\ud800\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 36)\nTotal output lines: 2\n\nreturn\ud800\nNote: m…29 tokens truncated…h image(block).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": ""
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo\nScript error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 31)\nTotal output lines: 9\n\n…31 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n\n==> text 2/3 <==\ntwo\n==> text 3/3 <==\nreturn\ud800"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 7\n\n==…16 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 12)\nTotal output lines: 5\n\ntwo\n<console_output>…2 tokens truncated…ee\n</console_output>\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nnull\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 18)\nTotal output lines: 4\n\n…18 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": []
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 16)\nTotal output lines: 3\n\n==> text 1/2 <==\n==>…6 tokens truncated…:2,\"\\ud800\":\"value\"}\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nreturn\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo\nScript error:\nstored stack\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 24)\nTotal output lines: 9\n\n…24 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nnull\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 22)\nTotal output lines: 8\n\n==…21 tokens truncated…t>\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 49)\nTotal output lines: 22\n\n==> text 1/2 <==\na\ud800b…39 tokens truncated…text 2/2 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript timed out: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 4\n\n…17 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\nreturn\ud800\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 45)\nTotal output lines: 4\n\n==…44 tokens truncated…).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 15)\nTotal output lines: 5\n\n==> text 1/3 <==\none…5 tokens truncated…==> text 3/3 <==\ntwo\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/3 <==\none\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 2/3 <==\ntwo\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "==> text 3/3 <==\nnull"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "two\n<console_output>\none\nthree\n</console_output>\nScript error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 29)\nTotal output lines: 9\n\n…29 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 38)\nTotal output lines: 20\n\na\ud800…37 tokens truncated…\ude00\n\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "return\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 18)\nTotal output lines: 4\n\n…18 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/4 <==\none\n==> text 2/4 <==\n==> text 3/4 <==\ntwo\n==> text 4/4 <==\nnull"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 20)\nTotal output lines: 7\n\n==…19 tokens truncated…ll\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n\n==> text 2/3 <==\ntwo\n==> text 3/3 <==\nreturn\ud800"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 17)\nTotal output lines: 7\n\n==> text 1/3 <==\none…7 tokens truncated…text 3/3 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "two\n<console_output>\none\nthree\n</console_output>\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "error": {
+          "kind": "script",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nScript error:\nstored stack\n\nNo tool calls were made."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 51)\nTotal output lines: 23\n\n…51 tokens truncated…\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "return\ud800"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 2)\nTotal output lines: 1\n\nre…1 tokens truncated…n\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": []
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\n==> text 2/2 <==\nnull"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ],
+        "error": {
+          "kind": "timeout",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo\nScript error:\nScript timed out: failure\ud800\n\nNo tool calls were made.\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 66)\nTotal output lines: 10\n\n…66 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo"
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 5\n\n==…10 tokens truncated…wo\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": {
+          "1": 1,
+          "2": 2,
+          "\ud800": "value"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\n{\"1\":1,\"2\":2,\"\\ud800\":\"value\"}\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 29)\nTotal output lines: 8\n\n==> text 1/2 <==\ntwo…19 tokens truncated…ee\n</console_output>\n\n[Could not save the full output: write failed\ud800]"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/2 <==\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n==> text 2/2 <==\nreturn\ud800"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "error": {
+          "kind": "aborted",
+          "name": "Custom",
+          "message": "failure\ud800",
+          "stack": "stored stack"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "Script error:\nScript aborted: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 16)\nTotal output lines: 4\n\n…16 tokens truncated…\n\n[Full output: /output/output.txt (read with offset/limit)]\n[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 120,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "null\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 35)\nTotal output lines: 2\n\nnu…34 tokens truncated…).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": ""
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\n==> text 2/2 <==\nreturn\ud800"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 11)\nTotal output lines: 3\n\n==> text 1/2 <==\n==>…1 tokens truncated…text 2/2 <==\nreturn\ud800\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one"
+          },
+          {
+            "type": "text",
+            "text": ""
+          },
+          {
+            "type": "text",
+            "text": "two"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "==> text 1/3 <==\none\n==> text 2/3 <==\n==> text 3/3 <==\ntwo"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": false,
+        "output": [
+          {
+            "type": "text",
+            "text": "one\n"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ],
+        "error": {
+          "kind": "sandbox",
+          "name": "Custom",
+          "message": "failure\ud800"
+        }
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 0,
+        "maxOutputTokens": 0,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 110
+        }
+      },
+      "fail": true,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\none\n\n==> text 2/2 <==\ntwo\nScript error:\nScript sandbox failed: failure\ud800\n\nNo tool calls were made."
+        },
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script failed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 29)\nTotal output lines: 9\n\n…29 tokens truncated…\n\n[Could not save the full output: write failed\ud800]\n[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image (image/png, 1 bytes) could not be saved: write failed\ud800]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "one",
+            "console": true
+          },
+          {
+            "type": "text",
+            "text": "two"
+          },
+          {
+            "type": "text",
+            "text": "three",
+            "console": true
+          }
+        ],
+        "value": "return\ud800"
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 1250,
+        "maxOutputTokens": 1,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "==> text 1/2 <==\ntwo\n==> text 2/2 <==\nreturn\ud800\n<console_output>\none\nthree\n</console_output>"
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 23)\nTotal output lines: 8\n\n==…22 tokens truncated…t>\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "text",
+            "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\n"
+          }
+        ]
+      },
+      "options": {
+        "generatedImages": 2,
+        "wallMs": 1249,
+        "maxOutputTokens": 10,
+        "calls": [],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "output.txt",
+          "text": "a\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00c😀\nNote: models.generateImages() returned 2 images that the script did not show. Show each image block of result.output with image(block)."
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "Warning: truncated output (original token count: 72)\nTotal output lines: 20\n\na\ud800b\udc00c😀\na\ud800b\udc00c😀\na\ud800b\udc00…62 tokens truncated…t with image(block).\n\n[Full output: /output/output.txt (read with offset/limit)]"
+          }
+        ],
+        "fullOutputPath": "/output/output.txt"
+      }
+    },
+    {
+      "result": {
+        "ok": true,
+        "output": [
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          }
+        ],
+        "value": null
+      },
+      "options": {
+        "generatedImages": 0,
+        "wallMs": 10000,
+        "maxOutputTokens": 10000,
+        "calls": [
+          {
+            "name": "tool\udc00",
+            "status": "error"
+          }
+        ],
+        "limits": {
+          "maxBytes": 4194304,
+          "maxLines": 100000
+        }
+      },
+      "fail": false,
+      "writes": [
+        {
+          "name": "image-1.png",
+          "bytes": [
+            97
+          ]
+        }
+      ],
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Script completed\nWall time 10.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/png"
+          },
+          {
+            "type": "text",
+            "text": "[Image saved to /output/image-1.png (image/png, 1 bytes)]"
+          },
+          {
+            "type": "image",
+            "data": "YQ",
+            "mimeType": "image/jpeg"
+          },
+          {
+            "type": "text",
+            "text": "null"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+[package]
+name = "pi-chord"
+description = "Native JSON revisions, invocation context and watch contracts for pi-durable"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio-util.workspace = true
+futures.workspace = true
+parking_lot.workspace = true
+pi-json.workspace = true
+pi-telemetry.workspace = true
+indexmap.workspace = true
+# std::time clocks on native; the JavaScript clock on wasm32, where std::time panics.
+web-time = "1.1"
+
+# Native builds use the workspace tokio ("full"); wasm32 has no reactor, process
+# or filesystem, so it gets the portable subset.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio.workspace = true
+# The bundled native SQLite driver; wasm32 hosts supply their own (Durable Objects).
+rusqlite.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1", default-features = false, features = ["sync", "macros", "rt", "time"] }
+wasm-bindgen-futures = "=0.4.79"
+wasm-bindgen = "=0.2.129"
+js-sys = "=0.3.106"
+
+[dev-dependencies]
+tempfile.workspace = true

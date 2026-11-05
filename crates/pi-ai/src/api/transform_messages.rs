@@ -124,7 +124,7 @@ pub fn transform_messages(
                                 content.push(block.clone());
                                 continue;
                             }
-                            if thinking.thinking.trim().is_empty() {
+                            if thinking.is_blank() {
                                 continue;
                             }
                             content.push(block.clone());
@@ -133,7 +133,11 @@ pub fn transform_messages(
                             if is_same_model {
                                 content.push(block.clone());
                             } else {
-                                content.push(AssistantContent::Text(TextContent::new(text.text.clone())));
+                                content.push(AssistantContent::Text(TextContent {
+                                    text: text.text.clone(),
+                                    lone_surrogates_removed: text.lone_surrogates_removed,
+                                    ..Default::default()
+                                }));
                             }
                         }
                         AssistantContent::ToolCall(tool_call) => {

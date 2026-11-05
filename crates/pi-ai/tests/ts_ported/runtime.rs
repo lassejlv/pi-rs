@@ -14,7 +14,6 @@ use futures::future::BoxFuture;
 use parking_lot::Mutex;
 use pi_ai::auth::*;
 use pi_ai::utils::models_error::{ModelsError, ModelsErrorCode};
-use pi_ai::utils::provider_retry::AbortError;
 use pi_ai::*;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
@@ -177,7 +176,7 @@ fn hi() -> Context {
 }
 
 fn is_abort(error: &anyhow::Error) -> bool {
-    error.chain().any(|e| e.is::<AbortError>())
+    pi_ai::utils::abort::is_abort_error(error)
 }
 
 /// Poll `check` until it holds (vitest `vi.waitFor`).

@@ -10,7 +10,7 @@ use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsE
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 
 use super::{array, bytes_arg, bytes_to_js, io_error, object};
 use crate::engine::{self, OpFn, arg_f64, arg_string, js_str, state};
@@ -45,6 +45,8 @@ pub(crate) enum FsOp {
     Fstat(i32),
     Ftruncate(i32, u64),
     Fsync(i32),
+    Futimes(i32, f64, f64),
+    Fchmod(i32, u32),
 }
 
 pub(crate) struct StatData {
@@ -198,11 +200,24 @@ fn copy_recursive(from: &Path, to: &Path, force: bool, error_on_exist: bool) -> 
 }
 
 fn file_for(fd: i32) -> std::io::Result<std::sync::Arc<parking_lot::Mutex<fs::File>>> {
-    FILES
-        .lock()
-        .get(&fd)
-        .cloned()
-        .ok_or_else(|| std::io::Error::from_raw_os_error(libc::EBADF))
+    let mut files = FILES.lock();
+    if let Some(f) = files.get(&fd) {
+        return Ok(f.clone());
+    }
+    // The standard streams are open in every process (`fs.readFileSync(0)`, `fs.writeSync(1, ..)`):
+    // use a duplicate, so closing it here leaves the process's own descriptor alone.
+    if (0..=2).contains(&fd) {
+        use std::os::fd::FromRawFd;
+        // SAFETY: dup of a standard descriptor; the duplicate is owned by the File.
+        let dup = unsafe { libc::fcntl(fd, libc::F_DUPFD_CLOEXEC, 3) };
+        if dup >= 0 {
+            // SAFETY: `dup` is a fresh descriptor.
+            let f = std::sync::Arc::new(parking_lot::Mutex::new(unsafe { fs::File::from_raw_fd(dup) }));
+            files.insert(fd, f.clone());
+            return Ok(f);
+        }
+    }
+    Err(std::io::Error::from_raw_os_error(libc::EBADF))
 }
 
 /// Execute an op (blocking).
@@ -407,6 +422,18 @@ pub(crate) fn exec(op: FsOp) -> Result<FsOut, Error> {
             f.lock().sync_all().map_err(|e| io_error(&e, "fsync", None))?;
             FsOut::Unit
         }
+        Futimes(fd, atime, mtime) => {
+            let f = file_for(fd).map_err(|e| io_error(&e, "futime", None))?;
+            let to_time = |s: f64| SystemTime::UNIX_EPOCH + Duration::from_secs_f64(s.max(0.0));
+            let times = fs::FileTimes::new().set_accessed(to_time(atime)).set_modified(to_time(mtime));
+            f.lock().set_times(times).map_err(|e| io_error(&e, "futime", None))?;
+            FsOut::Unit
+        }
+        Fchmod(fd, mode) => {
+            let f = file_for(fd).map_err(|e| io_error(&e, "fchmod", None))?;
+            f.lock().set_permissions(fs::Permissions::from_mode(mode)).map_err(|e| io_error(&e, "fchmod", None))?;
+            FsOut::Unit
+        }
     })
 }
 
@@ -529,6 +556,8 @@ fn build(args: &[JsValue], ctx: &mut Context) -> JsResult<FsOp> {
         "fstat" => FsOp::Fstat(n(0, ctx)? as i32),
         "ftruncate" => FsOp::Ftruncate(n(0, ctx)? as i32, n(1, ctx)?.max(0.0) as u64),
         "fsync" => FsOp::Fsync(n(0, ctx)? as i32),
+        "futimes" => FsOp::Futimes(n(0, ctx)? as i32, n(1, ctx)?, n(2, ctx)?),
+        "fchmod" => FsOp::Fchmod(n(0, ctx)? as i32, n(1, ctx)? as u32),
         other => return Err(engine::type_error(format!("unknown fs op {other}"))),
     })
 }
@@ -549,7 +578,7 @@ fn op_fs_sync(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsVa
             }
             to_js(out, ctx)
         }
-        Err(e) => Err(crate::error::to_boa(&e, ctx)),
+        Err(e) => Err(crate::error::to_js(&e, ctx)),
     }
 }
 
@@ -616,7 +645,7 @@ fn op_watch(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValu
             if !events.is_empty() {
                 let ok = poster.post(move |ctx| {
                     if let Some(internal) = engine::try_internal(ctx)
-                        && let Ok(f) = internal.get(boa_engine::js_string!("fsWatchEvent"), ctx)
+                        && let Ok(f) = internal.get(crate::js::js_string!("fsWatchEvent"), ctx)
                         && let Some(f) = f.as_function()
                     {
                         for (kind, name) in events {

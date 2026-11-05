@@ -292,6 +292,12 @@ impl ModelRegistry {
         self.runtime.get_registered_provider_config(provider_name)
     }
 
+    /// [`Self::get_registered_provider_config`] plus a revision that changes with every
+    /// registration (JS extensions get the same config object until the next registration).
+    pub fn get_registered_provider_config_revision(&self, provider_name: &str) -> Option<(u64, ProviderConfigInput)> {
+        self.runtime.get_registered_provider_config_revision(provider_name)
+    }
+
     pub fn get_registered_native_provider(&self, provider_name: &str) -> Option<Arc<dyn Provider>> {
         self.runtime.get_registered_native_provider(provider_name)
     }

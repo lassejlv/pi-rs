@@ -1,0 +1,313 @@
+{
+  "files": [
+    {
+      "reference": "packages/chord/test/output.test.ts",
+      "cases": [
+        {
+          "name": "tool output bounds > removes control characters but keeps tabs, newlines, and other text",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_removes_control_characters_but_keeps_tabs_newlines_and_other_text",
+          "note": "new; also pinned fixture sanitize rows"
+        },
+        {
+          "name": "tool output bounds > keeps output within the limits unchanged",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_keeps_output_within_the_limits_unchanged",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > keeps nothing with a zero limit",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_keeps_nothing_with_a_zero_limit",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > keeps exact slices of whole lines, trailing newline included",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_keeps_exact_slices_of_whole_lines_trailing_newline_included",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > cuts at the byte limit on whole lines when possible",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_cuts_at_the_byte_limit_on_whole_lines_when_possible",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > cuts a single line longer than the byte limit on a character boundary",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_cuts_a_single_line_longer_than_the_byte_limit_on_a_character_boundary",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > keeps a U+FEFF at the start of a kept slice",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_keeps_a_u_feff_at_the_start_of_a_kept_slice",
+          "note": "new"
+        },
+        {
+          "name": "tool output bounds > cuts tails of surrogate edge cases exactly like Buffer",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_cuts_tails_of_surrogate_edge_cases_exactly_like_buffer",
+          "note": "new; lone surrogates built with JsonString::from_utf16 and compared by UTF-16 units; Buffer lossy semantics = U+FFFD"
+        },
+        {
+          "name": "tool output bounds > cuts tails exactly like Buffer across deterministic fuzz cases",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::tool_output_bounds_cuts_tails_exactly_like_buffer_across_deterministic_fuzz_cases",
+          "note": "new; same alphabet, depth-3 exhaustive, 1000 LCG cases"
+        },
+        {
+          "name": "OutputBuffer > keeps exact totals across chunks and decodes UTF-8 split across byte chunks",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_keeps_exact_totals_across_chunks_and_decodes_utf_8_split_across_byte_chunks",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > sanitizes the retained text but counts the raw stream",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_sanitizes_the_retained_text_but_counts_the_raw_stream",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > drops a byte-order mark only at the start of the output",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_drops_a_byte_order_mark_only_at_the_start_of_the_output",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > flushes an incomplete character before a string chunk and at the end",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_flushes_an_incomplete_character_before_a_string_chunk_and_at_the_end",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > matches bounding the whole stream when several chunks arrive between snapshots",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_matches_bounding_the_whole_stream_when_several_chunks_arrive_between_snapshots",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > stops storing head output once the window is full",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_stops_storing_head_output_once_the_window_is_full",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer > stores only the tail window after each snapshot",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_stores_only_the_tail_window_after_each_snapshot",
+          "note": "new"
+        },
+        {
+          "name": "Progress > commits the first change at once, then waits at least 100 ms and the written size at 100 KiB/s",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/progress.rs::progress_commits_the_first_change_at_once_then_waits_at_least_100_ms_and_the_written_size_at_100_kib_s",
+          "note": "new; ManualClock replaces vi fake timers"
+        },
+        {
+          "name": "Progress > waits the configured minimum interval between small commits",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/progress.rs::progress_waits_the_configured_minimum_interval_between_small_commits",
+          "note": "new"
+        },
+        {
+          "name": "Progress > paces on the clock it is given",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/progress.rs::progress_paces_on_the_clock_it_is_given",
+          "note": "new; ManualClock now records timer delays"
+        },
+        {
+          "name": "Progress > rejects the waiters of a failed commit and reports its error",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/progress.rs::progress_rejects_the_waiters_of_a_failed_commit_and_reports_its_error",
+          "note": "new; also write_failure_rejects_its_waiters_reports_and_preserves_minimum_interval"
+        },
+        {
+          "name": "Progress > stops: waits for the commit in flight and hands back waiters no commit covered yet",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/progress.rs::progress_stops_waits_for_the_commit_in_flight_and_hands_back_waiters_no_commit_covered_yet",
+          "note": "new; also at_most_one_write_runs_and_stop_returns_only_the_pending_change"
+        }
+      ]
+    },
+    {
+      "reference": "packages/chord/test/output-skip.test.ts",
+      "cases": [
+        {
+          "name": "OutputBuffer skipped output > keeps the same tail whenever progress snapshots happen",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_skipped_output_keeps_the_same_tail_whenever_progress_snapshots_happen",
+          "note": "new; mulberry32 ported, seeds 1..=3000"
+        },
+        {
+          "name": "OutputBuffer skipped output > matches the full stream for every legal skip pattern",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_skipped_output_matches_the_full_stream_for_every_legal_skip_pattern",
+          "note": "new; seeds 1..=3000"
+        },
+        {
+          "name": "OutputBuffer skipped output > counts skipped bytes, lines and the final newline exactly",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_skipped_output_counts_skipped_bytes_lines_and_the_final_newline_exactly",
+          "note": "new"
+        },
+        {
+          "name": "OutputBuffer skipped output > refuses skips for head retention",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/output.rs::output_buffer_skipped_output_refuses_skips_for_head_retention",
+          "note": "new; also skipped_output_requires_tail_retention"
+        }
+      ]
+    },
+    {
+      "reference": "packages/chord/test/watch.test.ts",
+      "cases": [
+        {
+          "name": "Watch delivery > keeps the acquisition value until start and delivers exact frames in order",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::acquisition_value_and_exact_frames_are_held_until_async_start",
+          "note": "existing"
+        },
+        {
+          "name": "Watch delivery > never invokes the listener inline",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_delivery_never_invokes_the_listener_inline",
+          "note": "new"
+        },
+        {
+          "name": "Watch delivery > awaits each callback and buffers frames advanced while one is in flight",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_delivery_awaits_each_callback_and_buffers_frames_advanced_while_one_is_in_flight",
+          "note": "new"
+        },
+        {
+          "name": "Watch delivery > delivers a context with the frame's values and without its abort signal",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::delivery_is_serialized_and_frame_cancellation_is_masked",
+          "note": "existing"
+        },
+        {
+          "name": "Watch overflow > collapses 101 pending frames to one root replacement of the newest value",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::overflow_collapses_101_pending_frames_but_100_remain_exact",
+          "note": "existing"
+        },
+        {
+          "name": "Watch overflow > keeps 100 pending frames exact",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::overflow_collapses_101_pending_frames_but_100_remain_exact",
+          "note": "existing (same test, count==100 branch)"
+        },
+        {
+          "name": "Watch overflow > delivers the value of `replace` on overflow",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_overflow_delivers_the_value_of_replace_on_overflow",
+          "note": "new"
+        },
+        {
+          "name": "Watch overflow > never folds the in-flight frame into an overflow",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_overflow_never_folds_the_in_flight_frame_into_an_overflow",
+          "note": "new; also overflow_uses_source_replacement_without_folding_in_flight_frame"
+        },
+        {
+          "name": "Watch retirement > delivers `[[\"r\", null]]` as the last frame and then ends retired",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_retirement_delivers_r_null_as_the_last_frame_and_then_ends_retired",
+          "note": "new"
+        },
+        {
+          "name": "Watch retirement > drops an overflowing backlog for the retirement frame",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::retirement_delivers_null_last_and_ends_only_after_its_callback",
+          "note": "existing"
+        },
+        {
+          "name": "Watch retirement > ends retired only on its source's retirement, never on a null value",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_retirement_ends_retired_only_on_its_sources_retirement_never_on_a_null_value",
+          "note": "new"
+        },
+        {
+          "name": "Watch retirement > is only available to watches whose values include null",
+          "class": "n/a",
+          "rust": null,
+          "note": "TypeScript type-level assertion (expectTypeOf/@ts-expect-error); in Rust retire exists only on impl Watch<JsonValue>, enforced by the compiler"
+        },
+        {
+          "name": "Watch retirement > discards a retirement still pending when the source ends",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::cancellation_and_source_end_discard_pending_retirement",
+          "note": "existing"
+        },
+        {
+          "name": "Watch ends > stops idempotently and rejects a repeated or late start",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_ends_stops_idempotently_and_rejects_a_repeated_or_late_start",
+          "note": "new"
+        },
+        {
+          "name": "Watch ends > ends `ended` or `failed` from its source, dropping pending frames",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_ends_ends_ended_or_failed_from_its_source_dropping_pending_frames",
+          "note": "new"
+        },
+        {
+          "name": "Watch ends > stops future delivery without aborting or awaiting an in-flight callback",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_ends_stops_future_delivery_without_aborting_or_awaiting_an_in_flight_callback",
+          "note": "new"
+        },
+        {
+          "name": "Watch ends > ends `cancelled` when its acquisition signal aborts, also when already aborted",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_ends_ends_cancelled_when_its_acquisition_signal_aborts_also_when_already_aborted",
+          "note": "new"
+        },
+        {
+          "name": "Watch ends > ends `listener_error` on a throw, reports it, and delivers nothing more",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_ends_ends_listener_error_on_a_throw_reports_it_and_delivers_nothing_more",
+          "note": "new; also listener_failure_reports_once_and_drops_pending_frames"
+        },
+        {
+          "name": "Watch ends > wraps a thrown non-Error in an Error",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "JS can throw/reject arbitrary values; Rust listeners return Result<(), String|WatchError>, so wrapping is the type system"
+        },
+        {
+          "name": "Watch references > retains neither its source, its listener, nor its signal once ended, while still referenced",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::watch_references_retains_neither_its_source_its_listener_nor_its_signal_once_ended_while_still_referenced",
+          "note": "source, listener and signal released for stop/cancel/end/retire with open-watch control; signal observed via new AbortSignal::downgrade -> WeakAbortSignal (Weak of the signal's shared source slice, the WeakRef equivalent)"
+        },
+        {
+          "name": "NativeWatch > delivers values by identity in order with a context, never inline",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::native_watch_delivers_values_by_identity_in_order_with_a_context_never_inline",
+          "note": "new"
+        },
+        {
+          "name": "NativeWatch > collapses 101 pending values to the newest",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::native_watch_keeps_identity_and_collapses_backlog",
+          "note": "existing"
+        },
+        {
+          "name": "NativeWatch > ends with every reason of its lifecycle",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::native_watch_ends_with_every_reason_of_its_lifecycle",
+          "note": "new"
+        },
+        {
+          "name": "NativeWatch > retains neither its source nor its listener once stopped, while still referenced",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/watch.rs::native_watch_retains_neither_its_source_nor_its_listener_once_stopped_while_still_referenced",
+          "note": "new"
+        }
+      ]
+    }
+  ]
+}

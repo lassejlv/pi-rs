@@ -8,8 +8,8 @@
 //! As in TS, the Linux helper cannot write (`set_text` is `None`): callers use command-line tools
 //! there because they keep owning the clipboard selection after pi returns.
 //!
-//! Modifier-key state (`isModifierPressed`, macOS/Windows only in TS) is not available:
-//! [`is_native_modifier_pressed`] returns `false`.
+//! Modifier-key state (`isModifierPressed`, macOS/Windows only in TS) uses the same system calls
+//! as the TS addons ([`is_native_modifier_pressed`]).
 
 use std::sync::{Arc, Mutex};
 use std::task::{Poll, Waker};
@@ -64,9 +64,69 @@ pub fn get_native_clipboard() -> Option<Arc<dyn NativeClipboard>> {
     }
 }
 
-/// Whether `key` is currently held, as reported by the native helper (always `false` here).
-pub fn is_native_modifier_pressed(_key: ModifierKey) -> bool {
-    false
+/// Whether `key` is currently held, as the TS native helpers report it: macOS asks the combined
+/// session's event source (`CGEventSourceFlagsState`), Windows `GetAsyncKeyState`; other
+/// platforms have no helper (`false`).
+pub fn is_native_modifier_pressed(key: ModifierKey) -> bool {
+    modifier_state::is_pressed(key)
+}
+
+#[cfg(target_os = "macos")]
+mod modifier_state {
+    use super::ModifierKey;
+
+    #[link(name = "CoreGraphics", kind = "framework")]
+    unsafe extern "C" {
+        fn CGEventSourceFlagsState(state_id: i32) -> u64;
+    }
+
+    const COMBINED_SESSION_STATE: i32 = 0;
+
+    pub(super) fn is_pressed(key: ModifierKey) -> bool {
+        let mask: u64 = match key {
+            ModifierKey::Shift => 0x0002_0000,
+            ModifierKey::Control => 0x0004_0000,
+            ModifierKey::Option => 0x0008_0000,
+            ModifierKey::Command => 0x0010_0000,
+        };
+        // SAFETY: a pure query of the window server's modifier flags.
+        let flags = unsafe { CGEventSourceFlagsState(COMBINED_SESSION_STATE) };
+        flags & mask != 0
+    }
+}
+
+#[cfg(windows)]
+mod modifier_state {
+    use super::ModifierKey;
+
+    #[link(name = "user32")]
+    unsafe extern "system" {
+        fn GetAsyncKeyState(virtual_key: i32) -> i16;
+    }
+
+    fn key_pressed(virtual_key: i32) -> bool {
+        // SAFETY: a pure query of the asynchronous key state.
+        (unsafe { GetAsyncKeyState(virtual_key) } as u16 & 0x8000) != 0
+    }
+
+    pub(super) fn is_pressed(key: ModifierKey) -> bool {
+        let keys: &[i32] = match key {
+            ModifierKey::Shift => &[0x10, 0xA0, 0xA1],
+            ModifierKey::Control => &[0x11, 0xA2, 0xA3],
+            ModifierKey::Option => &[0x12, 0xA4, 0xA5],
+            ModifierKey::Command => &[0x5B, 0x5C],
+        };
+        keys.iter().any(|k| key_pressed(*k))
+    }
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
+mod modifier_state {
+    use super::ModifierKey;
+
+    pub(super) fn is_pressed(_key: ModifierKey) -> bool {
+        false
+    }
 }
 
 /// [`NativeClipboard`] over `arboard`. Each call opens the clipboard on a short-lived thread

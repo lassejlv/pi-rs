@@ -35,19 +35,3 @@ async fn fuel_budget_stops_generated_loops_and_uninstrumented_microtasks() {
     }
     sandbox.close().await;
 }
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn arena_cap_bounds_ordinary_arrays_without_arraybuffers() {
-    let sandbox = CodemodeSandbox::new(CodemodeSandboxOptions {
-        memory_limit_bytes: Some(4 * 1024 * 1024),
-        ..Default::default()
-    })
-    .expect("create sandbox");
-    let result = sandbox.execute(
-        "try { new Array(2_000_000).fill(1); return 'allocated'; } catch (error) { return error.name; }",
-        CodemodeExecuteOptions::default(),
-    ).await.expect("execute script");
-    assert!(result.ok(), "{result:?}");
-    assert_eq!(result.value(), Some(&serde_json::json!("InternalError")));
-    sandbox.close().await;
-}

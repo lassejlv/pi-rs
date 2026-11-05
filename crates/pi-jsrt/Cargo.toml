@@ -3,10 +3,11 @@ name = "pi-jsrt"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Embedded pure-Rust JavaScript runtime (Boa + oxc) used by pi extensions and code mode"
+description = "Embedded pure-Rust JavaScript runtime (QuickJS via rquickjs + oxc) used by pi extensions and code mode"
 
 [dependencies]
-boa_engine.workspace = true
+jiff.workspace = true
+pi-quickjs.workspace = true
 oxc_allocator.workspace = true
 oxc_parser.workspace = true
 oxc_semantic.workspace = true
@@ -36,7 +37,59 @@ bytes.workspace = true
 libc.workspace = true
 unicode-segmentation.workspace = true
 regex.workspace = true
+crc32fast.workspace = true
+ruzstd.workspace = true
+pi-embed.workspace = true
+# `__internal-api`: zlib's z_stream API (deflateParams with a strategy), not just the safe wrapper.
+zlib-rs = { version = "=0.6.8", features = ["__internal-api"] }
+brotli = "9"
+hmac.workspace = true
+rsa = { workspace = true, features = ["hazmat"] }
+aes = "0.8"
+des = "0.8"
+aria = "0.1"
+camellia = "0.1"
+sm4 = "0.5"
+sha3 = { version = "0.10", features = ["oid"] }
+ripemd = { version = "0.1", features = ["oid"] }
+blake2 = "0.10"
+sm3 = "0.4"
+digest = "0.10"
+num-bigint-dig = { version = "0.8", features = ["prime", "rand"] }
+num-traits = "0.2"
+cipher = "0.4"
+ghash = "0.5"
+chacha20 = "0.9"
+poly1305 = "0.8"
+universal-hash = "0.5"
+p256 = { version = "0.13", features = ["ecdsa", "ecdh", "pkcs8", "pem"] }
+p384 = { version = "0.13", features = ["ecdsa", "ecdh", "pkcs8", "pem"] }
+p521 = { version = "0.13", features = ["ecdsa", "ecdh", "pkcs8", "pem"] }
+k256 = { version = "0.13", features = ["ecdsa", "ecdh", "pkcs8", "pem"] }
+ed448-goldilocks = "0.9"
+dsa = "0.6"
+ed25519-dalek = "2"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+scrypt = { version = "0.11", default-features = false }
+hkdf = "0.12"
+pkcs8 = { version = "0.10", features = ["pem", "encryption", "std"] }
+spki = { version = "0.7", features = ["pem", "std"] }
+sec1 = { version = "0.7", features = ["pem", "std", "der"] }
+pkcs1 = { version = "0.7", features = ["pem", "std"] }
+der = { version = "0.7", features = ["oid", "std"] }
+wasmi = { version = "2", default-features = false, features = ["stable", "std", "validate", "auto-dispatch", "simd"] }
+aligned-vec = "0.6"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = "1"
+rustls-native-certs = "0.8"
+tokio-tungstenite.workspace = true
+h2 = "0.4"
+socket2 = { version = "0.6", features = ["all"] }
+http = "1"
+rusqlite.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
 tokio = { workspace = true }
+futures.workspace = true

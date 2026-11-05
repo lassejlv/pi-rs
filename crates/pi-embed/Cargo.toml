@@ -1,0 +1,10 @@
+[package]
+name = "pi-embed"
+description = "Text files embedded compressed and inflated on first use"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pi-embed-macros = { path = "../pi-embed-macros" }
+flate2 = { workspace = true }

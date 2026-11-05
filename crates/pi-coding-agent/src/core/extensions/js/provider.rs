@@ -39,7 +39,7 @@ pub(crate) fn bytes_of(value: &Value) -> Vec<u8> {
 
 /// Telemetry parents (`StreamOptions.telemetry`) passed to JavaScript as `{ __piTelemetry: id }`,
 /// alive while the JavaScript call that received them runs.
-static TELEMETRY_PARENTS: std::sync::LazyLock<parking_lot::Mutex<std::collections::HashMap<u64, pi_telemetry::SpanRef>>> =
+static TELEMETRY_PARENTS: std::sync::LazyLock<parking_lot::Mutex<std::collections::HashMap<u64, pi_telemetry::ContextRef>>> =
     std::sync::LazyLock::new(Default::default);
 /// Request observers started by JavaScript `Models` collections, until their result is observed.
 static TELEMETRY_OBSERVERS: std::sync::LazyLock<
@@ -47,7 +47,7 @@ static TELEMETRY_OBSERVERS: std::sync::LazyLock<
 > = std::sync::LazyLock::new(Default::default);
 
 /// Register a telemetry parent for JavaScript; release it with [`release_telemetry_parent`].
-pub(crate) fn register_telemetry_parent(span: pi_telemetry::SpanRef) -> u64 {
+pub(crate) fn register_telemetry_parent(span: pi_telemetry::ContextRef) -> u64 {
     let id = super::next_id();
     TELEMETRY_PARENTS.lock().insert(id, span);
     id
@@ -58,7 +58,7 @@ pub(crate) fn release_telemetry_parent(id: u64) {
 }
 
 /// The telemetry parent a JavaScript options object carries (`{ __piTelemetry: id }`).
-fn telemetry_parent_of(value: &Value) -> Option<pi_telemetry::SpanRef> {
+fn telemetry_parent_of(value: &Value) -> Option<pi_telemetry::ContextRef> {
     let id = value.get("__piTelemetry")?.as_u64()?;
     TELEMETRY_PARENTS.lock().get(&id).cloned()
 }
@@ -250,9 +250,10 @@ fn js_oauth(bridge: &Arc<Bridge>, value: &Value) -> Option<ProviderOAuthConfig> 
     let refresh = bridge.handle(&value["refreshToken"])?;
     let get_api_key = bridge.handle(&value["getApiKey"])?;
     let modify_models = bridge.handle(&value["modifyModels"]);
+    let object = bridge.handle(&value["object"]);
     let b = bridge.clone();
     let b2 = bridge.clone();
-    Some(ProviderOAuthConfig {
+    let config = ProviderOAuthConfig {
         name: value["name"].as_str().unwrap_or_default().to_string(),
         is_subscription: value["isSubscription"].as_bool(),
         uses_callback_server: value["usesCallbackServer"].as_bool(),
@@ -289,7 +290,12 @@ fn js_oauth(bridge: &Arc<Bridge>, value: &Value) -> Option<ProviderOAuthConfig> 
                 h.call_blocking(args).ok().and_then(|v| serde_json::from_value(v).ok()).unwrap_or(models)
             }) as Arc<dyn Fn(Vec<Model>, &pi_ai::auth::types::OAuthCredentials) -> Vec<Model> + Send + Sync>
         }),
-    })
+    };
+    // `getRegisteredProviderConfig()` hands back the extension's own oauth object.
+    if let Some(object) = object {
+        bridge.origins.record(&config.login, object);
+    }
+    Some(config)
 }
 
 /// `ProviderConfig` from the JS config object of `pi.registerProvider(name, config)`.
@@ -298,7 +304,8 @@ pub(crate) fn js_provider_config(bridge: &Arc<Bridge>, value: &Value) -> anyhow:
         Value::Null => None,
         v => Some(serde_json::from_value(v.clone()).map_err(|e| anyhow::anyhow!("Invalid provider models: {e}"))?),
     };
-    let refresh_models = bridge.handle(&value["refreshModels"]).map(|h| {
+    let refresh_handle = bridge.handle(&value["refreshModels"]);
+    let refresh_models = refresh_handle.clone().map(|h| {
         let b = bridge.clone();
         Arc::new(move |ctx: pi_ai::models::RefreshModelsContext| {
             let b = b.clone();
@@ -317,7 +324,9 @@ pub(crate) fn js_provider_config(bridge: &Arc<Bridge>, value: &Value) -> anyhow:
             let mut out = indexmap::IndexMap::new();
             for (api, implementation) in map {
                 if let Some(h) = bridge.handle(implementation) {
-                    out.insert(api.clone(), Arc::new(super::native::JsImages::new(bridge, h)) as Arc<dyn pi_ai::models::ProviderImages>);
+                    let images = Arc::new(super::native::JsImages::new(bridge, h.clone())) as Arc<dyn pi_ai::models::ProviderImages>;
+                    bridge.origins.record(&images, h);
+                    out.insert(api.clone(), images);
                 }
             }
             Some(out)
@@ -329,22 +338,30 @@ pub(crate) fn js_provider_config(bridge: &Arc<Bridge>, value: &Value) -> anyhow:
             let mut out = indexmap::IndexMap::new();
             for (api, implementation) in map {
                 if let Some(h) = bridge.handle(implementation) {
-                    out.insert(
-                        api.clone(),
-                        Arc::new(super::native::JsClassifier::new(bridge, h)) as Arc<dyn pi_ai::models::ProviderClassifier>,
-                    );
+                    let classifier =
+                        Arc::new(super::native::JsClassifier::new(bridge, h.clone())) as Arc<dyn pi_ai::models::ProviderClassifier>;
+                    bridge.origins.record(&classifier, h);
+                    out.insert(api.clone(), classifier);
                 }
             }
             Some(out)
         }
         None => None,
     };
+    if let (Some(f), Some(h)) = (&refresh_models, refresh_handle) {
+        bridge.origins.record(f, h);
+    }
+    let stream_simple = bridge.handle(&value["streamSimple"]).map(|h| {
+        let f = js_stream_simple(bridge.clone(), h.clone());
+        bridge.origins.record(&f, h);
+        f
+    });
     Ok(ProviderConfig {
         name: value["name"].as_str().map(str::to_string),
         base_url: value["baseUrl"].as_str().map(str::to_string),
         api_key: value["apiKey"].as_str().map(str::to_string),
         api: value["api"].as_str().map(str::to_string),
-        stream_simple: bridge.handle(&value["streamSimple"]).map(|h| js_stream_simple(bridge.clone(), h)),
+        stream_simple,
         images,
         classifiers,
         headers: opt(&value["headers"])?,
@@ -403,6 +420,34 @@ pub(crate) fn js_virtual_model(bridge: &Arc<Bridge>, value: &Value) -> anyhow::R
                 let (request_json, _guard) = route_request_json(&b, &request);
                 let ctx_id = b.register_ctx(CtxEntry::Base(ctx));
                 let result = b.glue_call("invokeRoute", vec![route.to_value(), request_json, json!(ctx_id)]).await?;
+                serde_json::from_value::<ModelRoute>(result).map_err(|e| anyhow::anyhow!("Invalid model route: {e}"))
+            })
+        }),
+    })
+}
+
+/// `VirtualModelDefinition` from the JS object of `ctx.modelRegistry.registerVirtualModel()`
+/// (`route(request)` gets no context, unlike `pi.registerVirtualModel()`).
+pub(crate) fn js_virtual_model_definition(
+    bridge: &Arc<Bridge>,
+    value: &Value,
+) -> anyhow::Result<crate::core::virtual_models::VirtualModelDefinition> {
+    let route = bridge.handle(&value["route"]).ok_or_else(|| anyhow::anyhow!("registerVirtualModel() requires route()"))?;
+    let b = bridge.clone();
+    Ok(crate::core::virtual_models::VirtualModelDefinition {
+        provider: str_arg(value, "provider"),
+        id: str_arg(value, "id"),
+        name: str_arg(value, "name"),
+        thinking_levels: opt(&value["thinkingLevels"])?,
+        context_window: value["contextWindow"].as_u64(),
+        max_tokens: value["maxTokens"].as_u64(),
+        input: opt(&value["input"])?,
+        route: Arc::new(move |request: ModelRouteRequest| {
+            let b = b.clone();
+            let route = route.clone();
+            Box::pin(async move {
+                let (request_json, _guard) = route_request_json(&b, &request);
+                let result = b.glue_call("invokeRoute", vec![route.to_value(), request_json, Value::Null]).await?;
                 serde_json::from_value::<ModelRoute>(result).map_err(|e| anyhow::anyhow!("Invalid model route: {e}"))
             })
         }),

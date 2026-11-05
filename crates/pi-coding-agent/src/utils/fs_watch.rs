@@ -345,14 +345,9 @@ mod tests {
 
         events.lock().clear();
         std::fs::rename(dir.path().join("a.json"), dir.path().join("b.json")).unwrap();
-        assert!(wait_until(|| events.lock().len() >= 2));
-        assert_eq!(
-            events.lock()[..2],
-            [
-                (WatchEventType::Rename, Some("a.json".to_string())),
-                (WatchEventType::Rename, Some("b.json".to_string()))
-            ]
-        );
+        // FSEvents coalesces flags per path, so a half may repeat or arrive late: require both halves.
+        let renamed = |name: &str| events.lock().contains(&(WatchEventType::Rename, Some(name.to_string())));
+        assert!(wait_until(|| renamed("a.json") && renamed("b.json")));
 
         watcher.close();
         events.lock().clear();
@@ -369,8 +364,11 @@ mod tests {
         let (events, listener) = recorder();
         let watcher = watch_with_error_handler(file.to_str().unwrap(), listener, Arc::new(|| {})).unwrap();
         std::fs::write(&file, "1\n").unwrap();
-        assert!(wait_until(|| !events.lock().is_empty()));
-        assert_eq!(events.lock()[0], (WatchEventType::Change, Some("tables.list".to_string())));
+        // FSEvents keeps the Created flag of the file written just before the watch started, so the
+        // first event can be a rename; a change for the base name must still arrive.
+        let changed = || events.lock().contains(&(WatchEventType::Change, Some("tables.list".to_string())));
+        assert!(wait_until(changed));
+        assert!(events.lock().iter().all(|(_, name)| name.as_deref() == Some("tables.list")));
         watcher.close();
     }
 

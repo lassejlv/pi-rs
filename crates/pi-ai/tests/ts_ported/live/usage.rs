@@ -63,7 +63,7 @@ async fn token_statistics_on_abort_e2e() {
         .expect("No Cerebras models available");
     let targets = vec![
         target("Google", Gate::Env(&["GEMINI_API_KEY"]), "google", "gemini-2.5-flash"),
-        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
         target("OpenAI Responses", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-5.4-mini").extra("reasoningEffort", json!("low")),
         target("Azure OpenAI Responses", Gate::Azure, "azure", "gpt-4o-mini"),
         target("Anthropic", Gate::Env(&["ANTHROPIC_API_KEY"]), "anthropic", "claude-sonnet-4-6"),
@@ -106,7 +106,7 @@ async fn openrouter_images_e2e() {
             let model = get_builtin_image_model("openrouter", "google/gemini-2.5-flash-image").expect("image model");
             let context = ImagesContext { input: vec![UserContentBlock::text("Generate a simple red circle on a plain white background. No text.")] };
             let response = pi_ai::images::generate_images(&model, &context, StreamOptions::default()).await.unwrap();
-            assert_eq!(serde_json::to_value(&response.stop_reason).unwrap(), "stop", "Error: {:?}", response.error_message);
+            assert_eq!(serde_json::to_value(response.stop_reason).unwrap(), "stop", "Error: {:?}", response.error_message);
             assert!(response.error_message.as_deref().unwrap_or_default().is_empty());
             assert!(response.output.iter().any(|item| matches!(item, UserContentBlock::Image(_))));
             assert!(response.timestamp > 0);
@@ -127,7 +127,7 @@ async fn openrouter_images_e2e() {
                 ],
             };
             let response = pi_ai::images::generate_images(&model, &context, StreamOptions::default()).await.unwrap();
-            assert_eq!(serde_json::to_value(&response.stop_reason).unwrap(), "stop", "Error: {:?}", response.error_message);
+            assert_eq!(serde_json::to_value(response.stop_reason).unwrap(), "stop", "Error: {:?}", response.error_message);
             assert!(response.output.iter().any(|item| matches!(item, UserContentBlock::Image(_))));
         })
     })

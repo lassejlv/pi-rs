@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use crate::TelemetryText;
 use crate::attributes::{AttributeValue, SpanAttributes};
 use crate::context::SpanStatus;
 use crate::metrics::MetricKind;
@@ -18,20 +19,21 @@ pub struct StoredEvent {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredLink {
-    pub trace_id: String,
-    pub span_id: String,
+    pub trace_id: TelemetryText,
+    pub span_id: TelemetryText,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attributes: Option<SpanAttributes>,
 }
 
 /// A settled span snapshot, independent of the recording adapter. Event times are relative to span start.
+/// IDs are JavaScript strings: an extracted carrier can supply any, including unpaired surrogates.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredSpan {
-    pub id: String,
-    pub trace_id: String,
+    pub id: TelemetryText,
+    pub trace_id: TelemetryText,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub parent_id: Option<String>,
+    pub parent_id: Option<TelemetryText>,
     pub name: String,
     #[serde(with = "crate::js::number")]
     pub started_ms: f64,
@@ -46,7 +48,7 @@ pub struct StoredSpan {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredTrace {
-    pub trace_id: String,
+    pub trace_id: TelemetryText,
     pub spans: Vec<StoredSpan>,
 }
 
@@ -117,6 +119,6 @@ pub struct StoredMetric {
 #[async_trait]
 pub trait TelemetryStore: Send + Sync {
     async fn find_traces(&self, query: TraceQuery) -> anyhow::Result<TraceQueryResult>;
-    async fn get_trace(&self, trace_id: &str) -> anyhow::Result<Option<StoredTrace>>;
+    async fn get_trace(&self, trace_id: &TelemetryText) -> anyhow::Result<Option<StoredTrace>>;
     async fn find_metrics(&self, query: MetricQuery) -> anyhow::Result<Vec<StoredMetric>>;
 }

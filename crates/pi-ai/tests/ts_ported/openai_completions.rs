@@ -186,7 +186,7 @@ async fn zai_tool_stream_and_thinking() {
     let mut overridden = glm.clone();
     let mut compat = overridden.compat();
     compat.zai_tool_stream = Some(true);
-    overridden.compat = Some(compat);
+    overridden.compat = Some(Box::new(compat));
     let run = simple(&overridden, &with_tools("Call ping with ok=true", vec![ping_tool()]), StreamOptions::default()).await;
     assert_eq!(run.payload["tool_stream"], true);
 

@@ -1,6 +1,7 @@
 //! Ports of the codemode description catalog tests (`test/tool-search.test.ts`), the renderer tests
 //! (`test/codemode-renderer.test.ts`), and direct `execute_codemode` checks.
 
+use tokio_util::sync::CancellationToken;
 use super::execute::{execute_codemode, read_codemode_store};
 use super::renderer::codemode_renderers;
 use super::tool::*;
@@ -223,6 +224,29 @@ async fn executes_scripts_without_a_session() {
         invalid.unwrap_err().to_string(),
         "The @options line must be followed by JavaScript source on subsequent lines"
     );
+}
+
+// The agent aborts tools with `controller.abort()`, whose reason is Node's DOMException
+// "This operation was aborted".
+#[tokio::test]
+async fn aborted_scripts_report_the_default_abort_reason() {
+    let token = CancellationToken::new();
+    token.cancel();
+    let input = CodemodeToolInput { code: "return 1".into() };
+    let result = execute_codemode("call", &input, Some(token), None, None, None).await.unwrap();
+    let (_, rest) = result_text(&result);
+    assert_eq!(rest, "Script error:\nScript aborted: This operation was aborted\n\nThe script did not start.");
+
+    let token = CancellationToken::new();
+    let cancel = token.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        cancel.cancel();
+    });
+    let input = CodemodeToolInput { code: "while (true) await null".into() };
+    let result = execute_codemode("call", &input, Some(token), None, None, None).await.unwrap();
+    let (_, rest) = result_text(&result);
+    assert!(rest.contains("Script aborted: This operation was aborted"), "{rest}");
 }
 
 // --- renderer (`test/codemode-renderer.test.ts`) ---

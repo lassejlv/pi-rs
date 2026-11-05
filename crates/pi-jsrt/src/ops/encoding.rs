@@ -1,7 +1,7 @@
 //! Text encoding, base64, URL parsing and grapheme segmentation ops.
 
 use base64::Engine as _;
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{array, bytes_arg, bytes_to_js, object};
@@ -56,14 +56,14 @@ fn op_base64_decode(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResul
     // Node stops at the first invalid character / padding.
     if let Some(i) = cleaned.find(|c: char| !(c.is_ascii_alphanumeric() || c == '+' || c == '/')) {
         if strict && cleaned[i..].chars().any(|c| c != '=') {
-            return Err(boa_engine::JsNativeError::error()
+            return Err(crate::js::JsNativeError::error()
                 .with_message("The string to be decoded is not correctly encoded.")
                 .into());
         }
         cleaned.truncate(i);
     }
     if strict && s.trim_end_matches('=').len() % 4 == 1 {
-        return Err(boa_engine::JsNativeError::error()
+        return Err(crate::js::JsNativeError::error()
             .with_message("The string to be decoded is not correctly encoded.")
             .into());
     }

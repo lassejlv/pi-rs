@@ -22,7 +22,7 @@ pub struct MatrixOptions {
 pub fn standard_matrix(options: MatrixOptions) -> Vec<Target> {
     let mut completions = target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini");
     if options.openai_completions_api {
-        completions = completions.as_api("openai-completions");
+        completions = completions.api_without_compat("openai-completions");
     }
     let mut together = target("Together AI", Gate::Env(&["TOGETHER_API_KEY"]), "together", "moonshotai/Kimi-K3");
     if options.together_high {
@@ -365,7 +365,7 @@ fn tool_with_text_and_image_result(model: &Model, options: StreamOptions) -> Sce
 async fn image_tool_result_e2e() {
     let targets = vec![
         target("Google", Gate::Env(&["GEMINI_API_KEY"]), "google", "gemini-2.5-flash"),
-        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
         target("OpenAI Responses", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-5-mini"),
         target("Azure OpenAI Responses", Gate::Azure, "azure", "gpt-4o-mini"),
         target("Anthropic", Gate::Env(&["ANTHROPIC_API_KEY"]), "anthropic", "claude-haiku-4-5"),
@@ -454,7 +454,7 @@ async fn total_tokens_e2e() {
     let targets = vec![
         target("Anthropic (API Key)", Gate::Env(&["ANTHROPIC_API_KEY"]), "anthropic", "claude-sonnet-4-5"),
         target("Anthropic (OAuth)", Gate::OAuth("anthropic"), "anthropic", "claude-sonnet-4-6"),
-        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
         target("OpenAI Responses", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o"),
         target("Azure OpenAI Responses", Gate::Azure, "azure", "gpt-4o-mini"),
         target("Google", Gate::Env(&["GEMINI_API_KEY"]), "google", "gemini-2.5-flash"),

@@ -411,6 +411,8 @@ pub fn create_tool_search_tool_definition(options: Option<&ToolSearchToolOptions
             async move { result }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some("Search for tools that are not loaded yet and load the matches".into());
     // Searching is not something scripts need; it changes what the model sees.
     definition.exposure = Some(ToolExposure::ModelOnly);

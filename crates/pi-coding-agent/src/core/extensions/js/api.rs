@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 
-use super::{Bridge, CtxEntry, builtin, component, context, native, provider};
+use super::{Bridge, CtxEntry, builtin, component, context, native, provider, sdk};
 use crate::compat::AutocompleteItem;
 use crate::core::bash_executor::BashResult;
 use crate::core::exec::ExecOptions;
@@ -76,11 +76,15 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, rt: &JsRuntime, op: &str, payload: 
         }
         "version" => Ok(json!(crate::config::VERSION)),
         _ if op.starts_with("pi.") => pi_op(bridge, rt, op, payload),
-        "ctx.get" | "ctx.call" | "sm" | "mr" | "ui" => context::dispatch(bridge, op, payload),
+        "ctx.get" | "ctx.release" | "ctx.call" | "sm" | "sm.static" | "mr" | "ui" => context::dispatch(bridge, op, payload),
         "theme" | "tui" | "kb" | "sv" | "overlay" | "footer" | "rc" | "rc.new" | "tui.util" | "tui.markdown"
         | "tui.markdownTheme" | "renderer.call" | "renderer.result" | "ac" => component::dispatch(bridge, op, payload),
         _ if op.starts_with("builtin.") || op.starts_with("ca") => builtin::dispatch(bridge, op, payload),
         "ai" => provider::dispatch(bridge, op, payload),
+        "settings" | "settings.static" | "rt" | "rl" | "as" | "trust" | "pm" | "sdk.resolveCliModel" | "sdk.createExtensionRuntime"
+        | "sdk.servicesPaths" | "sdk.extensionTool" => {
+            sdk::dispatch(bridge, op, payload)
+        }
         _ if op.starts_with("aip.") => native::dispatch(bridge, op, payload),
         _ => Err(anyhow::anyhow!("unknown host call {op}")),
     }
@@ -114,11 +118,15 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, _rt: JsRuntime, op: Stri
             let args = payload.get("args").and_then(Value::as_array).cloned().unwrap_or_default();
             callback(args).await
         }
-        "ctx.async" | "mr.async" | "ui.async" | "mr.stream" => context::dispatch_async(bridge, &op, payload).await,
+        "ctx.async" | "mr.async" | "ui.async" | "mr.stream" | "sm.list" => context::dispatch_async(bridge, &op, payload).await,
         "ac.async" => component::dispatch_async(bridge, &op, payload).await,
         "tui.clipboard" => component::native_clipboard_call(&payload).await,
         "builtin.execute" | "ca.localBashExec" | "ca.copyToClipboard" | "ca.image" | "ca.compaction" => builtin::dispatch_async(bridge, &op, payload).await,
         "ai.stream" | "stream.next" => provider::dispatch_async(bridge, &op, payload).await,
+        "settings.async" | "rt.async" | "rt.stream" | "rl.async" | "as.async" | "builtin.ext.run" | "pm.async" | "sdk.resolveModelScope"
+        | "sdk.discoverAndLoadExtensions" | "sdk.finishServices" => {
+            sdk::dispatch_async(bridge, &op, payload).await
+        }
         _ if op.starts_with("aip.") => native::dispatch_async(bridge, &op, payload).await,
         _ => Err(anyhow::anyhow!("unknown async host call {op}")),
     }
@@ -403,7 +411,7 @@ pub(crate) fn js_event_handler(bridge: Arc<Bridge>, handler: JsHandle) -> Extens
                 .glue_call("invokeHandler", vec![handler.to_value(), value, json!(ctx_id), json!("base"), signal_value])
                 .await;
             if transient {
-                bridge.release_ctx(ctx_id);
+                bridge.detach_ctx(ctx_id, "base");
             }
             let result = result?;
             if result.is_null() {
@@ -482,7 +490,7 @@ fn js_project_trust_handler(bridge: Arc<Bridge>, handler: JsHandle) -> ProjectTr
             let result = bridge
                 .glue_call("invokeProjectTrust", vec![handler.to_value(), serde_json::to_value(&event)?, json!(ctx_id)])
                 .await;
-            bridge.release_ctx(ctx_id);
+            bridge.detach_ctx(ctx_id, "trust");
             let result = result?;
             Ok(serde_json::from_value(result)?)
         })
@@ -495,8 +503,10 @@ fn js_command_handler(bridge: Arc<Bridge>, handler: JsHandle) -> CommandHandler 
         let handler = handler.clone();
         Box::pin(async move {
             let ctx_id = bridge.register_ctx(CtxEntry::Command(ctx));
-            bridge.glue_call("invokeCommand", vec![handler.to_value(), json!(args), json!(ctx_id), json!("command")]).await?;
-            Ok(())
+            let result =
+                bridge.glue_call("invokeCommand", vec![handler.to_value(), json!(args), json!(ctx_id), json!("command")]).await;
+            bridge.detach_ctx(ctx_id, "command");
+            result.map(|_| ())
         })
     })
 }
@@ -541,6 +551,8 @@ pub(crate) fn js_tool_definition(bridge: &Arc<Bridge>, tool: &Value) -> anyhow::
     let description = tool["description"].as_str().unwrap_or_default().to_string();
     let parameters = tool["parameters"].clone();
 
+    // Built-in tools (Rust markers) have TypeBox schemas in TS.
+    let parameters_typebox = tool["parametersTypebox"].as_bool() == Some(true) || rust_marker(&tool["execute"]).is_some();
     let execute: ToolExecuteFn = match rust_marker(&tool["execute"]) {
         Some(marker) => builtin::rust_execute(bridge, marker)?,
         None => {
@@ -555,6 +567,7 @@ pub(crate) fn js_tool_definition(bridge: &Arc<Bridge>, tool: &Value) -> anyhow::
         prompt_snippet: tool["promptSnippet"].as_str().map(str::to_string),
         prompt_guidelines: opt(&tool["promptGuidelines"]).unwrap_or(None),
         parameters,
+        parameters_typebox,
         constrained_sampling: if tool["constrainedSampling"].is_object() {
             serde_json::from_value(tool["constrainedSampling"].clone()).ok()
         } else {
@@ -602,6 +615,10 @@ pub(crate) fn js_tool_definition(bridge: &Arc<Bridge>, tool: &Value) -> anyhow::
     let (render_call, render_result) = component::tool_renderers(bridge, &tool["renderCall"], &tool["renderResult"])?;
     def.render_call = render_call;
     def.render_result = render_result;
+    // `session.getToolDefinition()` hands back the extension's own tool object.
+    if let Some(object) = bridge.handle(&tool["object"]) {
+        bridge.origins.record(&def.execute, object);
+    }
     Ok(def)
 }
 
@@ -669,7 +686,7 @@ pub(crate) fn js_execute(bridge: Arc<Bridge>, handle: JsHandle) -> ToolExecuteFn
                 bridge.callbacks.remove(id);
             }
             if let Some(id) = ctx_id {
-                bridge.release_ctx(id);
+                bridge.detach_ctx(id, "tool");
             }
             let result = result?;
             if result.is_null() {

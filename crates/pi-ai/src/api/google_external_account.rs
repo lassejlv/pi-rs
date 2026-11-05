@@ -6,6 +6,8 @@
 //! request), exchanges it at the STS endpoint (RFC 8693 token exchange) for a Google access
 //! token, and optionally impersonates a service account. `external_account_authorized_user`
 //! refreshes a workforce user's refresh token at the STS `oauthtoken` endpoint.
+// wasm32 compiles out the native-only transports and sources below.
+#![cfg_attr(target_arch = "wasm32", allow(unused_imports))]
 
 use std::path::Path;
 use std::time::Duration;
@@ -422,7 +424,7 @@ fn token_from_json_text(text: &str, field: &str) -> Option<String> {
 
 async fn file_subject_token(path: &str, format: &SubjectTokenFormat) -> anyhow::Result<String> {
     let resolved = resolve_regular_file(path)?;
-    let raw = tokio::fs::read_to_string(&resolved).await?;
+    let raw = crate::utils::wasm::fs::read_to_string(&resolved).await?;
     let token = match format {
         SubjectTokenFormat::Text => Some(raw).filter(|t| !t.is_empty()),
         SubjectTokenFormat::Json { subject_token_field_name } => {
@@ -491,7 +493,7 @@ pub(crate) async fn gaxios_send(
             }
         };
         if should_retry {
-            tokio::time::sleep(std::time::Duration::from_millis(gaxios_retry_delay_ms(attempt))).await;
+            crate::utils::wasm::sleep(std::time::Duration::from_millis(gaxios_retry_delay_ms(attempt))).await;
             attempt += 1;
         }
     }
@@ -603,7 +605,7 @@ async fn certificate_material(
             }
         },
     };
-    let contents = tokio::fs::read_to_string(&config_path)
+    let contents = crate::utils::wasm::fs::read_to_string(&config_path)
         .await
         .map_err(|_| anyhow::anyhow!("Failed to read certificate config file at: {config_path}"))?;
     let config: Value = crate::utils::js_json::js_json_parse(&contents)
@@ -616,7 +618,7 @@ async fn certificate_material(
             "Certificate config file ({config_path}) is missing required \"cert_path\" or \"key_path\" in the workload config."
         );
     };
-    let cert = tokio::fs::read(cert_path)
+    let cert = crate::utils::wasm::fs::read(cert_path)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to read certificate file at {cert_path}: {e}"))?;
     let cert_text = String::from_utf8_lossy(&cert).into_owned();
@@ -625,19 +627,20 @@ async fn certificate_material(
         .next()
         .ok_or_else(|| anyhow::anyhow!("Failed to read certificate file at {cert_path}: error:0480006C:PEM routines::no start line"))?;
     let leaf = pem_to_der(&leaf_pem).map_err(|e| anyhow::anyhow!("Failed to read certificate file at {cert_path}: {e}"))?;
-    let key = tokio::fs::read(key_path)
+    let key = crate::utils::wasm::fs::read(key_path)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to read private key file at {key_path}: {e}"))?;
     let mut identity_pem = cert.clone();
     identity_pem.push(b'\n');
     identity_pem.extend_from_slice(&key);
+    #[cfg(not(target_arch = "wasm32"))]
     reqwest::Identity::from_pem(&identity_pem)
         .map_err(|e| anyhow::anyhow!("Failed to read private key file at {key_path}: {e}"))?;
 
     let chain: Vec<Vec<u8>> = match trust_chain_path.filter(|p| !p.is_empty()) {
         None => vec![leaf],
         Some(path) => {
-            let pems = tokio::fs::read_to_string(path)
+            let pems = crate::utils::wasm::fs::read_to_string(path)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to process certificate chain from {path}: {e}"))?;
             let mut certs = Vec::new();
@@ -659,6 +662,12 @@ async fn certificate_material(
     Ok(CertificateMaterial { identity_pem, subject_token: serde_json::to_string(&encoded)? })
 }
 
+/// wasm32: the host's `fetch` cannot present client certificates.
+#[cfg(target_arch = "wasm32")]
+fn mtls_client(_identity_pem: &[u8]) -> anyhow::Result<reqwest::Client> {
+    anyhow::bail!("Certificate-based external accounts are not available on wasm32")
+}
+#[cfg(not(target_arch = "wasm32"))]
 fn mtls_client(identity_pem: &[u8]) -> anyhow::Result<reqwest::Client> {
     Ok(reqwest::Client::builder().use_rustls_tls().identity(reqwest::Identity::from_pem(identity_pem)?).build()?)
 }
@@ -748,7 +757,7 @@ async fn cached_executable_response(output_file: &str) -> anyhow::Result<Option<
     if !std::fs::symlink_metadata(&path)?.is_file() {
         return Ok(None);
     }
-    let text = tokio::fs::read_to_string(&path).await?;
+    let text = crate::utils::wasm::fs::read_to_string(&path).await?;
     if text.is_empty() {
         return Ok(None);
     }
@@ -758,6 +767,12 @@ async fn cached_executable_response(output_file: &str) -> anyhow::Result<Option<
     Ok((!response.is_expired() && response.success).then_some(response))
 }
 
+/// wasm32 cannot run processes.
+#[cfg(target_arch = "wasm32")]
+async fn run_executable(_command: &str, _timeout_millis: u64, _env: &[(String, String)]) -> anyhow::Result<ExecutableResponse> {
+    anyhow::bail!("Executable-sourced external accounts are not available on wasm32")
+}
+#[cfg(not(target_arch = "wasm32"))]
 async fn run_executable(command: &str, timeout_millis: u64, env: &[(String, String)]) -> anyhow::Result<ExecutableResponse> {
     use tokio::io::AsyncReadExt;
     let parts = parse_command(command)?;
@@ -781,7 +796,7 @@ async fn run_executable(command: &str, timeout_millis: u64, env: &[(String, Stri
         out.extend_from_slice(&err);
         anyhow::Ok((status, String::from_utf8_lossy(&out).into_owned()))
     };
-    let (status, output) = match tokio::time::timeout(Duration::from_millis(timeout_millis), run).await {
+    let (status, output) = match crate::utils::wasm::timeout(Duration::from_millis(timeout_millis), run).await {
         Ok(result) => result?,
         Err(_) => anyhow::bail!("The executable failed to finish within the timeout specified."),
     };

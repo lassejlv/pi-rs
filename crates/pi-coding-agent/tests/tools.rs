@@ -1104,6 +1104,57 @@ async fn grep_single_file_and_context() {
     assert!(!output.contains("match two"));
 }
 
+#[tokio::test]
+async fn grep_ignores_ripgrep_config_path() {
+    const CHILD: &str = "PI_GREP_CONFIG_TEST_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("rg-config");
+        fs::write(&config, "--fixed-strings\n").unwrap();
+        // Only the isolated test process inherits this config; concurrent tests
+        // never observe a process-wide environment mutation.
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "grep_ignores_ripgrep_config_path", "--nocapture"])
+            .env(CHILD, "1")
+            .env("RIPGREP_CONFIG_PATH", &config)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+
+    let rg = ensure_tool(GetToolPathTool::Rg, None)
+        .await
+        .unwrap()
+        .expect("ripgrep required for regression");
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("fixture.txt");
+    fs::write(&file, "aXb\na.b\n").unwrap();
+    // Confirm the inherited config changes a plain rg search to literal mode.
+    let configured = std::process::Command::new(rg)
+        .args(["--", "a.b"])
+        .arg(&file)
+        .output()
+        .unwrap();
+    assert!(configured.status.success());
+    assert_eq!(String::from_utf8(configured.stdout).unwrap(), "a.b\n");
+
+    let grep = create_grep_tool(&p(dir.path()), None);
+    let result = run(&grep, json!({ "pattern": "a.b", "path": p(&file), "literal": false }))
+        .await
+        .unwrap();
+    assert_eq!(text(&result), "fixture.txt:1: aXb\nfixture.txt:2: a.b");
+    let result = run(&grep, json!({ "pattern": "a.b", "path": p(&file), "literal": true }))
+        .await
+        .unwrap();
+    assert_eq!(text(&result), "fixture.txt:2: a.b");
+}
+
 #[cfg(unix)]
 #[tokio::test]
 async fn grep_treats_flag_like_patterns_as_text() {

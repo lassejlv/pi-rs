@@ -98,7 +98,7 @@ pub async fn load_radius_gateway_config(
     let response = match signal {
         Some(signal) => tokio::select! {
             r = send => r?,
-            _ = signal.cancelled() => anyhow::bail!(crate::utils::provider_retry::AbortError),
+            _ = signal.cancelled() => anyhow::bail!(crate::utils::abort::SignalAbortError),
         },
         None => send.await?,
     };

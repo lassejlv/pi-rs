@@ -39,7 +39,7 @@ pub async fn personalize_open_router_catalog(catalog: Vec<AnyModel>, context: &R
         .send();
     let response = tokio::select! {
         r = request => r?,
-        _ = context.signal.cancelled() => anyhow::bail!(crate::utils::provider_retry::AbortError),
+        _ = context.signal.cancelled() => anyhow::bail!(crate::utils::abort::SignalAbortError),
     };
     let status = response.status().as_u16();
     if matches!(status, 401 | 403 | 404) {

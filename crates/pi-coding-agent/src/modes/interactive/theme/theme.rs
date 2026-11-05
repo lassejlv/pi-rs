@@ -565,8 +565,7 @@ pub struct ThemeInfo {
 }
 
 fn js_locale_compare(a: &str, b: &str) -> std::cmp::Ordering {
-    // Approximation of `String.prototype.localeCompare`: case-insensitive first, then by code point.
-    a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| b.cmp(a))
+    pi_tui::collation::locale_compare(a, b)
 }
 
 pub fn get_available_themes_with_paths() -> Vec<ThemeInfo> {

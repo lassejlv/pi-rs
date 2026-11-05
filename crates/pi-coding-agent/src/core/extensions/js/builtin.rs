@@ -258,22 +258,7 @@ pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow
             let kind = str_arg(&payload, "kind");
             let cwd = payload["cwd"].as_str().map(str::to_string).unwrap_or_else(|| bridge.cwd.clone());
             let definition = create_definition(bridge, &kind, &cwd, &payload["options"])?;
-            let mut out = json!({
-                "name": definition.name,
-                "label": definition.label,
-                "description": definition.description,
-                "parameters": definition.parameters,
-                "promptSnippet": definition.prompt_snippet,
-                "promptGuidelines": definition.prompt_guidelines,
-                "renderShell": serde_json::to_value(definition.render_shell)?,
-                "executionMode": serde_json::to_value(definition.execution_mode)?,
-                "hasPrepareArguments": definition.prepare_arguments.is_some(),
-                "hasRenderCall": definition.render_call.is_some(),
-                "hasRenderResult": definition.render_result.is_some(),
-            });
-            let id = bridge.builtins.insert(BuiltinTool { definition });
-            out["id"] = json!(id);
-            Ok(out)
+            Ok(describe_definition(bridge, definition))
         }
         "builtin.renderCall" => {
             let (definition, theme, ctx) = render_args(bridge, &payload)?;
@@ -695,4 +680,40 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
             Err(anyhow::anyhow!("unknown async host call {op}"))
         }
     }
+}
+
+/// A Rust `ToolDefinition` for JavaScript: the extension's own tool object when it registered the
+/// tool from this runtime (`{ object }`), otherwise a description of the Rust tool that
+/// `toolFromHost` (pi-sdk.js) wraps.
+pub(crate) fn tool_definition_to_js(bridge: &Arc<Bridge>, definition: ToolDefinition) -> Value {
+    if let Some(origin) = bridge.origins.get(&definition.execute) {
+        return json!({ "object": origin });
+    }
+    describe_definition(bridge, definition)
+}
+
+/// Register a Rust tool for JavaScript and describe it (`builtinTool` in pi-coding-agent.js).
+fn describe_definition(bridge: &Arc<Bridge>, definition: ToolDefinition) -> Value {
+    let mut out = json!({
+        "name": definition.name,
+        "label": definition.label,
+        "description": definition.description,
+        "parameters": definition.parameters,
+        "promptSnippet": definition.prompt_snippet,
+        "promptGuidelines": definition.prompt_guidelines,
+        "renderShell": serde_json::to_value(definition.render_shell).unwrap_or(Value::Null),
+        "executionMode": serde_json::to_value(definition.execution_mode).unwrap_or(Value::Null),
+        "hasPrepareArguments": definition.prepare_arguments.is_some(),
+        "hasRenderCall": definition.render_call.is_some(),
+        "hasRenderResult": definition.render_result.is_some(),
+    });
+    if let Some(a) = definition.default_active {
+        out["defaultActive"] = json!(a);
+    }
+    if let Some(x) = &definition.exposure {
+        out["exposure"] = serde_json::to_value(x).unwrap_or(Value::Null);
+    }
+    let id = bridge.builtins.insert(BuiltinTool { definition });
+    out["id"] = json!(id);
+    out
 }

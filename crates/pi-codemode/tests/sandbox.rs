@@ -180,8 +180,8 @@ async fn rejects_invalid_text_and_image_arguments(backend: Backend) {
     assert!(result.ok(), "{:?}", result.error());
     assert!(result.output.is_empty());
     let errors: Vec<String> = serde_json::from_value(result.value().unwrap().clone()).unwrap();
-    // The engine provides its own cyclic-value error message.
-    assert_eq!(errors[0], "TypeError: circular reference");
+    // The engine's own message: QuickJS and V8 say "circular".
+    assert!(errors[0].starts_with("TypeError: ") && errors[0].contains("circular"), "{}", errors[0]);
     let mut expected = vec![
         "TypeError: image expects a non-empty image URL string, an object with image_url, or an image block { type: \"image\", data, mimeType }".to_string(),
         "TypeError: remote image URLs are not supported in tool outputs. Pass a base64 data URI instead".to_string(),
@@ -637,8 +637,8 @@ async fn terminates_a_synchronous_infinite_loop_on_timeout(backend: Backend) {
     assert!(started.elapsed() < Duration::from_secs(5));
 }
 
-/// Cancellation must also stop an async function that resumed after an await; the instrumented
-/// loop still stops the script and the VM reports why.
+/// A loop in an async function that resumed after an await: the instrumented loop stops the
+/// script and the VM reports why.
 async fn terminates_a_loop_after_an_await_on_timeout(backend: Backend) {
     let sandbox = create_sandbox(backend, vec![echo()]);
     let started = Instant::now();
@@ -710,7 +710,15 @@ async fn aborts_via_signal_and_cancels_in_flight_calls(backend: Backend) {
     called.notified().await;
     second.abort();
     let aborted = pending.await.unwrap();
-    assert_matches(&aborted, json!({ "ok": false, "error": { "kind": "aborted" }, "calls": [{ "name": "hang", "status": "cancelled" }] }));
+    // Node's `controller.abort()` reason is a DOMException: "This operation was aborted".
+    assert_matches(
+        &aborted,
+        json!({
+            "ok": false,
+            "error": { "kind": "aborted", "message": "This operation was aborted" },
+            "calls": [{ "name": "hang", "status": "cancelled" }]
+        }),
+    );
     assert!(tool_signal.lock().as_ref().unwrap().is_cancelled());
 
     sandbox.close().await;
@@ -766,7 +774,7 @@ async fn runs_executions_in_parallel_without_sharing_state(backend: Backend) {
     assert_eq!(values, vec![json!("a"), json!("b"), json!("undefined")]);
 }
 
-/// Deep recursion must report a script RangeError rather than crash the host.
+/// QuickJS throws a catchable `RangeError`.
 async fn ends_deep_recursion_with_a_range_error(backend: Backend) {
     let sandbox = create_sandbox(backend, vec![]);
     let result = run(
@@ -778,9 +786,9 @@ async fn ends_deep_recursion_with_a_range_error(backend: Backend) {
     "#,
     )
     .await;
-    // djs stack exhaustion is catchable, unlike Boa's fatal runtime limit.
+    // Catchable, as in QuickJS.
     assert_matches(&result, json!({ "ok": true, "value": ["RangeError", true] }));
-    // Preserve the uncaught stack-overflow contract as well.
+    // Uncaught, it ends the script as a script error.
     let uncaught = run(&sandbox, "function dive() { dive(); } dive();").await;
     assert_matches(
         &uncaught,

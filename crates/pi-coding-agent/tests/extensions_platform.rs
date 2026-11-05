@@ -109,6 +109,15 @@ export default function (pi) {
 /// pi passed to its provider records its request under pi's telemetry parent, like TS.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn js_models_requests_are_observed_by_pi_ai_telemetry() {
+    check_js_models_telemetry(false).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn js_models_requests_accept_a_root_telemetry_context() {
+    check_js_models_telemetry(true).await;
+}
+
+async fn check_js_models_telemetry(root_parent: bool) {
     let dir = std::env::temp_dir().join(format!("pi-ext-telemetry-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
     let path: PathBuf = dir.join("extension.ts");
@@ -132,17 +141,20 @@ async fn js_models_requests_are_observed_by_pi_ai_telemetry() {
     let model = runtime.get_model("js-outer", "outer-1").expect("the extension registers its provider");
 
     let telemetry = InMemoryTelemetryContext::new();
-    let message = telemetry
-        .start_span("caller", |parent| async move {
-            let context = Context {
-                system_prompt: None,
-                messages: vec![Message::User(UserMessage { content: UserContent::Text("hi".into()), timestamp: 0 })],
-                tools: None,
-            };
-            let options = StreamOptions { telemetry: Some(parent), ..Default::default() };
-            runtime.complete_simple(model, context, Some(options.into())).await
-        })
-        .await;
+    let request = move |parent: pi_telemetry::ContextRef| async move {
+        let context = Context {
+            system_prompt: None,
+            messages: vec![Message::User(UserMessage { content: UserContent::Text("hi".into()), timestamp: 0, ..Default::default() })],
+            tools: None,
+        };
+        let options = StreamOptions { telemetry: Some(parent), ..Default::default() };
+        runtime.complete_simple(model, context, Some(options.into())).await
+    };
+    let message = if root_parent {
+        request(telemetry.clone()).await
+    } else {
+        telemetry.start_span("caller", |parent| request(parent)).await
+    };
     assert_eq!(message.stop_reason, StopReason::Stop, "{:?}", message.error_message);
     for _ in 0..200 {
         if telemetry.get_spans().iter().all(|s| s.settled) {
@@ -162,8 +174,12 @@ async fn js_models_requests_are_observed_by_pi_ai_telemetry() {
     // The extension's nested request (JavaScript Models), recorded by pi-ai's Rust telemetry.
     assert!(requests.contains(&("js-inner".to_string(), json!("stop"), true)), "{requests:?}");
     let inner = spans.iter().find(|s| s.name == "pi.ai.request" && serde_json::to_value(&s.attributes).unwrap()["provider"] == "js-inner").unwrap();
-    let caller = spans.iter().find(|s| s.name == "caller").unwrap();
-    assert_eq!(inner.parent_id, Some(caller.id), "the JS request is a child of pi's telemetry parent");
+    if root_parent {
+        assert_eq!(inner.parent_id, None, "the root context reaches the JavaScript request");
+    } else {
+        let caller = spans.iter().find(|s| s.name == "caller").unwrap();
+        assert_eq!(inner.parent_id, Some(caller.id), "the JS request is a child of pi's telemetry parent");
+    }
     let events: Vec<&str> = inner.events.iter().map(|e| e.name.as_str()).collect();
     assert!(events.contains(&"pi.ai.first_chunk") && events.contains(&"pi.ai.block"), "{events:?}");
     harness.cleanup();

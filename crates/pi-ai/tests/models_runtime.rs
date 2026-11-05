@@ -487,3 +487,52 @@ async fn unknown_provider_and_streaming() {
     assert_eq!(events.iter().map(|e| e.type_name()).collect::<Vec<_>>(), vec!["start", "done"]);
     assert_eq!(message.stop_reason, StopReason::Stop);
 }
+
+#[tokio::test]
+async fn aborted_requests_fail_auth_setup_with_the_signal_reason() {
+    // An agent aborted while its tools ran still makes one more request with the aborted signal.
+    // `resolveProviderAuth` races its signal, which rejects with the signal's reason (the
+    // DOMException "This operation was aborted"), and `lazyStream` turns the setup failure into
+    // an error result before any provider request (not provider-retry's "Request aborted").
+    let models = create_models(CreateModelsOptions::default());
+    let (p1, calls) = provider("p1", ProviderAuth { api_key: Some(Arc::new(Ambient)), oauth: None });
+    models.set_provider(p1);
+    let model = test_model("p1", "model-a");
+    let signal = CancellationToken::new();
+    signal.cancel();
+    for api_key in [None, Some("explicit-key".to_string())] {
+        let options = StreamOptions { api_key, signal: Some(signal.clone()), ..Default::default() };
+        let (events, message) = models.stream_simple(&model, &ctx(), options.clone()).collect_all().await;
+        assert_eq!(events.iter().map(|e| e.type_name()).collect::<Vec<_>>(), vec!["error"]);
+        assert_eq!(message.stop_reason, StopReason::Error);
+        assert_eq!(message.error_message.as_deref(), Some("This operation was aborted"));
+        let message = models.complete(&model, &ctx(), options).await;
+        assert_eq!(message.error_message.as_deref(), Some("This operation was aborted"));
+    }
+    assert!(calls.lock().is_empty());
+
+    // Aborted while auth resolution is pending: the race rejects with the same reason.
+    struct Pending;
+    #[async_trait]
+    impl ApiKeyAuth for Pending {
+        fn name(&self) -> &str {
+            "Pending"
+        }
+        async fn resolve(&self, _input: ApiKeyResolveInput) -> anyhow::Result<Option<AuthResult>> {
+            std::future::pending().await
+        }
+    }
+    let (p2, calls) = provider("p2", ProviderAuth { api_key: Some(Arc::new(Pending)), oauth: None });
+    models.set_provider(p2);
+    let signal = CancellationToken::new();
+    let trigger = signal.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        trigger.cancel();
+    });
+    let options = StreamOptions { signal: Some(signal), ..Default::default() };
+    let message = models.complete_simple(&test_model("p2", "model-a"), &ctx(), options).await;
+    assert_eq!(message.stop_reason, StopReason::Error);
+    assert_eq!(message.error_message.as_deref(), Some("This operation was aborted"));
+    assert!(calls.lock().is_empty());
+}

@@ -71,7 +71,7 @@ async fn abort_e2e() {
     let high = |t: Target| t.extra("reasoningEffort", json!("high"));
     let targets = vec![
         target("Google", Gate::Env(&["GEMINI_API_KEY"]), "google", "gemini-2.5-flash").extra("thinking", json!({"enabled": true})),
-        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+        target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
         target("OpenAI Responses", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-5-mini"),
         target("Azure OpenAI Responses", Gate::Azure, "azure", "gpt-4o-mini"),
         target("Anthropic", Gate::Env(&["ANTHROPIC_OAUTH_TOKEN"]), "anthropic", "claude-sonnet-4-6")

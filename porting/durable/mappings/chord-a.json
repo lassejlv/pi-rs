@@ -1,0 +1,24 @@
+{"files":[
+{"reference":"packages/chord/test/json.test.ts","cases":[
+{"name":"isJsonValue > checks strict JSON without normalizing it","class":"native","rust":"crates/pi-chord/tests/json.rs::is_json_value_checks_strict_json_without_normalizing_it","note":"Native half: nested valid JSON round-trips; non-finite numbers unrepresentable and rejected by parse. undefined/Uint8Array/cyclic are unrepresentable in the Rust Value type (embedded-only)."},
+{"name":"copyJson > copies strict JSON without retaining aliases","class":"native","rust":"crates/pi-chord/tests/json.rs::copy_json_copies_strict_json_without_retaining_aliases","note":"Value containers are Arc copy-on-write, so copy_json shares storage but mutation isolation (the observable contract) holds; JS object identity (not.toBe) is not observable natively."},
+{"name":"copyJson > optionally omits undefined object properties without normalizing arrays","class":"embedded-only","rust":null,"note":"Depends on JS undefined; Rust Value cannot hold it and copy_json has no omitUndefinedProperties option."},
+{"name":"copyJson > preserves null prototypes and own __proto__ data properties","class":"native","rust":"crates/pi-chord/tests/json.rs::copy_json_preserves_null_prototypes_and_own_proto_data_properties","note":"Native half: own __proto__ key is an ordinary data key preserved through parse/copy/stringify. Prototype checks are embedded-only."},
+{"name":"copyJson > rejects cycles and non-strict container properties","class":"embedded-only","rust":null,"note":"Cycles, sparse arrays, extra array props, subclasses, accessors, non-enumerable and symbol keys cannot exist in Rust Value (excluded by construction)."}
+]},
+{"reference":"packages/chord/test/delta-clone.test.ts","cases":[
+{"name":"tracker ownership > takes immutable ownership of the imported revision in O(1)","class":"native","rust":"crates/pi-chord/tests/delta_clone.rs::takes_immutable_ownership_of_the_imported_revision_in_o1","note":"Tracker::new(Arc) keeps the same Arc and nested container pointers. Object.isFrozen check is embedded-only."},
+{"name":"tracker ownership > preserves null prototypes in an alias-free owned root","class":"embedded-only","rust":null,"note":"Prototype semantics; root identity retention is covered by the O(1) ownership test."},
+{"name":"tracker ownership > does not traverse a trusted root while taking ownership","class":"embedded-only","rust":null,"note":"Accessor-based; Tracker::new is a pointer move with no traversal (see ownership test)."},
+{"name":"tracker ownership > copies assigned and inserted values immediately","class":"native","rust":"crates/pi-chord/tests/delta_clone.rs::copies_assigned_and_inserted_values_immediately","note":"Splice payload is isolated from later mutation of the caller's value (COW); replica via apply(base, ops) equals prepared value."}
+]},
+{"reference":"packages/chord/test/context.test.ts","cases":[
+{"name":"Context > provides distinct empty root contexts","class":"native","rust":"crates/pi-chord/tests/context.rs::provides_distinct_empty_root_contexts","note":"Also partly covered by roots_and_typed_value_layers_are_distinct_and_immutable."},
+{"name":"Context > layers typed values without modifying parents","class":"native","rust":"crates/pi-chord/tests/context.rs::roots_and_typed_value_layers_are_distinct_and_immutable","note":"Existing test."},
+{"name":"Context > inherits parent cancellation and isolates child cancellation","class":"native","rust":"crates/pi-chord/tests/context.rs::cancellation_is_inherited_and_child_abort_does_not_affect_siblings","note":"Existing; abort event listener replaced by cancelled() future."},
+{"name":"Context > masks caller cancellation for mandatory cleanup","class":"native","rust":"crates/pi-chord/tests/context.rs::cleanup_masks_cancellation_without_losing_values_or_telemetry","note":"Existing test."},
+{"name":"Context > derives telemetry independently from values and cancellation","class":"native","rust":"crates/pi-chord/tests/context.rs::derives_telemetry_independently_from_values_and_cancellation","note":"Link asserted: native ContextRef gained TelemetryContext::record_link (pi-telemetry, forwarded by the in-memory span); inner.links[0].context == outer.context, plus parent chain and events."},
+{"name":"Context > isolates concurrent traceIn branches and preserves callback results and errors","class":"native","rust":"crates/pi-chord/tests/context.rs::isolates_concurrent_trace_in_branches_and_preserves_callback_results_and_errors","note":"Throw-vs-reject identity collapses to Result::Err passthrough in Rust; record_link on the noop BACKGROUND context is inert and the callback result (42) is returned."},
+{"name":"Context > stops waiting when the invocation is cancelled","class":"native","rust":"crates/pi-chord/tests/context.rs::cancelled_waiter_does_not_cancel_underlying_work","note":"Existing test."}
+]}
+]}

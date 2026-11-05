@@ -44,6 +44,10 @@ impl AgentTool for DefinitionAgentTool {
         &self.definition.parameters
     }
 
+    fn parameters_typebox(&self) -> bool {
+        self.definition.parameters_typebox
+    }
+
     fn constrained_sampling(&self) -> Option<&ConstrainedSampling> {
         self.constrained_sampling.as_ref()
     }
@@ -126,6 +130,7 @@ pub fn create_tool_definition_from_agent_tool(tool: AgentToolRef) -> ToolDefinit
         },
     );
     definition.output_schema = tool.output_schema().cloned();
+    definition.parameters_typebox = tool.parameters_typebox();
     definition.constrained_sampling = tool.constrained_sampling().and_then(|c| c.config().cloned());
     definition.execution_mode = tool.execution_mode();
     let prepare_tool = tool.clone();

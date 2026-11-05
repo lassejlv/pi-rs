@@ -183,9 +183,54 @@ pub(crate) fn aws_sdk_user_agent(
     (user_agent, x_amz)
 }
 
-/// `maxAttempts` of the SDK clients' standard retry strategy (`AWS_MAX_ATTEMPTS`, default 3).
-pub(crate) fn aws_max_attempts() -> u32 {
-    std::env::var("AWS_MAX_ATTEMPTS").ok().and_then(|v| v.parse::<u32>().ok()).filter(|v| *v > 0).unwrap_or(3)
+/// `maxAttempts` of the SDK clients' standard retry strategy for the default profile.
+pub(crate) fn aws_max_attempts() -> anyhow::Result<u32> {
+    aws_max_attempts_for(None)
+}
+
+/// `maxAttempts` of a client's standard retry strategy (`NODE_MAX_ATTEMPT_CONFIG_OPTIONS`):
+/// `AWS_MAX_ATTEMPTS`, else the profile's `max_attempts` in the shared config files, else 3.
+/// Values are read with `parseInt`; one that is not a number fails the request like the SDK.
+pub(crate) fn aws_max_attempts_for(profile: Option<&str>) -> anyhow::Result<u32> {
+    let attempts = |value: i64| value.clamp(1, u32::MAX as i64) as u32;
+    if let Ok(value) = std::env::var("AWS_MAX_ATTEMPTS")
+        && !value.is_empty()
+    {
+        return match js_parse_int(&value) {
+            Some(n) => Ok(attempts(n)),
+            None => anyhow::bail!("Environment variable AWS_MAX_ATTEMPTS mast be a number, got \"{value}\""),
+        };
+    }
+    let name = profile.map(str::to_string).or_else(|| env("AWS_PROFILE")).unwrap_or_else(|| "default".into());
+    if let Some(value) = SharedConfig::load().profile(&name).and_then(|p| p.get("max_attempts").cloned())
+        && !value.is_empty()
+    {
+        return match js_parse_int(&value) {
+            Some(n) => Ok(attempts(n)),
+            None => anyhow::bail!("Shared config file entry max_attempts mast be a number, got \"{value}\""),
+        };
+    }
+    Ok(3)
+}
+
+/// JavaScript `parseInt(value)` (radix 10, or 16 after a `0x` prefix); `None` for `NaN`.
+fn js_parse_int(value: &str) -> Option<i64> {
+    let s = value.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let (negative, s) = match s.as_bytes().first() {
+        Some(b'-') => (true, &s[1..]),
+        Some(b'+') => (false, &s[1..]),
+        _ => (false, s),
+    };
+    let (radix, s) = match s.get(..2) {
+        Some("0x") | Some("0X") => (16, &s[2..]),
+        _ => (10, s),
+    };
+    let digits: String = s.chars().take_while(|c| c.is_digit(radix)).collect();
+    if digits.is_empty() {
+        return None;
+    }
+    let n = i64::from_str_radix(&digits, radix).unwrap_or(i64::MAX);
+    Some(if negative { -n } else { n })
 }
 
 /// `parseRetryAfterHeader` of the SDK's retry middleware: the first `retry-after` (seconds, or an
@@ -248,6 +293,27 @@ fn parse_http_date(text: &str) -> Option<i64> {
     let month = MONTHS.iter().position(|m| *m == month)? + 1;
     let day: u32 = day.parse().ok()?;
     parse_iso8601(&format!("{year}-{month:02}-{day:02}T{time}Z"))
+}
+
+/// The standard retry strategy's retry quota (`INITIAL_RETRY_TOKENS` 500; a retry costs 5, or
+/// `TIMEOUT_RETRY_COST` 10 for transient errors). Each SDK client has its own and pi creates a
+/// client per request, so it only stops retries when `max_attempts` exceeds about 50.
+pub(crate) struct SdkRetryQuota(u32);
+
+impl SdkRetryQuota {
+    pub(crate) fn new() -> Self {
+        Self(500)
+    }
+
+    /// Take the capacity a retry of this error needs; `false` when the quota is exhausted.
+    pub(crate) fn acquire(&mut self, throttling: bool) -> bool {
+        let cost = if throttling { 5 } else { 10 };
+        if self.0 < cost {
+            return false;
+        }
+        self.0 -= cost;
+        true
+    }
 }
 
 /// The standard retry strategy's wait before retrying after `retry_count` earlier retries:
@@ -542,7 +608,8 @@ async fn sts_request(
     let (user_agent, x_amz_user_agent) =
         aws_sdk_user_agent(AWS_NESTED_CLIENTS_VERSION, "STS", &[], context.app_id.as_deref(), signing);
     let invocation_id = uuid::Uuid::new_v4().to_string();
-    let max = aws_max_attempts();
+    let max = aws_max_attempts()?;
+    let mut quota = SdkRetryQuota::new();
     let mut attempt = 1u32;
     loop {
         let mut headers = vec![
@@ -586,10 +653,10 @@ async fn sts_request(
                 (sts_error(status, &text), throttling || transient, throttling, retry_after)
             }
         };
-        if !retryable || attempt >= max {
+        if !retryable || attempt >= max || !quota.acquire(throttling) {
             return Err(error);
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     }
 }
@@ -696,6 +763,12 @@ async fn assume_role_with_web_identity(
 
 /// Run a `credential_process` command and parse its JSON output (`resolveProcessCredentials`).
 /// Callers turn every failure into a chain-continuing `CredentialsProviderError`.
+/// wasm32 cannot run processes; the chain continues past this source.
+#[cfg(target_arch = "wasm32")]
+pub async fn from_process(_command: &str, _profile_name: &str, _profile: &Profile) -> anyhow::Result<AwsCredentials> {
+    anyhow::bail!("credential_process is not available on wasm32")
+}
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn from_process(command: &str, profile_name: &str, profile: &Profile) -> anyhow::Result<AwsCredentials> {
     let output = if cfg!(windows) {
         tokio::process::Command::new("cmd").arg("/d").arg("/s").arg("/c").arg(command).output().await
@@ -888,7 +961,8 @@ async fn send_aws_sdk_request(
     let (user_agent, x_amz_user_agent) =
         aws_sdk_user_agent(AWS_NESTED_CLIENTS_VERSION, service_id, &[], context.app_id.as_deref(), None);
     let invocation_id = uuid::Uuid::new_v4().to_string();
-    let max = aws_max_attempts();
+    let max = aws_max_attempts()?;
+    let mut quota = SdkRetryQuota::new();
     let mut attempt = 1u32;
     loop {
         let result = build()
@@ -917,10 +991,10 @@ async fn send_aws_sdk_request(
                 (Ok(SdkResponse { status, headers, body }), throttling || transient, throttling, retry_after)
             }
         };
-        if !retryable || attempt >= max {
+        if !retryable || attempt >= max || !quota.acquire(throttling) {
             return outcome;
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     }
 }
@@ -1089,7 +1163,13 @@ fn signin_endpoint(region: &str) -> String {
     format!("https://{region}.{suffix}")
 }
 
+/// wasm32 has no ring; AWS login token refresh needs a native host.
+#[cfg(target_arch = "wasm32")]
+fn dpop_proof(_dpop_key_pem: &str, _method: &str, _endpoint: &str) -> anyhow::Result<String> {
+    Err(terminal("Failed to generate Dpop proof: not available on wasm32"))
+}
 /// A DPoP proof (ES256 JWT) for the refresh request.
+#[cfg(not(target_arch = "wasm32"))]
 fn dpop_proof(dpop_key_pem: &str, method: &str, endpoint: &str) -> anyhow::Result<String> {
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -1125,6 +1205,7 @@ fn dpop_proof(dpop_key_pem: &str, method: &str, endpoint: &str) -> anyhow::Resul
 }
 
 /// Wrap a SEC1 `ECPrivateKey` (P-256) in a PKCS#8 `PrivateKeyInfo`.
+#[cfg(not(target_arch = "wasm32"))]
 fn sec1_to_pkcs8(sec1: &[u8]) -> Vec<u8> {
     fn der_len(len: usize) -> Vec<u8> {
         if len < 0x80 {
@@ -1185,7 +1266,8 @@ async fn from_login(profile: &Profile, context: &CredentialContext) -> anyhow::R
     let (user_agent, x_amz_user_agent) =
         aws_sdk_user_agent(AWS_NESTED_CLIENTS_VERSION, "Signin", &[], context.app_id.as_deref(), None);
     let invocation_id = uuid::Uuid::new_v4().to_string();
-    let max = aws_max_attempts();
+    let max = aws_max_attempts()?;
+    let mut quota = SdkRetryQuota::new();
     let mut attempt = 1u32;
     let response = loop {
         let dpop = dpop_proof(fresh["dpopKey"].as_str().unwrap_or_default(), "POST", &endpoint)?;
@@ -1219,10 +1301,10 @@ async fn from_login(profile: &Profile, context: &CredentialContext) -> anyhow::R
                 (throttling || transient, throttling)
             }
         };
-        if !retryable || attempt >= max {
+        if !retryable || attempt >= max || !quota.acquire(throttling) {
             break result;
         }
-        tokio::time::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
+        crate::utils::wasm::sleep(Duration::from_millis(sdk_retry_delay_ms(attempt - 1, throttling, retry_after))).await;
         attempt += 1;
     };
     let fresh_unexpired = |error: String| -> anyhow::Result<AwsCredentials> {
@@ -1345,10 +1427,10 @@ fn credential_source_provider<'a>(
     // Each source's credentials are attributed to the named provider (`setNamedProvider`).
     let named = |credentials: AwsCredentials| credentials.with_feature("CREDENTIALS_PROFILE_NAMED_PROVIDER", "p");
     Ok(match source {
-        "EcsContainer" => Box::pin(async move {
+        "EcsContainer" => crate::utils::wasm::boxed(async move {
             from_container(&context.client).await.map(named).map_err(|e| provider_error(e.to_string()))
         }),
-        "Ec2InstanceMetadata" => Box::pin(async move {
+        "Ec2InstanceMetadata" => crate::utils::wasm::boxed(async move {
             from_imds(&context.client).await.map(named).map_err(|e| provider_error(e.to_string()))
         }),
         "Environment" => Box::pin(async move { env_provider().map(named) }),
@@ -1370,7 +1452,7 @@ fn resolve_profile<'a>(
     assume_role_recursive: bool,
     top: &'a str,
 ) -> futures::future::BoxFuture<'a, anyhow::Result<AwsCredentials>> {
-    Box::pin(async move {
+    crate::utils::wasm::boxed(async move {
         let data = shared.profile(name);
         if let Some(profile) = data
             && !visited.is_empty()
@@ -1628,6 +1710,18 @@ pub fn sso_cache_file_for(key: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn retry_quota_allows_50_transient_or_100_throttling_retries() {
+        let mut quota = SdkRetryQuota::new();
+        assert!((0..50).all(|_| quota.acquire(false)));
+        assert!(!quota.acquire(false));
+        assert!(!quota.acquire(true));
+        let mut quota = SdkRetryQuota::new();
+        assert!((0..100).all(|_| quota.acquire(true)));
+        assert!(!quota.acquire(true));
+    }
+
     use super::*;
 
     #[test]

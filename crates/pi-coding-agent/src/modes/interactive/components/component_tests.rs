@@ -132,6 +132,8 @@ fn assistant_adds_osc133_zone_markers_without_tool_calls() {
         None,
         None,
         None,
+        None,
+        None,
     );
     let lines = component.render(40);
     assert!(!lines.is_empty());
@@ -155,6 +157,8 @@ fn assistant_has_no_zone_markers_with_tool_calls() {
         None,
         None,
         None,
+        None,
+        None,
     );
     let rendered = component.render(60).join("\n");
     assert!(!rendered.contains(OSC133_ZONE_START));
@@ -168,6 +172,8 @@ fn assistant_renders_length_stops_with_neutral_wording() {
     let component = AssistantMessageComponent::new(
         Some(assistant_message(json!([{"type": "thinking", "thinking": "private reasoning"}]), "length")),
         Some(true),
+        None,
+        None,
         None,
         None,
         None,
@@ -196,6 +202,8 @@ fn assistant_coalesces_adjacent_thinking_blocks() {
         None,
         None,
         None,
+        None,
+        None,
     );
     let rendered = strip_lines(&component.render(80));
     assert_eq!(rendered.matches("Thinking...").count(), 1);
@@ -214,6 +222,8 @@ fn assistant_collapses_individual_thinking_runs_when_clicked() {
             ]),
             "stop",
         )),
+        None,
+        None,
         None,
         None,
         None,
@@ -245,6 +255,8 @@ fn assistant_uses_configured_output_padding() {
         Some("Thinking..."),
         Some(1),
         None,
+        None,
+        None,
     );
     let lines: Vec<String> = component.render(80).iter().map(|l| strip(l)).collect();
     assert!(lines.iter().any(|l| l.contains(" hello")));
@@ -269,7 +281,9 @@ fn assistant_chains_markdown_transformers_in_order() {
                 MarkdownTransformContext {
                     message_type: MarkdownMessageType::Assistant,
                     is_streaming: false,
-                    available_width: 78
+                    available_width: 78,
+                    message_id: None,
+                    timestamp: None,
                 }
             );
             markdown.replace("$x^2$", "x²")
@@ -286,6 +300,8 @@ fn assistant_chains_markdown_transformers_in_order() {
         Some("Thinking..."),
         Some(1),
         Some(&transformers),
+        None,
+        None,
     );
     assert!(strip_lines(&component.render(80)).contains("The result is x². Done."));
     assert_eq!(*calls.lock(), vec!["formula", "suffix"]);
@@ -302,7 +318,7 @@ fn assistant_identifies_partial_markdown_as_streaming() {
     })];
     let message = assistant_message(json!([{"type": "text", "text": "partial"}]), "stop");
     let component =
-        AssistantMessageComponent::new(None, Some(false), None, Some("Thinking..."), Some(1), Some(&transformers));
+        AssistantMessageComponent::new(None, Some(false), None, Some("Thinking..."), Some(1), Some(&transformers), None, None);
 
     component.update_content(message.clone(), Some(true));
     assert!(!strip_lines(&component.render(80)).contains("transformed"));
@@ -328,6 +344,8 @@ fn assistant_reapplies_transformers_when_width_changes() {
         Some("Thinking..."),
         Some(1),
         Some(&transformers),
+        None,
+        None,
     );
     assert!(strip_lines(&component.render(80)).contains("answer (78)"));
     component.render(80);
@@ -361,6 +379,8 @@ fn assistant_continues_transformer_chain_after_failure() {
         Some("Thinking..."),
         Some(1),
         Some(&transformers),
+        None,
+        None,
     );
     assert!(strip_lines(&component.render(80)).contains("remains visible after error"));
     assert_eq!(*calls.lock(), vec!["first", "throw", "last"]);
@@ -383,6 +403,8 @@ fn assistant_transforms_text_and_thinking_without_mutating_message() {
         Some("Thinking..."),
         Some(1),
         Some(&transformers),
+        None,
+        None,
     );
     let rendered = strip_lines(&component.render(80));
     assert!(rendered.contains("assistant:answer"));
@@ -393,9 +415,9 @@ fn assistant_transforms_text_and_thinking_without_mutating_message() {
 #[test]
 fn user_message_uses_configured_output_padding() {
     let _theme = dark_theme();
-    let padded = UserMessageComponent::new("hello", None, Some(1), None);
+    let padded = UserMessageComponent::new("hello", None, Some(1), None, None, None);
     assert!(padded.render(40).iter().map(|l| strip(l)).any(|l| l.starts_with(" hello")));
-    let unpadded = UserMessageComponent::new("hello", None, Some(0), None);
+    let unpadded = UserMessageComponent::new("hello", None, Some(0), None, None, None);
     assert!(unpadded.render(40).iter().map(|l| strip(l)).any(|l| l.starts_with("hello")));
 }
 
@@ -406,7 +428,7 @@ fn user_message_uses_configured_output_padding() {
 #[test]
 fn user_message_keeps_height_while_moving_closing_markers() {
     let _theme = dark_theme();
-    let component = UserMessageComponent::new("hello", None, None, None);
+    let component = UserMessageComponent::new("hello", None, None, None, None, None);
     let lines = component.render(20);
     assert_eq!(lines.len(), 3);
     assert!(lines[0].contains(OSC133_ZONE_START));
@@ -427,7 +449,7 @@ fn user_message_chains_transformers_with_user_context() {
             c1.lock().push("formula".into());
             assert_eq!(
                 *context,
-                MarkdownTransformContext { message_type: MarkdownMessageType::User, is_streaming: false, available_width: 78 }
+                MarkdownTransformContext { message_type: MarkdownMessageType::User, is_streaming: false, available_width: 78, message_id: None, timestamp: None }
             );
             markdown.replace("$x^2$", "x²")
         }),
@@ -436,7 +458,7 @@ fn user_message_chains_transformers_with_user_context() {
             format!("{markdown} Done.")
         }),
     ];
-    let component = UserMessageComponent::new("The input is $x^2$.", None, Some(1), Some(&transformers));
+    let component = UserMessageComponent::new("The input is $x^2$.", None, Some(1), Some(&transformers), None, None);
     assert!(strip_lines(&component.render(80)).contains("The input is x². Done."));
     assert_eq!(*calls.lock(), vec!["formula", "suffix"]);
 }
@@ -447,7 +469,7 @@ fn user_message_reapplies_transformers_when_invalidated() {
     let suffix = Arc::new(Mutex::new("before".to_string()));
     let s = suffix.clone();
     let transformers = vec![transformer(move |markdown, _| format!("{markdown} {}", s.lock()))];
-    let component = UserMessageComponent::new("Message", None, Some(1), Some(&transformers));
+    let component = UserMessageComponent::new("Message", None, Some(1), Some(&transformers), None, None);
     assert!(strip_lines(&component.render(80)).contains("Message before"));
     *suffix.lock() = "after".into();
     component.invalidate();
@@ -1095,7 +1117,7 @@ fn transform_mermaid(
 ) -> String {
     let transformer =
         create_mermaid_markdown_transformer(&MermaidTransformerOptions { get_mode: Arc::new(move || mode), theme });
-    transformer(markdown, &MarkdownTransformContext { message_type, is_streaming, available_width: max_width })
+    transformer(markdown, &MarkdownTransformContext { message_type, is_streaming, available_width: max_width, message_id: None, timestamp: None })
 }
 
 fn mermaid(markdown: &str) -> String {
@@ -1428,4 +1450,73 @@ fn custom_editor_history_binding_wins_over_model_cycling() {
     editor.handle_input("\x0e"); // Ctrl+N
     assert_eq!(EditorComponent::get_text(&editor), "draft");
     pi_tui::keybindings::set_keybindings(previous);
+}
+
+#[test]
+fn markdown_transform_context_persisted_identity_wire_roundtrip() {
+    let persisted = json!({
+        "messageType": "user", "isStreaming": false, "availableWidth": 78,
+        "messageId": "entry-abc", "timestamp": "2025-01-15T10:30:00.000Z"
+    });
+    let context: MarkdownTransformContext = serde_json::from_value(persisted.clone()).unwrap();
+    assert_eq!(serde_json::to_value(context).unwrap(), persisted);
+    let live = json!({"messageType": "assistant", "isStreaming": true, "availableWidth": 78});
+    let context: MarkdownTransformContext = serde_json::from_value(live.clone()).unwrap();
+    assert_eq!(serde_json::to_value(context).unwrap(), live);
+}
+
+#[test]
+fn markdown_transformers_receive_persisted_identity_and_absent_live_metadata() {
+    let _theme = dark_theme();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let captured = seen.clone();
+    let transformers = vec![transformer(move |markdown, context| {
+        captured.lock().push(context.clone());
+        markdown.to_string()
+    })];
+    let timestamp = "2025-01-15T10:30:00.000Z";
+    let user = UserMessageComponent::new(
+        "restored", None, Some(1), Some(&transformers), Some("entry-user"), Some(timestamp),
+    );
+    user.render(80);
+    user.set_output_pad(0);
+    user.render(60);
+    UserMessageComponent::new("live", None, Some(1), Some(&transformers), None, None).render(80);
+    let message = assistant_message(
+        json!([{"type": "text", "text": "answer"}, {"type": "thinking", "thinking": "reasoning"}]),
+        "stop",
+    );
+    let assistant = AssistantMessageComponent::new(
+        Some(message.clone()), Some(false), None, None, Some(1), Some(&transformers),
+        Some("entry-assistant"), Some(timestamp),
+    );
+    assistant.render(80);
+    assistant.invalidate();
+    assistant.render(60);
+    let live = AssistantMessageComponent::new(
+        None, Some(false), None, None, Some(1), Some(&transformers), None, None,
+    );
+    live.update_content(message, Some(true));
+    live.render(80);
+    let seen = seen.lock();
+    assert_eq!(seen.len(), 9);
+    for index in [0, 1] {
+        assert_eq!(seen[index].message_type, MarkdownMessageType::User);
+        assert_eq!(seen[index].message_id.as_deref(), Some("entry-user"));
+        assert_eq!(seen[index].timestamp.as_deref(), Some(timestamp));
+    }
+    assert_eq!(seen[0].available_width, 78);
+    assert_eq!(seen[1].available_width, 60);
+    for index in [3, 4, 5, 6] {
+        assert_eq!(seen[index].message_id.as_deref(), Some("entry-assistant"));
+        assert_eq!(seen[index].timestamp.as_deref(), Some(timestamp));
+        assert!(!seen[index].is_streaming);
+    }
+    assert_eq!(seen[3].message_type, MarkdownMessageType::Assistant);
+    assert_eq!(seen[4].message_type, MarkdownMessageType::AssistantThinking);
+    for index in [2, 7, 8] {
+        assert_eq!(seen[index].message_id, None);
+        assert_eq!(seen[index].timestamp, None);
+        assert_eq!(seen[index].is_streaming, index != 2);
+    }
 }

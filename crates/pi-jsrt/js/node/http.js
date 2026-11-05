@@ -1,5 +1,4 @@
-// node:http (HTTP/1.1 server and client over node:net) and node:https (client over fetch;
-// TLS servers are not supported).
+// node:http (HTTP/1.1 server and client over node:net) and node:https (the same over node:tls).
 
 const EventEmitter = internal.EventEmitter;
 const Buffer = internal.Buffer;
@@ -495,6 +494,10 @@ class Server extends net.Server {
         });
         const dispatch = () => {
           busy = true;
+          if (internal.dcPublish) {
+            internal.dcPublish("http.server.request.start", { request: current, response: res, socket, server: this });
+            res.once("finish", () => internal.dcPublish("http.server.response.finish", { request: current, response: res, socket, server: this }));
+          }
           this.emit("request", current, res);
         };
         if (busy) queue.push(dispatch);
@@ -534,7 +537,7 @@ function createServer(options, requestListener) {
 class Agent extends EventEmitter {
   constructor(options = {}) {
     super();
-    this.options = options;
+    this.options = { path: null, ...options };
     this.keepAlive = !!options.keepAlive;
     this.maxSockets = options.maxSockets ?? Infinity;
     this.maxFreeSockets = options.maxFreeSockets ?? 256;
@@ -547,6 +550,11 @@ class Agent extends EventEmitter {
   destroy() {}
   getName(options = {}) {
     return `${options.host ?? "localhost"}:${options.port ?? ""}:${options.localAddress ?? ""}`;
+  }
+  createConnection(options, callback) {
+    const socket = net.connect({ ...options, host: options.host ?? "localhost", port: options.port ?? this.defaultPort });
+    if (typeof callback === "function") socket.once("connect", () => callback(null, socket));
+    return socket;
   }
 }
 
@@ -592,6 +600,8 @@ class ClientRequest extends OutgoingMessage {
     this._hasBody = true;
     this._timeoutMs = opts.timeout;
     if (callback) this.once("response", callback);
+    // Requests over net sockets publish once their socket exists (see NetClientRequest).
+    if (internal.dcPublish && !(this instanceof NetClientRequest)) process.nextTick(() => internal.dcPublish("http.client.request.start", { request: this }));
     const headers = opts.headers ?? {};
     if (Array.isArray(headers)) for (let i = 0; i < headers.length; i += 2) this.appendHeader(headers[i], headers[i + 1]);
     else for (const [name, value] of Object.entries(headers)) if (value !== undefined) this.setHeader(name, value);
@@ -630,6 +640,16 @@ class ClientRequest extends OutgoingMessage {
     this._connect();
     this._sendHead();
   }
+
+  // Unlike a plain Writable, a request does not close when its body is finished: 'close' comes
+  // when the exchange is over (the socket closes) or the request is destroyed.
+  _emitCloseW() {
+    if (!this.destroyed && !this._exchangeDone) return;
+    if (this._closeEmitted) return;
+    this._closeEmitted = true;
+    this._writableState.closed = true;
+    this.emit("close");
+  }
 }
 
 function abortError() {
@@ -647,10 +667,28 @@ class NetClientRequest extends ClientRequest {
 
   _connect() {
     if (this.socket || this.destroyed) return;
-    const create = this._opts.createConnection ?? this.agent?.createConnection?.bind(this.agent);
-    const socket = create
-      ? create({ host: this.host, port: this.port, ...this._opts })
-      : net.connect({ host: this.host, port: this.port });
+    let agent = this.agent;
+    if (agent === undefined) agent = this.protocol === "https:" ? https.globalAgent : globalAgent;
+    const create = this._opts.createConnection ?? (agent ? agent.createConnection?.bind(agent) : undefined);
+    // `path` is the request path, not an IPC path; `socketPath` selects IPC.
+    const connectOpts = { ...this._opts, host: this.host, port: this.port, path: this._opts.socketPath };
+    if (this.protocol === "https:" && connectOpts.servername === undefined && !net.isIP(this.host)) {
+      connectOpts.servername = this._headers.get("host")?.[1]?.replace(/:\d+$/, "") ?? this.host;
+    }
+    const socket = this._createSocket(create, connectOpts);
+    internal.dcPublish?.("http.client.request.start", { request: this });
+    this._useSocket(socket);
+  }
+
+  _createSocket(create, connectOpts) {
+    return create
+      ? create(connectOpts)
+      : this.protocol === "https:"
+        ? httpsConnect(connectOpts)
+        : net.connect({ host: this.host, port: this.port });
+  }
+
+  _useSocket(socket) {
     this.socket = socket;
     this.connection = socket;
     if (this._timeoutMs) socket.setTimeout(this._timeoutMs, () => this.emit("timeout"));
@@ -671,6 +709,7 @@ class NetClientRequest extends ClientRequest {
           return { stop: true };
         }
         this.res = res;
+        internal.dcPublish?.("http.client.response.finish", { request: this, response: res });
         this.emit("response", res);
         return { skipBody: this.method === "HEAD" || head.statusCode === 204 || head.statusCode === 304 };
       },
@@ -695,7 +734,9 @@ class NetClientRequest extends ClientRequest {
         res.aborted = true;
         res.destroy(Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
       }
-      this.emit("close");
+      this._exchangeDone = true;
+      // A destroyed request emits 'error' and then 'close' itself (on the next tick).
+      if (!this.destroyed) this._emitCloseW();
     });
     socket.on("connect", () => this.emit("socket", socket));
     for (const buf of this._pending.splice(0)) socket.write(buf);
@@ -754,84 +795,8 @@ class NetClientRequest extends ClientRequest {
   }
 }
 
-/** HTTPS client request over pi-jsrt's fetch (no TLS sockets): the body is sent on `end()`. */
-class FetchClientRequest extends ClientRequest {
-  constructor(opts, callback) {
-    super(opts, callback);
-    this._chunks = [];
-    this._controller = new AbortController();
-    this.socket = new EventEmitter();
-    this.socket.setTimeout = () => this.socket;
-    this.socket.destroy = () => this._controller.abort();
-  }
-
-  _write(chunk, encoding, callback) {
-    this._chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
-    callback();
-  }
-
-  _final(callback) {
-    this.headersSent = true;
-    this.finished = true;
-    callback();
-    this._start();
-  }
-
-  async _start() {
-    const hostname = this.host.includes(":") ? `[${this.host}]` : this.host;
-    const url = `${this.protocol}//${hostname}:${this.port}${this.path}`;
-    const headers = new Headers();
-    for (const [, [name, value]] of this._headers) {
-      if (["host", "connection", "content-length", "transfer-encoding"].includes(name.toLowerCase())) continue;
-      for (const v of [].concat(value)) headers.append(name, String(v));
-    }
-    const body = this._chunks.length && !["GET", "HEAD"].includes(this.method) ? Buffer.concat(this._chunks) : undefined;
-    let response;
-    try {
-      this.emit("socket", this.socket);
-      response = await fetch(url, { method: this.method, headers, body, redirect: "manual", signal: this._controller.signal });
-    } catch (error) {
-      const err = error?.cause instanceof Error ? error.cause : error;
-      this.destroy(err);
-      return;
-    }
-    const res = new IncomingMessage(this.socket);
-    res.statusCode = response.status;
-    res.statusMessage = response.statusText || STATUS_CODES[response.status] || "";
-    for (const [name, value] of response.headers) {
-      res.rawHeaders.push(name, value);
-      if (name === "set-cookie") (res.headers[name] ??= []).push(value);
-      else res.headers[name] = res.headers[name] === undefined ? value : `${res.headers[name]}, ${value}`;
-    }
-    res.req = this;
-    this.res = res;
-    this.emit("response", res);
-    try {
-      if (response.body && this.method !== "HEAD") {
-        const reader = response.body.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.push(Buffer.from(value));
-        }
-      }
-      res.complete = true;
-      res.push(null);
-    } catch (error) {
-      res.destroy(error);
-    }
-    this.emit("close");
-  }
-
-  _destroy(err, callback) {
-    this._controller.abort();
-    callback(err);
-  }
-}
-
 function request(input, options, callback) {
   const args = requestArgs(input, options, callback, "http:");
-  if (args.opts.protocol === "https:") return new FetchClientRequest(args.opts, args.callback);
   return new NetClientRequest(args.opts, args.callback);
 }
 
@@ -875,28 +840,70 @@ const http = {
   setMaxIdleHTTPParsers() {},
 };
 
+/** TLS connection for https requests (agent and request TLS options merged, like Node). */
+function httpsConnect(options) {
+  const tls = internal.requireBuiltin("tls");
+  const o = { ...options };
+  if (!o.ALPNProtocols) o.ALPNProtocols = ["http/1.1"];
+  return tls.connect(o);
+}
+
 class HttpsAgent extends Agent {
   constructor(options) {
     super(options);
     this.defaultPort = 443;
     this.protocol = "https:";
   }
+  createConnection(options, callback) {
+    const socket = httpsConnect({ ...this.options, ...options });
+    if (typeof callback === "function") socket.once("secureConnect", () => callback(null, socket));
+    return socket;
+  }
+  getName(options = {}) {
+    let name = super.getName(options);
+    for (const key of ["ca", "cert", "key", "servername", "rejectUnauthorized"]) name += `:${options[key] ?? ""}`;
+    return name;
+  }
 }
+
+/** https.Server: a tls.Server whose secure connections are served as HTTP/1.1. */
+function makeHttpsServer() {
+  const tls = internal.requireBuiltin("tls");
+  class HttpsServer extends tls.Server {
+    constructor(options, requestListener) {
+      if (typeof options === "function") {
+        requestListener = options;
+        options = {};
+      }
+      super({ ALPNProtocols: ["http/1.1"], ...(options ?? {}) });
+      this.timeout = 0;
+      this.keepAliveTimeout = 5000;
+      this.headersTimeout = 60000;
+      this.requestTimeout = 300000;
+      this.maxHeadersCount = null;
+      if (requestListener) this.on("request", requestListener);
+      this.on("secureConnection", (socket) => this._handleConnection(socket));
+    }
+  }
+  for (const name of ["_handleConnection", "setTimeout", "closeIdleConnections"]) HttpsServer.prototype[name] = Server.prototype[name];
+  return HttpsServer;
+}
+let HttpsServerClass;
 
 const https = {
   Agent: HttpsAgent,
   globalAgent: new HttpsAgent(),
-  Server: class Server {
-    constructor() {
-      throw new Error("https.Server is not supported in pi-jsrt (no TLS server sockets)");
-    }
+  get Server() {
+    HttpsServerClass ??= makeHttpsServer();
+    return HttpsServerClass;
   },
-  createServer() {
-    throw new Error("https.createServer is not supported in pi-jsrt (no TLS server sockets)");
+  createServer(options, requestListener) {
+    HttpsServerClass ??= makeHttpsServer();
+    return new HttpsServerClass(options, requestListener);
   },
   request(input, options, callback) {
     const args = requestArgs(input, options, callback, "https:");
-    return args.opts.protocol === "http:" ? new NetClientRequest(args.opts, args.callback) : new FetchClientRequest(args.opts, args.callback);
+    return new NetClientRequest(args.opts, args.callback);
   },
   get(input, options, callback) {
     const req = https.request(input, options, callback);

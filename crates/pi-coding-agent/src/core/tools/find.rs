@@ -467,6 +467,8 @@ pub fn create_find_tool_definition(cwd: &str, options: Option<&FindToolOptions>)
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(FIND_SNIPPET.to_string());
     let renderers = crate::core::tools::renderers::find::find_renderers();
     definition.render_call = renderers.render_call;

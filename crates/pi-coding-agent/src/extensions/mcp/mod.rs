@@ -193,30 +193,9 @@ fn js_len(text: &str) -> i64 {
     text.encode_utf16().count() as i64
 }
 
-/// `a.localeCompare(b)`: letters compare case-insensitively first, punctuation sorts before digits,
-/// digits before letters, and lowercase before uppercase as a tie-break.
+/// `a.localeCompare(b)` (ICU root collation).
 pub(crate) fn locale_compare(a: &str, b: &str) -> std::cmp::Ordering {
-    fn class(c: char) -> u8 {
-        if c.is_alphabetic() {
-            2
-        } else if c.is_numeric() {
-            1
-        } else {
-            0
-        }
-    }
-    let primary = |s: &str| {
-        s.chars()
-            .map(|c| (class(c), c.to_lowercase().next().unwrap_or(c)))
-            .collect::<Vec<_>>()
-    };
-    primary(a)
-        .cmp(&primary(b))
-        .then_with(|| {
-            let tertiary = |s: &str| s.chars().map(|c| c.is_uppercase()).collect::<Vec<_>>();
-            tertiary(a).cmp(&tertiary(b))
-        })
-        .then_with(|| a.cmp(b))
+    pi_tui::collation::locale_compare(a, b)
 }
 
 fn first_line(text: &str) -> String {

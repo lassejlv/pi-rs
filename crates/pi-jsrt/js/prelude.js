@@ -2,9 +2,90 @@
 // registry, CommonJS module objects, Error.stack formatting and timers.
 // Evaluated as `(function (ops, internal) { ... })`.
 
-const hidden = (obj, name, value) =>
-  Object.defineProperty(obj, name, { value, writable: true, configurable: true, enumerable: false });
+// Values of lazily loaded globals (see below); glue defines them through `hidden`.
+const lazyValues = Object.create(null);
+const hidden = (obj, name, value) => {
+  if (obj === globalThis && typeof name === "string" && lazyGlobalNames.has(name)) {
+    lazyValues[name] = value;
+    return obj;
+  }
+  return Object.defineProperty(obj, name, { value, writable: true, configurable: true, enumerable: false });
+};
+const lazyGlobalNames = new Set(Object.keys(ops.config.lazyGlobals ?? {}));
 internal.hidden = hidden;
+
+// A libuv-style handle for the event loop's liveness: counted while active and referenced.
+internal.loopHandle = () => {
+  let active = false;
+  let refed = true;
+  let counted = false;
+  const update = () => {
+    const want = active && refed;
+    if (want !== counted) {
+      counted = want;
+      ops.loopRef(want ? 1 : -1);
+    }
+  };
+  return {
+    activate() {
+      active = true;
+      update();
+    },
+    deactivate() {
+      active = false;
+      update();
+    },
+    ref() {
+      refed = true;
+      update();
+    },
+    unref() {
+      refed = false;
+      update();
+    },
+    hasRef: () => refed,
+  };
+};
+
+// Node's `determineSpecificType` for "Received ..." in ERR_INVALID_ARG_TYPE messages.
+internal.describeReceived = (value) => {
+  if (value == null) return "" + value;
+  if (typeof value === "function" && value.name) return `function ${value.name}`;
+  if (typeof value === "object") {
+    if (value.constructor?.name) return `an instance of ${value.constructor.name}`;
+    return internal.inspect ? internal.inspect(value, { depth: -1 }) : "an object";
+  }
+  let inspected = internal.inspect ? internal.inspect(value, { colors: false }) : String(value);
+  if (inspected.length > 28) inspected = `${inspected.slice(0, 25)}...`;
+  return `type ${typeof value} (${inspected})`;
+};
+
+// ---------------------------------------------------------------------------
+// ArrayBuffer.prototype.transfer / transferToFixedLength / detached (ES2024), for engines without
+// them (QuickJS-ng has them; vm realms share this shim)
+// ---------------------------------------------------------------------------
+
+if (typeof ArrayBuffer.prototype.transfer !== "function") {
+  const define = (name, fn) =>
+    Object.defineProperty(ArrayBuffer.prototype, name, { value: fn, writable: true, configurable: true, enumerable: false });
+  define("transfer", {
+    transfer(newLength) {
+      return ops.arrayBufferTransfer(this, newLength, this.resizable ? this.maxByteLength : undefined);
+    },
+  }.transfer);
+  define("transferToFixedLength", {
+    transferToFixedLength(newLength) {
+      return ops.arrayBufferTransfer(this, newLength, undefined);
+    },
+  }.transferToFixedLength);
+  Object.defineProperty(ArrayBuffer.prototype, "detached", {
+    get: { get detached() { return ops.arrayBufferDetached(this); } }.__lookupGetter__?.("detached") ?? function () {
+      return ops.arrayBufferDetached(this);
+    },
+    configurable: true,
+    enumerable: false,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // JSON conversion helpers (see src/convert.rs)
@@ -94,16 +175,19 @@ internal.requireBuiltin = (name) => {
 };
 
 // Globals provided by lazily loaded glue: an accessor loads the file on first use.
+// Lazy globals stay accessors for good, backed by `lazyValues` (redefining a global object
+// property from accessor to data inside its own getter broke the previous engine's inline caches;
+// accessors also keep `globalThis.X = v` working before the first read).
 for (const name of Object.keys(lazyGlobals)) {
   Object.defineProperty(globalThis, name, {
     configurable: true,
     enumerable: false,
     get() {
-      internal.loadGlue(lazyGlobals[name]);
-      return globalThis[name];
+      if (!(name in lazyValues)) internal.loadGlue(lazyGlobals[name]);
+      return lazyValues[name];
     },
     set(value) {
-      hidden(globalThis, name, value);
+      lazyValues[name] = value;
     },
   });
 }
@@ -145,7 +229,15 @@ function makeRequire(filename) {
   };
   require.resolve = resolve;
   require.cache = requireCache;
-  require.main = undefined;
+  // The entry module in Node mode (src/node.rs); undefined in an embedding.
+  Object.defineProperty(require, "main", {
+    configurable: true,
+    enumerable: true,
+    get: () => (internal.mainFilename ? requireCache[internal.mainFilename] : undefined),
+    set(v) {
+      Object.defineProperty(require, "main", { value: v, writable: true, configurable: true, enumerable: true });
+    },
+  });
   require.extensions = Object.create(null);
   return require;
 }
@@ -252,10 +344,12 @@ class Timeout {
   }
   ref() {
     this._ref = true;
+    if (!this._destroyed) ops.timerRef(this._id, true);
     return this;
   }
   unref() {
     this._ref = false;
+    if (!this._destroyed) ops.timerRef(this._id, false);
     return this;
   }
   hasRef() {
@@ -284,10 +378,12 @@ class Immediate {
   }
   ref() {
     this._ref = true;
+    ops.timerRef(this._id, true);
     return this;
   }
   unref() {
     this._ref = false;
+    ops.timerRef(this._id, false);
     return this;
   }
   hasRef() {
@@ -345,7 +441,7 @@ function clearTimeout(timer) {
 
 function setImmediate(callback, ...args) {
   checkCallback(callback);
-  const id = ops.timerStart(() => callback(...args), 0, false);
+  const id = ops.timerStart(() => callback(...args), 0, false, "Immediate");
   return new Immediate(id);
 }
 

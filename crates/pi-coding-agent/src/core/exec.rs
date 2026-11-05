@@ -105,6 +105,20 @@ pub async fn exec_command(
         if let Some(deadline) = idle_deadline
             && tokio::time::Instant::now() >= deadline
         {
+            // Output (or EOF) still waiting in a pipe means this task fell behind (e.g. under
+            // load), not that a quiet descendant holds the pipe open: keep reading.
+            #[cfg(unix)]
+            {
+                use std::os::fd::AsFd;
+                let open = [
+                    stdout_pipe.as_ref().filter(|_| !stdout_done).map(|p| p.as_fd()),
+                    stderr_pipe.as_ref().filter(|_| !stderr_done).map(|p| p.as_fd()),
+                ];
+                if crate::utils::child_process::pipes_pending(open.into_iter().flatten()) {
+                    idle_deadline = Some(tokio::time::Instant::now() + Duration::from_millis(EXIT_STDIO_GRACE_MS));
+                    continue;
+                }
+            }
             break;
         }
         let far = tokio::time::Instant::now() + Duration::from_secs(86_400);

@@ -1389,6 +1389,12 @@ pub struct SessionSelectorComponent {
 }
 
 impl SessionSelectorComponent {
+    /// Whether a session list is still loading.
+    pub fn is_loading(&self) -> bool {
+        let s = self.inner.state.lock();
+        s.current_load.is_some() || s.all_load.is_some()
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         current_sessions_loader: &SessionsLoader,

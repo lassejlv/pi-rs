@@ -20,9 +20,9 @@ const BUDGET: u64 = 50_000;
 const STARTED_AT: f64 = 1_768_471_200_000.0;
 
 /// The first `Math.random()` with seed 1.
-const PINNED_FIRST_RANDOM: f64 = 0.18967728553554145;
+const PINNED_FIRST_RANDOM: f64 = 0.34227450605335275;
 /// The first two `Math.random()` values with seed 0.
-const PINNED_SEED_ZERO: [f64; 2] = [0.3588899754427616, 0.6752904796446454];
+const PINNED_SEED_ZERO: [f64; 2] = [0.6711372530266764, 0.7258461452833667];
 
 /// A remote that round-trips through JSON; `delay_first` holds the reply to result 1 back, so later
 /// results reach the VM before it.

@@ -171,12 +171,34 @@ EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
 
 EventEmitter.prototype.removeAllListeners = function removeAllListeners(type) {
   const events = ensureEvents(this);
+  // Not listening for removeListener, no need to emit.
+  if (events.removeListener === undefined) {
+    if (arguments.length === 0) {
+      this._events = Object.create(null);
+      this._eventsCount = 0;
+    } else if (events[type] !== undefined) {
+      if (--this._eventsCount === 0) this._events = Object.create(null);
+      else delete events[type];
+    }
+    return this;
+  }
+  // Emit removeListener for all listeners on all events.
   if (arguments.length === 0) {
+    for (const key of Reflect.ownKeys(events)) {
+      if (key === "removeListener") continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners("removeListener");
     this._events = Object.create(null);
     this._eventsCount = 0;
-  } else if (events[type] !== undefined) {
-    if (--this._eventsCount === 0) this._events = Object.create(null);
-    else delete events[type];
+    return this;
+  }
+  const listeners = events[type];
+  if (typeof listeners === "function") {
+    this.removeListener(type, listeners);
+  } else if (listeners !== undefined) {
+    // LIFO order
+    for (let i = listeners.length - 1; i >= 0; i--) this.removeListener(type, listeners[i]);
   }
   return this;
 };

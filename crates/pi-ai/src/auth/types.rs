@@ -209,7 +209,7 @@ pub struct ProviderAuthInteraction {
 impl ProviderAuthInteraction {
     pub fn throw_if_aborted(&self) -> anyhow::Result<()> {
         if self.signal.is_cancelled() {
-            anyhow::bail!(crate::utils::provider_retry::AbortError);
+            anyhow::bail!(crate::utils::abort::SignalAbortError);
         }
         Ok(())
     }
@@ -226,7 +226,7 @@ pub struct ApiKeyResolveInput {
 impl ApiKeyResolveInput {
     pub fn throw_if_aborted(&self) -> anyhow::Result<()> {
         if self.signal.is_cancelled() {
-            anyhow::bail!(crate::utils::provider_retry::AbortError);
+            anyhow::bail!(crate::utils::abort::SignalAbortError);
         }
         Ok(())
     }

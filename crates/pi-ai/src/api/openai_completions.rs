@@ -23,7 +23,7 @@ use crate::providers::compat_schema::{
 use crate::types::{
     AssistantContent, AssistantMessage, AssistantMessageEvent, CacheRetention, Message, Model, ModelInputModality,
     ModelThinkingLevel, ProviderHeaders, ProviderResponse, StopReason, StreamOptions, TextContent, ThinkingContent,
-    ThinkingLevel, Tool, ToolCall, TranscriptContext, Usage, UserContent, UserContentBlock,
+    ThinkingLevel, Tool, ToolCall, TranscriptContext, Usage, UserContent, UserContentBlock, is_blank_text,
 };
 use crate::utils::error_body::{SdkErrorStyle, format_provider_error, normalize_provider_error};
 use crate::utils::event_stream::{AssistantMessageEventSender, AssistantMessageEventStream};
@@ -34,7 +34,10 @@ use crate::utils::identity::{ClientIdentityTarget, get_identity_headers};
 use crate::utils::json_parse::{parse_streaming_json_object, parse_tool_call_arguments};
 use crate::utils::provider_env::get_provider_env_value;
 use crate::utils::provider_retry::{ProviderRetryOptions, retry_provider_request};
-use crate::utils::text::{get_system_message_text, render_system_message_update};
+use crate::utils::text::{
+    get_system_message_text, get_system_message_text_is_empty, render_system_message_update,
+    render_system_message_update_is_empty,
+};
 use crate::utils::transcript::{TranscriptToolSupport, get_declared_tools, resolve_transcript, resolve_transcript_tools};
 
 /// Version of the `openai` SDK whose request shape this module reproduces.
@@ -461,7 +464,8 @@ pub fn convert_messages(
                     params.push(json!({ "role": "system", "tools": convert_tools(&added, compat)? }));
                 }
                 let text = if i == 0 { get_system_message_text(system) } else { render_system_message_update(system) };
-                if !text.is_empty() {
+                let empty = if i == 0 { get_system_message_text_is_empty(system) } else { render_system_message_update_is_empty(system) };
+                if !empty {
                     params.push(json!({ "role": instruction_role, "content": text }));
                 }
                 last_role = Some("system");
@@ -472,7 +476,7 @@ pub fn convert_messages(
                     UserContent::Blocks(blocks) => {
                         let content: Vec<Value> = blocks
                             .iter()
-                            .filter(|b| !matches!(b, UserContentBlock::Text(t) if t.text.is_empty()))
+                            .filter(|b| !matches!(b, UserContentBlock::Text(t) if t.is_empty_text()))
                             .map(|b| match b {
                                 UserContentBlock::Text(t) => json!({ "type": "text", "text": t.text }),
                                 UserContentBlock::Image(img) => json!({ "type": "image_url", "image_url": { "url": data_url(img) } }),
@@ -495,7 +499,7 @@ pub fn convert_messages(
                     .content
                     .iter()
                     .filter_map(AssistantContent::as_text)
-                    .filter(|t| !t.text.trim().is_empty())
+                    .filter(|t| !t.is_blank())
                     .map(|t| t.text.clone())
                     .collect();
                 let assistant_text = text_parts.concat();
@@ -507,7 +511,7 @@ pub fn convert_messages(
                     .filter_map(|tc| parse_legacy_encrypted_reasoning_detail(tc.thought_signature.as_deref()))
                     .collect();
                 let preserved_details = signed_details.or(if legacy_details.is_empty() { None } else { Some(legacy_details) });
-                let non_empty_thinking: Vec<&&ThinkingContent> = thinking_blocks.iter().filter(|b| !b.thinking.trim().is_empty()).collect();
+                let non_empty_thinking: Vec<&&ThinkingContent> = thinking_blocks.iter().filter(|b| !b.is_blank()).collect();
                 if !non_empty_thinking.is_empty() {
                     if compat.requires_thinking_as_text {
                         let thinking_text = non_empty_thinking.iter().map(|b| b.thinking.as_str()).collect::<Vec<_>>().join("\n\n");
@@ -579,7 +583,8 @@ pub fn convert_messages(
                     let text_result =
                         tool_msg.content.iter().filter_map(UserContentBlock::as_text).map(|t| t.text.as_str()).collect::<Vec<_>>().join("\n");
                     let has_images = tool_msg.content.iter().any(|c| c.as_image().is_some());
-                    let has_text = !text_result.trim().is_empty();
+                    let removed = tool_msg.content.iter().filter_map(UserContentBlock::as_text).any(|t| t.lone_surrogates_removed);
+                    let has_text = !is_blank_text(&text_result, removed);
                     let text = if has_text {
                         text_result
                     } else if has_images {
@@ -1192,6 +1197,7 @@ async fn run_stream(model: Model, context: TranscriptContext, options: StreamOpt
                     thinking: String::new(),
                     thinking_signature: Some(signature.to_string()),
                     redacted: None,
+                    ..Default::default()
                 }));
                 let index = output.content.len() - 1;
                 *thinking_index = Some(index);
@@ -1440,7 +1446,7 @@ fn finish_blocks(
 /// Stream a Chat Completions response.
 pub fn stream(model: &Model, context: &TranscriptContext, options: StreamOptions) -> AssistantMessageEventStream {
     let (sender, stream) = AssistantMessageEventStream::new();
-    tokio::spawn(run_stream(model.clone(), context.clone(), options, sender));
+    crate::utils::wasm::spawn(run_stream(model.clone(), context.clone(), options, sender));
     stream
 }
 

@@ -2,7 +2,7 @@
 
 use crate::core::bug_report::{BugReportBundle, bug_report_files};
 use crate::core::radius::get_radius_gateway_url;
-use pi_ai::utils::provider_retry::AbortError;
+use pi_ai::utils::abort::SignalAbortError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio_util::sync::CancellationToken;
@@ -65,7 +65,7 @@ pub async fn upload_bug_report(
     let (status, json) = match &options.signal {
         Some(signal) => tokio::select! {
             result = send => result?,
-            _ = signal.cancelled() => return Err(AbortError.into()),
+            _ = signal.cancelled() => return Err(SignalAbortError.into()),
         },
         None => send.await?,
     };

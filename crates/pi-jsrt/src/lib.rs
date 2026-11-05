@@ -1,16 +1,18 @@
-//! # pi-jsrt — an embedded, pure-Rust JavaScript runtime
+//! # pi-jsrt — an embedded JavaScript runtime
 //!
-//! `pi-jsrt` runs JavaScript and TypeScript for pi extensions and code mode without
-//! Node.js. It is built on:
+//! `pi-jsrt` runs JavaScript and TypeScript for pi extensions without Node.js. It is built on:
 //!
-//! - [Boa](https://boajs.dev) (`boa_engine`) as the ECMAScript engine,
+//! - [QuickJS](https://github.com/quickjs-ng/quickjs) (QuickJS-ng through
+//!   [rquickjs](https://github.com/DelSkayn/rquickjs), with a small patch, see
+//!   `vendor/rquickjs-sys/PATCH.md`) as the ECMAScript engine, reached through the
+//!   [`js`] embedding API (the `pi-quickjs` crate),
 //! - [oxc](https://oxc.rs) to strip TypeScript (types, `enum`, `namespace`,
 //!   parameter properties) and to detect ES module syntax,
 //! - tokio + reqwest for async host work (fs, child processes, `fetch`).
 //!
 //! ## Threading model
 //!
-//! Boa's `Context` is `!Send`, so every runtime owns a dedicated OS thread that runs
+//! QuickJS values are bound to their runtime's thread, so every runtime owns a dedicated OS thread that runs
 //! the context, its promise job queue and a timer queue (`setTimeout`,
 //! `setInterval`, `setImmediate`, `queueMicrotask`). [`JsRuntime`] is a cheap,
 //! `Send + Sync + Clone` handle that talks to that thread with messages; the thread
@@ -73,23 +75,32 @@
 //!
 //! ## Node compatibility
 //!
-//! With [`RuntimeOptions::node_compat`] (the default) the runtime provides `process`,
-//! `Buffer`, `fetch`/`Headers`/`Request`/`Response`, `crypto`, and the builtins
-//! `node:fs`, `node:fs/promises`, `node:path`, `node:os`, `node:child_process`,
-//! `node:events`, `node:util`, `node:url`, `node:readline`, `node:assert`,
-//! `node:stream`, `node:buffer`, `node:crypto`, `node:module`, `node:timers`,
-//! `node:timers/promises`, `node:string_decoder`, `node:tty`, `node:querystring`,
-//! `node:perf_hooks`, `node:async_hooks` and `node:process` (unprefixed names work too).
-//! Without it, only ECMAScript plus web-style globals (`console`, timers,
+//! With [`RuntimeOptions::node_compat`] (the default) the runtime provides `process`
+//! (`process.version` is `v22.19.0`, pi's `engines` minimum), `Buffer`,
+//! `fetch`/`Headers`/`Request`/`Response`, `crypto` (WebCrypto included), `WebAssembly`,
+//! `MessageChannel`/`BroadcastChannel`, `CompressionStream`/`DecompressionStream`, `navigator`, and
+//! the builtins `node:fs`, `node:fs/promises`, `node:path`, `node:os`, `node:child_process`,
+//! `node:events`, `node:util`, `node:url`, `node:readline`, `node:assert`, `node:stream`,
+//! `node:buffer`, `node:crypto`, `node:zlib`, `node:net`, `node:tls`, `node:http`, `node:https`,
+//! `node:dns`, `node:module`, `node:timers`, `node:timers/promises`, `node:string_decoder`,
+//! `node:tty`, `node:querystring`, `node:perf_hooks`, `node:async_hooks`, `node:worker_threads`
+//! (no `Worker`) and `node:process` (unprefixed names work too). They are compiled on first use
+//! (see `ops/mod.rs`), so they cost nothing at startup.
+//!
+//! Native parts are pure Rust: zlib/brotli/zstd on zlib-rs, brotli and ruzstd; ciphers, keys,
+//! signatures and KDFs on RustCrypto (`ops/cipher.rs`, `ops/keys.rs`); TLS on rustls
+//! (`ops/tls.rs`, sans I/O over any duplex); WebAssembly on the wasmi interpreter with linear
+//! memory shared zero-copy with the JS `ArrayBuffer` (`ops/wasm.rs`).
+//!
+//! Without `node_compat`, only ECMAScript plus web-style globals (`console`, timers,
 //! `TextEncoder`/`TextDecoder`, `URL`, `AbortController`, `structuredClone`, ...) exist,
 //! which is the sandbox used by code mode.
 //!
 //! ## Limitations
 //!
-//! See `PORTING-STATUS.md`: no `Intl` beyond a small shim, no interruption of
-//! synchronous infinite loops (use [`RuntimeOptions::loop_iteration_limit`]), no
-//! `node:net`/`http`/`zlib`/`worker_threads`, and `AsyncLocalStorage` does not
-//! propagate across `await`.
+//! See `PORTING-STATUS.md`: no `Intl` beyond a small shim; synchronous infinite loops run until
+//! [`RuntimeOptions::loop_iteration_limit`] (when set) stops them; no DNS record queries beyond
+//! A/AAAA.
 
 #![warn(missing_docs)]
 
@@ -98,15 +109,16 @@ pub mod ctx;
 mod engine;
 mod error;
 mod loader;
+pub mod node;
 mod ops;
 mod runtime;
 pub mod transpile;
 
 pub use error::{Error, JsException, Result};
+/// The QuickJS embedding API the runtime is built on (see [`JsRuntime::with_context`]).
+pub use pi_quickjs as js;
 pub use runtime::{
     in_host_call, set_blocking_wait_hook, BlockingWaitHook, ExitHandler, JsCallback, JsHandle, JsObjectHandle, JsRuntime,
     OutputSink, RuntimeOptions, UncaughtHandler, VirtualModule,
 };
 
-/// Re-export of the Boa engine for use with [`JsRuntime::with_context`].
-pub use boa_engine as boa;

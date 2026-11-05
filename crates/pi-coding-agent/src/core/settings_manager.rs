@@ -383,6 +383,47 @@ fn to_settings_error(
     }
 }
 
+/// A JavaScript error with its constructor name (`SyntaxError` from `JSON.parse`, `TypeError`),
+/// for output that shows `error.stack`, whose first line is `${name}: ${message}`.
+#[derive(Debug, Clone)]
+pub struct JsError {
+    pub name: &'static str,
+    pub message: String,
+}
+
+impl JsError {
+    pub fn new(name: &'static str, message: impl Into<String>) -> Self {
+        Self { name, message: message.into() }
+    }
+}
+
+impl std::fmt::Display for JsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for JsError {}
+
+/// The first line of the JavaScript `error.stack` for a settings error: `${error.name}: ${error.message}`
+/// (`Error` for filesystem and lock errors).
+pub fn js_error_stack_header(error: &anyhow::Error) -> String {
+    let name = error.downcast_ref::<JsError>().map(|e| e.name).unwrap_or("Error");
+    format!("{name}: {error}")
+}
+
+/// Node `fs` error for a failed settings file operation (`CODE: description, syscall 'path'`).
+fn settings_fs_error(error: std::io::Error, syscall: &str, path: &str) -> anyhow::Error {
+    use crate::core::tools::node_fs::node_fs_error;
+    // Node reports reading a directory from the `read` syscall without a path.
+    let fs_error = if error.kind() == std::io::ErrorKind::IsADirectory && syscall == "open" {
+        node_fs_error(&error, "read", None)
+    } else {
+        node_fs_error(&error, syscall, Some(path))
+    };
+    anyhow::Error::new(fs_error)
+}
+
 /// TS: `implements SettingsStorage`
 pub struct FileSettingsStorage {
     global_settings_path: String,
@@ -423,8 +464,10 @@ impl SettingsStorage for FileSettingsStorage {
         if file_exists {
             release = Some(Self::acquire_lock_sync_with_retry(path)?);
         }
+        // `readFileSync(path, "utf-8")` decodes invalid UTF-8 as U+FFFD.
         let current = if file_exists {
-            Some(std::fs::read_to_string(path)?)
+            let bytes = std::fs::read(path).map_err(|e| settings_fs_error(e, "open", path))?;
+            Some(String::from_utf8_lossy(&bytes).into_owned())
         } else {
             None
         };
@@ -432,12 +475,12 @@ impl SettingsStorage for FileSettingsStorage {
         if let Some(next) = next {
             // Only create directory when we actually need to write
             if !std::path::Path::new(&dir).exists() {
-                std::fs::create_dir_all(&dir)?;
+                std::fs::create_dir_all(&dir).map_err(|e| settings_fs_error(e, "mkdir", &dir))?;
             }
             if release.is_none() {
                 release = Some(Self::acquire_lock_sync_with_retry(path)?);
             }
-            std::fs::write(path, next)?;
+            std::fs::write(path, next).map_err(|e| settings_fs_error(e, "open", path))?;
         }
         drop(release);
         Ok(())
@@ -805,7 +848,8 @@ impl SettingsManager {
     }
 
     fn parse_settings_object(content: &str) -> anyhow::Result<JsonMap> {
-        let parsed: Value = crate::utils::js_json::js_json_parse(&strip_bom(content)).map_err(anyhow::Error::msg)?;
+        let parsed: Value = crate::utils::js_json::js_json_parse(&strip_bom(content))
+            .map_err(|message| anyhow::Error::new(JsError::new("SyntaxError", message)))?;
         match parsed {
             Value::Object(map) => Ok(map),
             // Arrays are objects in JS: the migrations find nothing and the merge spreads the
@@ -813,10 +857,10 @@ impl SettingsManager {
             Value::Array(items) => {
                 Ok(items.into_iter().enumerate().map(|(i, v)| (i.to_string(), v)).collect())
             }
-            other => anyhow::bail!(
-                "Cannot use 'in' operator to search for 'queueMode' in {}",
-                js_string(&other)
-            ),
+            other => Err(anyhow::Error::new(JsError::new(
+                "TypeError",
+                format!("Cannot use 'in' operator to search for 'queueMode' in {}", js_string(&other)),
+            ))),
         }
     }
 

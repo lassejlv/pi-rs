@@ -224,6 +224,8 @@ pub fn create_ls_tool_definition(cwd: &str, options: Option<&LsToolOptions>) -> 
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(LS_SNIPPET.to_string());
     let renderers = crate::core::tools::renderers::ls::ls_renderers();
     definition.render_call = renderers.render_call;

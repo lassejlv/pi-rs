@@ -225,6 +225,30 @@ async fn aws_sdk_fidelity() {
     let bedrock = server.requests().into_iter().rfind(|r| r.path.starts_with("/model/")).unwrap();
     assert!(bedrock.header("authorization").unwrap().contains("Credential=ASIAREFRESHED/"));
 
+    // `maxAttempts` (NODE_MAX_ATTEMPT_CONFIG_OPTIONS): the profile's `max_attempts`, overridden by
+    // `AWS_MAX_ATTEMPTS`; a value `parseInt` cannot read fails the request.
+    write(
+        &home.join(".aws/config"),
+        "[profile login]\nlogin_session = arn:aws:iam::1:user/me\nregion = us-east-1\nmax_attempts = 5\n",
+    );
+    aws_credentials::clear_shared_ini_file_cache();
+    let message = bedrock_converse_stream::stream(&model_at(&server.url), &hello(), options("login")).result().await;
+    assert_eq!(message.stop_reason, StopReason::Stop, "{:?}", message.error_message);
+    let bedrock = server.requests().into_iter().rfind(|r| r.path.starts_with("/model/")).unwrap();
+    assert_eq!(bedrock.header("amz-sdk-request"), Some("attempt=1; max=5"));
+    set("AWS_MAX_ATTEMPTS", "4 attempts");
+    bedrock_converse_stream::stream(&model_at(&server.url), &hello(), options("login")).result().await;
+    let bedrock = server.requests().into_iter().rfind(|r| r.path.starts_with("/model/")).unwrap();
+    assert_eq!(bedrock.header("amz-sdk-request"), Some("attempt=1; max=4"));
+    set("AWS_MAX_ATTEMPTS", "many");
+    let message = bedrock_converse_stream::stream(&model_at(&server.url), &hello(), options("login")).result().await;
+    assert_eq!(message.stop_reason, StopReason::Error);
+    assert_eq!(
+        message.error_message.as_deref(),
+        Some("Environment variable AWS_MAX_ATTEMPTS mast be a number, got \"many\"")
+    );
+    unset("AWS_MAX_ATTEMPTS");
+
     unset("AWS_ENDPOINT_URL_STS");
     unset("AWS_ENDPOINT_URL_SIGNIN");
     let _ = std::fs::remove_dir_all(&home);

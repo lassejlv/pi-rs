@@ -1,0 +1,1798 @@
+{
+ "source": "pi-mono 5e63241 packages/ai/src/api/*.ts streamSimple against a local HTTP/1.1 server under Node 24 (bedrock with AWS_BEDROCK_FORCE_HTTP1=1); builtin model JSON from the Rust catalog. A null value means the field is absent.",
+ "scenarios": [
+  [
+   {
+    "role": "user",
+    "content": "\ud800",
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": " \udc00 ",
+    "timestamp": 2
+   },
+   {
+    "role": "user",
+    "content": "ok",
+    "timestamp": 3
+   }
+  ],
+  [
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": "\ud800"
+     },
+     {
+      "type": "text",
+      "text": "a"
+     }
+    ],
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": [
+     {
+      "type": "text",
+      "text": " \udfff"
+     }
+    ],
+    "timestamp": 2
+   },
+   {
+    "role": "user",
+    "content": "ok",
+    "timestamp": 3
+   }
+  ],
+  [
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 1
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "text",
+      "text": "\ud83d"
+     },
+     {
+      "type": "toolCall",
+      "id": "call_1",
+      "name": "read",
+      "arguments": {
+       "path": "a"
+      }
+     }
+    ],
+    "api": "API",
+    "provider": "PROVIDER",
+    "model": "MODEL",
+    "usage": {
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "totalTokens": 0,
+     "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+     }
+    },
+    "stopReason": "toolUse",
+    "timestamp": 2
+   },
+   {
+    "role": "toolResult",
+    "toolCallId": "call_1",
+    "toolName": "read",
+    "content": [
+     {
+      "type": "text",
+      "text": "\udfff"
+     }
+    ],
+    "isError": false,
+    "timestamp": 3
+   },
+   {
+    "role": "user",
+    "content": "next",
+    "timestamp": 4
+   }
+  ],
+  [
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 1
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "thinking",
+      "thinking": "\ud800"
+     },
+     {
+      "type": "text",
+      "text": " \udc00"
+     },
+     {
+      "type": "text",
+      "text": "fine"
+     }
+    ],
+    "api": "API",
+    "provider": "PROVIDER",
+    "model": "MODEL",
+    "usage": {
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "totalTokens": 0,
+     "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+     }
+    },
+    "stopReason": "stop",
+    "timestamp": 2
+   },
+   {
+    "role": "user",
+    "content": "next",
+    "timestamp": 3
+   }
+  ],
+  [
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 1
+   },
+   {
+    "role": "assistant",
+    "content": [
+     {
+      "type": "toolCall",
+      "id": "call_1",
+      "name": "read",
+      "arguments": {
+       "path": "a"
+      }
+     }
+    ],
+    "api": "API",
+    "provider": "PROVIDER",
+    "model": "MODEL",
+    "usage": {
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "totalTokens": 0,
+     "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+     }
+    },
+    "stopReason": "toolUse",
+    "timestamp": 2
+   },
+   {
+    "role": "toolResult",
+    "toolCallId": "call_1",
+    "toolName": "read",
+    "content": [
+     {
+      "type": "text",
+      "text": "\ud800"
+     },
+     {
+      "type": "text",
+      "text": "b"
+     }
+    ],
+    "isError": false,
+    "timestamp": 3
+   }
+  ],
+  [
+   {
+    "role": "system",
+    "content": "\ud800",
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 2
+   }
+  ],
+  [
+   {
+    "role": "system",
+    "content": "base",
+    "sections": {
+     "a": "\udc00",
+     "b": "keep"
+    },
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 2
+   }
+  ],
+  [
+   {
+    "role": "system",
+    "content": "base",
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 2
+   },
+   {
+    "role": "system",
+    "content": " \ud800",
+    "sections": {
+     "a": "\udfff"
+    },
+    "timestamp": 3
+   },
+   {
+    "role": "user",
+    "content": "next",
+    "timestamp": 4
+   }
+  ],
+  [
+   {
+    "role": "system",
+    "content": [
+     {
+      "type": "text",
+      "text": "\ud800"
+     }
+    ],
+    "timestamp": 1
+   },
+   {
+    "role": "user",
+    "content": "go",
+    "timestamp": 2
+   }
+  ]
+ ],
+ "bodies": {
+  "anthropic-messages": {
+   "fields": [
+    "system",
+    "messages"
+   ],
+   "values": [
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "  "
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "ok",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "a"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "ok",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "type": "text",
+         "text": ""
+        },
+        {
+         "type": "tool_use",
+         "id": "call_1",
+         "name": "read",
+         "input": {
+          "path": "a"
+         }
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "tool_result",
+         "tool_use_id": "call_1",
+         "content": "",
+         "is_error": false
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "next",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "type": "text",
+         "text": ""
+        },
+        {
+         "type": "text",
+         "text": " "
+        },
+        {
+         "type": "text",
+         "text": "fine"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "next",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "type": "tool_use",
+         "id": "call_1",
+         "name": "read",
+         "input": {
+          "path": "a"
+         }
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "tool_result",
+         "tool_use_id": "call_1",
+         "content": "\nb",
+         "is_error": false,
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "type": "text",
+       "text": "",
+       "cache_control": {
+        "type": "ephemeral"
+       }
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "go",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "type": "text",
+       "text": "base\n\n\n\nkeep",
+       "cache_control": {
+        "type": "ephemeral"
+       }
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "go",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "type": "text",
+       "text": "base\n\n \n\n",
+       "cache_control": {
+        "type": "ephemeral"
+       }
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "next",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "type": "text",
+       "text": "",
+       "cache_control": {
+        "type": "ephemeral"
+       }
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": "go",
+         "cache_control": {
+          "type": "ephemeral"
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "openai-completions": {
+   "fields": [
+    "messages"
+   ],
+   "values": [
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "  "
+      },
+      {
+       "role": "user",
+       "content": "ok"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": ""
+        },
+        {
+         "type": "text",
+         "text": "a"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": " "
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": "ok"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": null,
+       "tool_calls": [
+        {
+         "id": "call_1",
+         "type": "function",
+         "function": {
+          "name": "read",
+          "arguments": "{\"path\":\"a\"}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "content": "",
+       "tool_call_id": "call_1"
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": " fine"
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "content": null,
+       "tool_calls": [
+        {
+         "id": "call_1",
+         "type": "function",
+         "function": {
+          "name": "read",
+          "arguments": "{\"path\":\"a\"}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "content": "\nb",
+       "tool_call_id": "call_1"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": "base\n\n\n\nkeep"
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": "base\n\n \n\n"
+      },
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    }
+   ]
+  },
+  "openai-responses": {
+   "fields": [
+    "instructions",
+    "input"
+   ],
+   "values": [
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": ""
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "  "
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "ok"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": ""
+        },
+        {
+         "type": "input_text",
+         "text": "a"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": " "
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "ok"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "type": "message",
+       "role": "assistant",
+       "content": [
+        {
+         "type": "output_text",
+         "text": "",
+         "annotations": []
+        }
+       ],
+       "status": "completed",
+       "id": "msg_pi_1"
+      },
+      {
+       "type": "function_call",
+       "call_id": "call_1",
+       "name": "read",
+       "arguments": "{\"path\":\"a\"}"
+      },
+      {
+       "type": "function_call_output",
+       "call_id": "call_1",
+       "output": ""
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "type": "message",
+       "role": "assistant",
+       "content": [
+        {
+         "type": "output_text",
+         "text": " ",
+         "annotations": []
+        }
+       ],
+       "status": "completed",
+       "id": "msg_pi_1"
+      },
+      {
+       "type": "message",
+       "role": "assistant",
+       "content": [
+        {
+         "type": "output_text",
+         "text": "fine",
+         "annotations": []
+        }
+       ],
+       "status": "completed",
+       "id": "msg_pi_1_1"
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "type": "function_call",
+       "call_id": "call_1",
+       "name": "read",
+       "arguments": "{\"path\":\"a\"}"
+      },
+      {
+       "type": "function_call_output",
+       "call_id": "call_1",
+       "output": "\nb"
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "system",
+       "content": "base\n\n\n\nkeep"
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "system",
+       "content": "base\n\n \n\n"
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "instructions": null,
+     "input": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "input_text",
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "google-generative-ai": {
+   "fields": [
+    "systemInstruction",
+    "contents"
+   ],
+   "values": [
+    {
+     "systemInstruction": null,
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": ""
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "  "
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "ok"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": null,
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": ""
+        },
+        {
+         "text": "a"
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": " "
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "ok"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": null,
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": ""
+        },
+        {
+         "functionCall": {
+          "args": {
+           "path": "a"
+          },
+          "name": "read"
+         }
+        }
+       ],
+       "role": "model"
+      },
+      {
+       "parts": [
+        {
+         "functionResponse": {
+          "name": "read",
+          "response": {
+           "output": ""
+          }
+         }
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "next"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": null,
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "",
+         "thought": true
+        },
+        {
+         "text": " "
+        },
+        {
+         "text": "fine"
+        }
+       ],
+       "role": "model"
+      },
+      {
+       "parts": [
+        {
+         "text": "next"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": null,
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "functionCall": {
+          "args": {
+           "path": "a"
+          },
+          "name": "read"
+         }
+        }
+       ],
+       "role": "model"
+      },
+      {
+       "parts": [
+        {
+         "functionResponse": {
+          "name": "read",
+          "response": {
+           "output": "\nb"
+          }
+         }
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": {
+      "parts": [
+       {
+        "text": ""
+       }
+      ],
+      "role": "user"
+     },
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": {
+      "parts": [
+       {
+        "text": "base\n\n\n\nkeep"
+       }
+      ],
+      "role": "user"
+     },
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": {
+      "parts": [
+       {
+        "text": "base\n\n \n\n"
+       }
+      ],
+      "role": "user"
+     },
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      },
+      {
+       "parts": [
+        {
+         "text": "next"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    },
+    {
+     "systemInstruction": {
+      "parts": [
+       {
+        "text": ""
+       }
+      ],
+      "role": "user"
+     },
+     "contents": [
+      {
+       "parts": [
+        {
+         "text": "go"
+        }
+       ],
+       "role": "user"
+      }
+     ]
+    }
+   ]
+  },
+  "mistral-conversations": {
+   "fields": [
+    "messages"
+   ],
+   "values": [
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "  "
+      },
+      {
+       "role": "user",
+       "content": "ok"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": ""
+        },
+        {
+         "type": "text",
+         "text": "a"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "type": "text",
+         "text": " "
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": "ok"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "prefix": false,
+       "content": [
+        {
+         "type": "text",
+         "text": ""
+        }
+       ],
+       "tool_calls": [
+        {
+         "id": "call_1",
+         "type": "function",
+         "function": {
+          "name": "read",
+          "arguments": "{\"path\":\"a\"}"
+         },
+         "index": 0
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "name": "read",
+       "content": [
+        {
+         "type": "text",
+         "text": "(no tool output)"
+        }
+       ],
+       "tool_call_id": "call_1"
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "prefix": false,
+       "content": [
+        {
+         "type": "thinking",
+         "thinking": [
+          {
+           "type": "text",
+           "text": ""
+          }
+         ]
+        },
+        {
+         "type": "text",
+         "text": " "
+        },
+        {
+         "type": "text",
+         "text": "fine"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "assistant",
+       "prefix": false,
+       "tool_calls": [
+        {
+         "id": "call_1",
+         "type": "function",
+         "function": {
+          "name": "read",
+          "arguments": "{\"path\":\"a\"}"
+         },
+         "index": 0
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "name": "read",
+       "content": [
+        {
+         "type": "text",
+         "text": "b"
+        }
+       ],
+       "tool_call_id": "call_1"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": "base\n\n\n\nkeep"
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": "base\n\n \n\n"
+      },
+      {
+       "role": "user",
+       "content": "go"
+      },
+      {
+       "role": "user",
+       "content": "next"
+      }
+     ]
+    },
+    {
+     "messages": [
+      {
+       "role": "system",
+       "content": ""
+      },
+      {
+       "role": "user",
+       "content": "go"
+      }
+     ]
+    }
+   ]
+  },
+  "bedrock-converse-stream": {
+   "fields": [
+    "system",
+    "messages"
+   ],
+   "values": [
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "<empty>"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "<empty>"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "ok"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "a"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "<empty>"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "ok"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "toolUse": {
+          "toolUseId": "call_1",
+          "name": "read",
+          "input": {
+           "path": "a"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "toolResult": {
+          "toolUseId": "call_1",
+          "content": [
+           {
+            "text": "<empty>"
+           }
+          ],
+          "status": "success"
+         }
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "text": "fine"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": null,
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "role": "assistant",
+       "content": [
+        {
+         "toolUse": {
+          "toolUseId": "call_1",
+          "name": "read",
+          "input": {
+           "path": "a"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "toolResult": {
+          "toolUseId": "call_1",
+          "content": [
+           {
+            "text": "b"
+           }
+          ],
+          "status": "success"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "text": ""
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "text": "base\n\n\n\nkeep"
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "text": "base\n\n \n\n"
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      },
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "next"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "system": [
+      {
+       "text": ""
+      }
+     ],
+     "messages": [
+      {
+       "role": "user",
+       "content": [
+        {
+         "text": "go"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

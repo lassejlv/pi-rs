@@ -1,8 +1,8 @@
 //! The default sandbox: each execution gets its own thread and djs VM.
 //!
 //! A fresh thread per run keeps termination simple: a runaway script cannot poison a later run.
-//! Stopping sets an interrupt flag polled at host calls and between 10,000-fuel interpreter
-//! slices, including promise jobs and generated code. It does not wait for the thread. Hosts
+//! Stopping sets an interrupt flag that the VM polls at host calls and between interpreter fuel
+//! slices, including promise jobs and generated code, and does not wait for the thread. Hosts
 //! that limit concurrency can track actual thread lifetime with
 //! `on_worker_started` and `acquire_worker`.
 
@@ -42,12 +42,12 @@ pub struct CodemodeSandboxOptions {
     pub timeout_ms: Option<f64>,
     /// See [`CodemodeSandboxBaseOptions::memory_limit_bytes`].
     pub memory_limit_bytes: Option<u64>,
-    /// Instrumented iterations plus 10,000-fuel slices an execution may run before it fails with
+    /// Instrumented loop iterations plus 10,000-fuel slices an execution may run before it fails with
     /// `kind: "timeout"`, like the TS `interruptBudget`. Default: none; the deadline and abort
     /// signal stop computing scripts.
     pub interrupt_budget: Option<u64>,
-    /// Interpreter fuel one invocation may consume, including generated code and promise jobs. Default: [`DEFAULT_LOOP_ITERATION_LIMIT`]; `Some(u64::MAX)`
-    /// disables it.
+    /// Interpreter fuel one invocation may use, including generated code and promise jobs.
+    /// Default: [`DEFAULT_LOOP_ITERATION_LIMIT`]; `Some(u64::MAX)` disables it.
     pub loop_iteration_limit: Option<u64>,
     /// Approximate JS call depth, translated to value-stack slots. Default: [`DEFAULT_RECURSION_LIMIT`].
     pub recursion_limit: Option<usize>,

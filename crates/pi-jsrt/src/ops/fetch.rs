@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsResult, JsValue};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsResult, JsValue};
 use parking_lot::Mutex;
 use tokio_util::sync::CancellationToken;
 

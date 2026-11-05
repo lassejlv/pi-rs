@@ -1,7 +1,7 @@
 //! Messages between the host and a VM. Tool arguments, results, and values cross as JSON strings:
 //! the VM passes them into and out of the engine as strings and never builds structured values
-//! itself. All types serialize to the same JSON as the TS protocol, so they can cross a process or
-//! network boundary unchanged.
+//! itself. Ordinary messages retain the TS protocol's JSON. Lossless JSON runs negotiate
+//! UTF-16 extensions through the VM fingerprint before host effects.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -13,9 +13,9 @@ use crate::types::{CodemodeCallTarget, CodemodeDuring, CodemodeOutputItem};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VmTool {
-    pub name: String,
-    pub js_name: String,
-    pub description: String,
+    pub name: pi_json::strict::JsonString,
+    pub js_name: pi_json::strict::JsonString,
+    pub description: pi_json::strict::JsonString,
 }
 
 /// A global as the VM sees it.
@@ -38,17 +38,28 @@ pub struct VmDeterministic {
 #[serde(rename_all = "camelCase")]
 pub struct VmStartData {
     pub code: String,
+    /// Lossless source when JavaScript text contains unpaired surrogate units.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code_utf16: Option<Vec<u16>>,
     pub tools: Vec<VmTool>,
     pub globals: Vec<VmGlobal>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory_limit_bytes: Option<u64>,
     /// Snapshot for `load()`: key to JSON text.
     pub store: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub lossless_json: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub store_json: Option<String>,
     /// Run deterministically: UTC, a virtual clock starting at `started_at` (ms since the epoch)
     /// that moves only with delivered results, randomness from `seed`, no `WeakRef`, results
     /// applied in `seq` order, and `started`/`idle` messages.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deterministic: Option<VmDeterministic>,
+    /// The timezone of a non-deterministic VM's `Date` (IANA name or POSIX `TZ` string); `None`:
+    /// the VM thread's own. Never sent to a remote.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
 }
 
 /// `done`: `ok` with the JSON `value` (absent for `undefined`) and `writes`, a JSON array of
@@ -89,8 +100,23 @@ pub enum WorkerToHostMessage {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         args: Option<String>,
     },
+    /// Lossless call names for deterministic JSON runs.
+    CallUtf16 {
+        id: u64,
+        target: CodemodeCallTarget,
+        name: Vec<u16>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        args: Option<String>,
+    },
     Output {
         item: CodemodeOutputItem,
+    },
+    /// UTF-16 output for a lossless JSON run. Ordinary runs retain the original protocol.
+    OutputUtf16 {
+        kind: String,
+        data: Vec<u16>,
+        #[serde(rename = "mimeType")]
+        mime_type: Vec<u16>,
     },
     Done(DoneMessage),
     /// The VM failed outside the script's control.
@@ -123,6 +149,14 @@ impl WorkerToHostMessage {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum HostToWorkerMessage {
+    ResultUtf16 {
+        id: u64,
+        ok: bool,
+        payload: Option<Vec<u16>>,
+        seq: u64,
+        now: f64,
+        properties: Option<String>,
+    },
     Result {
         id: u64,
         ok: bool,
@@ -140,7 +174,7 @@ pub enum HostToWorkerMessage {
 impl HostToWorkerMessage {
     pub fn id(&self) -> u64 {
         match self {
-            HostToWorkerMessage::Result { id, .. } => *id,
+            HostToWorkerMessage::Result { id, .. } | HostToWorkerMessage::ResultUtf16 { id, .. } => *id,
         }
     }
 }

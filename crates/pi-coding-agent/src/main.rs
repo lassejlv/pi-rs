@@ -1,8 +1,13 @@
 //! The `pi` binary (port of `packages/coding-agent/src/cli.ts`).
 
 fn main() {
+    pi_coding_agent::utils::memory::configure_allocator();
+    // `child_process.fork()` in extensions re-executes this binary as a Node-like script runner.
+    if let Some(code) = pi_jsrt::node::main_if_requested() {
+        std::process::exit(code);
+    }
     pi_coding_agent::cli::setup::setup_cli();
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<String> = pi_coding_agent::cli::setup::process_args().iter().skip(1).cloned().collect();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()

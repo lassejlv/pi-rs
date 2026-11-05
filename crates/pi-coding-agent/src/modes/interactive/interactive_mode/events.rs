@@ -44,7 +44,12 @@ impl ModelPriceSource for RuntimePrices {
 // construction and match across the crate for little memory saved.
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum RenderItem {
-    Message(AgentMessage),
+    // Keep metadata attached to the converted message, even when entries have identical content.
+    Message {
+        message: AgentMessage,
+        message_id: String,
+        timestamp: String,
+    },
     Custom(CustomEntry),
     Usage(UsageEntry),
     CompactionCost(CompactionCostNotice),
@@ -174,7 +179,12 @@ impl Inner {
         component
     }
 
-    fn new_assistant_component(&self, message: Option<AssistantMessage>) -> Arc<AssistantMessageComponent> {
+    fn new_assistant_component(
+        &self,
+        message: Option<AssistantMessage>,
+        message_id: Option<&str>,
+        timestamp: Option<&str>,
+    ) -> Arc<AssistantMessageComponent> {
         let (hide, label, pad) = {
             let s = self.state.lock();
             (s.hide_thinking_block, s.hidden_thinking_label.clone(), s.output_pad)
@@ -186,6 +196,8 @@ impl Inner {
             Some(&label),
             Some(pad),
             Some(&self.get_markdown_transformers()),
+            message_id,
+            timestamp,
         ))
     }
 
@@ -264,7 +276,7 @@ impl Inner {
                     self.request_render();
                 }
                 AgentMessage::Assistant(assistant) => {
-                    let component = self.new_assistant_component(None);
+                    let component = self.new_assistant_component(None, None, None);
                     {
                         let mut s = self.state.lock();
                         s.streaming_component = Some(component.clone());
@@ -620,6 +632,16 @@ impl Inner {
     }
 
     pub(crate) fn add_message_to_chat(&self, message: &AgentMessage, populate_history: bool) {
+        self.add_message_to_chat_with_meta(message, populate_history, None, None);
+    }
+
+    fn add_message_to_chat_with_meta(
+        &self,
+        message: &AgentMessage,
+        populate_history: bool,
+        message_id: Option<&str>,
+        timestamp: Option<&str>,
+    ) {
         let (expanded, pad) = {
             let s = self.state.lock();
             (s.tool_output_expanded, s.output_pad)
@@ -698,6 +720,8 @@ impl Inner {
                             Some(&self.get_markdown_theme_with_settings()),
                             Some(pad),
                             Some(&transformers),
+                            message_id,
+                            timestamp,
                         )));
                     }
                 } else {
@@ -706,6 +730,8 @@ impl Inner {
                         Some(&self.get_markdown_theme_with_settings()),
                         Some(pad),
                         Some(&transformers),
+                        message_id,
+                        timestamp,
                     )));
                 }
                 if populate_history {
@@ -713,7 +739,7 @@ impl Inner {
                 }
             }
             AgentMessage::Assistant(assistant) => {
-                let component = self.new_assistant_component(Some(assistant.clone()));
+                let component = self.new_assistant_component(Some(assistant.clone()), message_id, timestamp);
                 self.chat_container.add_child(component);
             }
             AgentMessage::ToolResult(_) => {
@@ -760,9 +786,9 @@ impl Inner {
                 RenderItem::Custom(entry) => self.add_custom_entry_to_chat(&entry),
                 RenderItem::Usage(entry) => self.add_cache_warming_usage(&entry),
                 RenderItem::CompactionCost(notice) => self.add_compaction_cost_notice(&notice),
-                RenderItem::Message(message) => match &message {
+                RenderItem::Message { message, message_id, timestamp } => match &message {
                     AgentMessage::Assistant(assistant) => {
-                        self.add_message_to_chat(&message, false);
+                        self.add_message_to_chat_with_meta(&message, false, Some(&message_id), Some(&timestamp));
                         for content in &assistant.content {
                             let AssistantContent::ToolCall(call) = content else { continue };
                             let args = Value::Object(call.arguments.clone().into_iter().collect());
@@ -792,7 +818,7 @@ impl Inner {
                             component.update_result(&value, None);
                         }
                     }
-                    _ => self.add_message_to_chat(&message, populate_history),
+                    _ => self.add_message_to_chat_with_meta(&message, populate_history, Some(&message_id), Some(&timestamp)),
                 },
             }
         }
@@ -821,7 +847,11 @@ impl Inner {
                         _ => None,
                     };
                     let has_messages = !messages.is_empty();
-                    items.extend(messages.into_iter().map(RenderItem::Message));
+                    items.extend(messages.into_iter().map(|message| RenderItem::Message {
+                        message,
+                        message_id: entry.id().to_string(),
+                        timestamp: entry.timestamp().to_string(),
+                    }));
                     if let Some((kind, usage)) = cost
                         && has_messages
                     {

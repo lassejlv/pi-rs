@@ -292,6 +292,8 @@ pub fn create_edit_tool_definition(cwd: &str, options: Option<&EditToolOptions>)
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(EDIT_SNIPPET.to_string());
     definition.prompt_guidelines = Some(EDIT_GUIDELINES.iter().map(|s| s.to_string()).collect());
     definition.constrained_sampling = Some(ConstrainedSamplingConfig::JsonSchema {

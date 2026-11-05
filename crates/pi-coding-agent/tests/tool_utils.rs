@@ -530,3 +530,35 @@ mod max_thinking {
         );
     }
 }
+
+// TS builds the built-in tool schemas with TypeBox, so `validateToolArguments` runs
+// `Value.Convert` before the JSON Schema coercion: a single edit object becomes a one-element
+// array, "" is 0, "1.9" truncates for integers, "TRUE"/"1" are booleans.
+#[test]
+fn builtin_tool_arguments_are_converted_like_typebox_value_convert() {
+    let tools = create_all_tools(".", None);
+    for tool in tools.values() {
+        assert!(tool.to_tool().typebox, "{}", tool.name());
+    }
+    let validate = |name: ToolName, arguments: Value| {
+        let tool = tools[&name].to_tool();
+        let call = pi_ai::types::ToolCall {
+            id: "call".into(),
+            name: tool.name.clone(),
+            arguments: arguments.as_object().unwrap().clone(),
+            thought_signature: None,
+            namespace: None,
+            arguments_error: None,
+        };
+        pi_ai::validate_tool_arguments(&tool, &call).map_err(|e| e.0)
+    };
+    assert_eq!(
+        validate(ToolName::Edit, json!({ "path": "f", "edits": { "oldText": "a", "newText": "b" } })).unwrap(),
+        json!({ "path": "f", "edits": [{ "oldText": "a", "newText": "b" }] })
+    );
+    assert_eq!(validate(ToolName::Read, json!({ "path": "f", "limit": "" })).unwrap(), json!({ "path": "f", "limit": 0 }));
+    assert_eq!(
+        validate(ToolName::Grep, json!({ "pattern": "x", "ignoreCase": "TRUE", "literal": "1" })).unwrap(),
+        json!({ "pattern": "x", "ignoreCase": true, "literal": true })
+    );
+}

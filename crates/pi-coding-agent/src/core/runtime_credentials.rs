@@ -6,13 +6,13 @@ use parking_lot::Mutex;
 use pi_ai::auth::types::{
     ApiKeyCredential, AuthType, Credential, CredentialInfo, CredentialStore, ModifyCredentialFn,
 };
-use pi_ai::utils::provider_retry::AbortError;
+use pi_ai::utils::abort::SignalAbortError;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 fn throw_if_aborted(signal: Option<&CancellationToken>) -> anyhow::Result<()> {
     if signal.is_some_and(CancellationToken::is_cancelled) {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }

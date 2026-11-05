@@ -239,20 +239,9 @@ fn home_dir() -> String {
     std::env::var("HOME").unwrap_or_default()
 }
 
-/// Approximation of `String.prototype.localeCompare` (ICU root collation): case-insensitive
-/// comparison first, lowercase before uppercase on ties.
+/// `String.prototype.localeCompare` (ICU root collation).
 pub(crate) fn locale_compare(a: &str, b: &str) -> std::cmp::Ordering {
-    let la = a.to_lowercase();
-    let lb = b.to_lowercase();
-    la.cmp(&lb).then_with(|| {
-        // Lowercase sorts before uppercase at the tertiary level.
-        let flip = |s: &str| -> String {
-            s.chars()
-                .map(|c| if c.is_lowercase() { c.to_uppercase().next().unwrap_or(c) } else { c.to_lowercase().next().unwrap_or(c) })
-                .collect()
-        };
-        flip(a).cmp(&flip(b))
-    })
+    crate::collation::locale_compare(a, b)
 }
 
 // ---------------------------------------------------------------------------

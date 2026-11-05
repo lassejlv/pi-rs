@@ -12,6 +12,8 @@ pi-mcp.workspace = true
 pi-codemode.workspace = true
 pi-telemetry.workspace = true
 pi-jsrt.workspace = true
+pi-durable-jsrt.workspace = true
+pi-json.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 futures.workspace = true
@@ -34,16 +36,19 @@ indexmap.workspace = true
 unicode-width.workspace = true
 flate2.workspace = true
 crc32fast.workspace = true
+pi-embed.workspace = true
 fancy-regex.workspace = true
 libc.workspace = true
 image.workspace = true
 unicode-normalization.workspace = true
-yaml-rust2.workspace = true
 notify.workspace = true
 ignore.workspace = true
 semver.workspace = true
 globset.workspace = true
 sha1.workspace = true
+
+[build-dependencies]
+flate2.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

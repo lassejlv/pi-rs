@@ -152,6 +152,16 @@ fn golden_system_prompts() {
     finish(failures);
 }
 
+/// Help lines that differ from TypeScript on purpose: `(TS line, Rust line)`.
+const HELP_DIVERGENCES: &[(&str, &str)] = &[
+    // `--tools +codemode` / `+tool_search` load those built-in extensions even with `-ne`
+    // (`requested_builtin_tool_extensions` in `pi_main.rs`).
+    (
+        "  --no-extensions, -ne           Disable extension discovery and built-in extensions (explicit -e paths still work)",
+        "  --no-extensions, -ne           Disable extension discovery and built-in extensions (explicit -e and --tools requests still work)",
+    ),
+];
+
 #[test]
 fn golden_help() {
     let fixture = fixture();
@@ -159,8 +169,14 @@ fn golden_help() {
     for case in selected(&fixture, &["help"]) {
         let flags: Option<Vec<ExtensionFlag>> = serde_json::from_value(case.input["flags"].clone()).unwrap();
         let text = help_text(flags.as_deref());
+        let mut expected = case.out["text"].as_str().unwrap().to_string();
+        for (ts, rs) in HELP_DIVERGENCES {
+            // A divergence that no longer matches the TS text must be revisited, not ignored.
+            assert!(expected.contains(ts), "{}: TS help no longer has {ts:?}", case.name);
+            expected = expected.replace(ts, rs);
+        }
         // `console.log` adds the trailing newline that `print_help`'s `println!` adds.
-        check(&mut failures, &case.name, case.out["text"].as_str().unwrap(), &text);
+        check(&mut failures, &case.name, &expected, &text);
     }
     finish(failures);
 }

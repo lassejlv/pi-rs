@@ -1,10 +1,12 @@
 //! Loop instrumentation.
 //!
-//! The script's loops call a native tick on every iteration to count the interrupt budget.
-//! djs also charges interpreter fuel, including promise jobs and generated code. Fatal stops
-//! abort the interpreter, so async functions cannot swallow cancellation or exhaustion.
-//! Insertions add no line breaks; columns on instrumented lines may shift.
-
+//! The script's loops call a native tick function on every iteration: the tick counts the
+//! execution's interrupt budget, which must count the same iterations on every run for
+//! deterministic replays (fuel consumption also depends on the engine's internals), and polls the host's interrupt flag (deadline, abort, a script that
+//! already reported its result). It records why it stopped the script, so the VM can report it
+//! even when an async function swallows the error. The call is inserted without adding line
+//! breaks, so line numbers in stack traces are unchanged. Code produced at run time (`eval`,
+//! `Function`) is not instrumented; the VM's fuel limit bounds it and the host can interrupt it between fuel slices.
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{DoWhileStatement, ForInStatement, ForOfStatement, ForStatement, Statement, WhileStatement};
@@ -59,9 +61,8 @@ impl<'a> Visit<'a> for LoopFinder {
     }
 }
 
-/// `source` with a tick call at the start of every loop body, or `None` when it does not parse
-/// (the engine then reports the syntax error).
-pub(crate) fn instrument_loops(source: &str) -> Option<String> {
+/// Ordered insertions for parsed loop bodies.
+fn loop_inserts(source: &str) -> Option<Vec<(usize, &'static str)>> {
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, source, SourceType::script()).parse();
     if parsed.fatal_error || !parsed.diagnostics.is_empty() {
@@ -69,14 +70,16 @@ pub(crate) fn instrument_loops(source: &str) -> Option<String> {
     }
     let mut finder = LoopFinder { inserts: Vec::new() };
     finder.visit_program(&parsed.program);
-    if finder.inserts.is_empty() {
-        return Some(source.to_string());
-    }
     // Stable: a `}` closing one body and a `{` opening the next at the same offset keep their order.
     finder.inserts.sort_by_key(|(offset, _)| *offset);
-    let mut out = String::with_capacity(source.len() + finder.inserts.len() * 20);
+    Some(finder.inserts)
+}
+
+pub(crate) fn instrument_loops(source: &str) -> Option<String> {
+    let inserts = loop_inserts(source)?;
+    let mut out = String::with_capacity(source.len() + inserts.len() * 20);
     let mut last = 0;
-    for (offset, text) in finder.inserts {
+    for (offset, text) in inserts {
         if offset > source.len() || !source.is_char_boundary(offset) || offset < last {
             return None;
         }
@@ -86,6 +89,38 @@ pub(crate) fn instrument_loops(source: &str) -> Option<String> {
     }
     out.push_str(&source[last..]);
     Some(out)
+}
+
+/// Parse an escaped UTF-8 view solely to locate loop boundaries. Apply those
+/// insertions to the original UTF-16, preserving literal, comment and regex text.
+pub(crate) fn instrument_loops_utf16(source: &[u16]) -> Option<Vec<u16>> {
+    let mut parsed = String::new();
+    let mut offsets = vec![Some(0)];
+    let mut units = 0;
+    for scalar in char::decode_utf16(source.iter().copied()) {
+        let (text, consumed) = match scalar {
+            Ok(ch) => (ch.to_string(), ch.len_utf16()),
+            Err(error) => (format!("\\u{:04x}", error.unpaired_surrogate()), 1),
+        };
+        parsed.push_str(&text);
+        offsets.resize(parsed.len(), None);
+        units += consumed;
+        offsets.push(Some(units));
+    }
+    let inserts = loop_inserts(&parsed)?;
+    let mut result = Vec::with_capacity(source.len() + inserts.len() * 20);
+    let mut last = 0;
+    for (offset, text) in inserts {
+        let offset = offsets.get(offset).copied().flatten()?;
+        if offset < last || offset > source.len() {
+            return None;
+        }
+        result.extend_from_slice(&source[last..offset]);
+        result.extend(text.encode_utf16());
+        last = offset;
+    }
+    result.extend_from_slice(&source[last..]);
+    Some(result)
 }
 
 #[cfg(test)]
@@ -104,5 +139,15 @@ mod tests {
         );
         assert!(instrument_loops("const = ;").is_none());
         assert_eq!(TICK, "__codemode$tick");
+    }
+
+    #[test]
+    fn utf16_instrumentation_preserves_raw_units_and_maps_multibyte_offsets() {
+        let prefix: Vec<u16> = "// \u{10000} é\nconst x = '".encode_utf16().chain([0xd800]).collect();
+        let mut source = prefix.clone();
+        source.extend("'; while(x) { f(); }".encode_utf16());
+        let mut expected = prefix;
+        expected.extend("'; while(x) {__codemode$tick(); f(); }".encode_utf16());
+        assert_eq!(instrument_loops_utf16(&source).unwrap(), expected);
     }
 }

@@ -612,105 +612,204 @@ internal.defineBuiltin("tty", () => ({
   WriteStream: class WriteStream extends EventEmitter {},
 }));
 
-internal.defineBuiltin("perf_hooks", () => ({
-  performance: internal.performance,
-  PerformanceObserver: class PerformanceObserver {
-    observe() {}
-    disconnect() {}
-  },
-  monitorEventLoopDelay: () => ({ enable() {}, disable() {}, percentile: () => 0, mean: 0, max: 0, min: 0 }),
-}));
+
+
+// AsyncLocalStorage and async_hooks over the engine's async context (src/engine.rs): the
+// frame (a Map of AsyncLocalStorage -> store) and async ids are captured when promise
+// reactions, timers and AsyncResources are created and restored while their callbacks run.
+
+const EMPTY_FRAME = new Map();
+const currentFrame = () => ops.asyncContext()[0] ?? EMPTY_FRAME;
+const activeHooks = new Set();
+const hookResources = new Map();
+
+function emitHook(kind, id, type, trigger) {
+  for (const hook of [...activeHooks]) {
+    const fn = hook[kind];
+    if (typeof fn !== "function") continue;
+    if (kind === "init") {
+      let resource = hookResources.get(id);
+      if (!resource) {
+        resource = {};
+        hookResources.set(id, resource);
+      }
+      fn.call(hook, id, type, trigger, resource);
+    } else {
+      fn.call(hook, id);
+    }
+  }
+  if (kind === "destroy") hookResources.delete(id);
+}
+
+class AsyncHook {
+  constructor({ init, before, after, destroy, promiseResolve } = {}) {
+    for (const [name, fn] of Object.entries({ init, before, after, destroy, promiseResolve })) {
+      if (fn !== undefined && typeof fn !== "function") {
+        const err = new TypeError(`hook.${name} must be a function`);
+        err.code = "ERR_ASYNC_CALLBACK";
+        throw err;
+      }
+    }
+    this.init = init;
+    this.before = before;
+    this.after = after;
+    this.destroy = destroy;
+    this.promiseResolve = promiseResolve;
+  }
+  enable() {
+    activeHooks.add(this);
+    ops.asyncHooksEnable(emitHook);
+    return this;
+  }
+  disable() {
+    activeHooks.delete(this);
+    if (activeHooks.size === 0) ops.asyncHooksEnable(null);
+    return this;
+  }
+}
+
+class AsyncResource {
+  #ctx;
+  #destroyed = false;
+  constructor(type, opts = {}) {
+    if (typeof type !== "string") {
+      const err = new TypeError(`The "type" argument must be of type string. Received ${internal.describeReceived(type)}`);
+      err.code = "ERR_INVALID_ARG_TYPE";
+      throw err;
+    }
+    let triggerAsyncId = opts;
+    if (typeof opts !== "number") triggerAsyncId = opts?.triggerAsyncId;
+    if (triggerAsyncId !== undefined && (!Number.isSafeInteger(triggerAsyncId) || triggerAsyncId < -1)) {
+      const err = new RangeError(`Invalid triggerAsyncId value: ${triggerAsyncId}`);
+      err.code = "ERR_INVALID_ASYNC_ID";
+      throw err;
+    }
+    this.#ctx = ops.asyncResourceNew(type, triggerAsyncId);
+  }
+  runInAsyncScope(fn, thisArg, ...args) {
+    const previous = ops.asyncEnter(this.#ctx);
+    const id = this.asyncId();
+    if (activeHooks.size) emitHook("before", id);
+    try {
+      return Reflect.apply(fn, thisArg, args);
+    } finally {
+      if (activeHooks.size) emitHook("after", id);
+      ops.asyncEnter(previous);
+    }
+  }
+  emitDestroy() {
+    if (!this.#destroyed) {
+      this.#destroyed = true;
+      if (activeHooks.size) emitHook("destroy", this.asyncId());
+    }
+    return this;
+  }
+  asyncId() {
+    return ops.asyncResourceInfo(this.#ctx)[0];
+  }
+  triggerAsyncId() {
+    return ops.asyncResourceInfo(this.#ctx)[1];
+  }
+  bind(fn, thisArg) {
+    if (typeof fn !== "function") {
+      const err = new TypeError(`The "fn" argument must be of type function. Received ${internal.describeReceived(fn)}`);
+      err.code = "ERR_INVALID_ARG_TYPE";
+      throw err;
+    }
+    const resource = this;
+    const bound =
+      thisArg === undefined
+        ? function (...args) {
+            return resource.runInAsyncScope(fn, this, ...args);
+          }
+        : (...args) => resource.runInAsyncScope(fn, thisArg, ...args);
+    Object.defineProperties(bound, {
+      length: { configurable: true, enumerable: false, value: fn.length, writable: false },
+      asyncResource: { configurable: true, enumerable: true, value: this, writable: true },
+    });
+    return bound;
+  }
+  static bind(fn, type, thisArg) {
+    type = type || fn.name || "bound-anonymous-fn";
+    return new AsyncResource(type).bind(fn, thisArg);
+  }
+}
 
 class AsyncLocalStorage {
-  #store = undefined;
   #enabled = false;
-  getStore() {
-    return this.#enabled ? this.#store : undefined;
-  }
-  run(store, fn, ...args) {
-    const prev = this.#store;
-    const prevEnabled = this.#enabled;
-    this.#store = store;
-    this.#enabled = true;
-    try {
-      const r = fn(...args);
-      if (r && typeof r.then === "function") {
-        return r.finally(() => {
-          this.#store = prev;
-          this.#enabled = prevEnabled;
-        });
-      }
-      this.#store = prev;
-      this.#enabled = prevEnabled;
-      return r;
-    } catch (e) {
-      this.#store = prev;
-      this.#enabled = prevEnabled;
-      throw e;
+  constructor(options = {}) {
+    if (options === null || typeof options !== "object") {
+      const err = new TypeError(`The "options" argument must be of type object. Received ${internal.describeReceived(options)}`);
+      err.code = "ERR_INVALID_ARG_TYPE";
+      throw err;
     }
   }
-  enterWith(store) {
-    this.#store = store;
-    this.#enabled = true;
+  static bind(fn) {
+    return AsyncResource.bind(fn);
   }
-  exit(fn, ...args) {
-    const prev = this.#store;
-    this.#enabled = false;
-    try {
-      return fn(...args);
-    } finally {
-      this.#store = prev;
-      this.#enabled = true;
-    }
+  static snapshot() {
+    return AsyncResource.bind(function runInAsyncScope(cb, ...args) {
+      return Reflect.apply(cb, this, args);
+    });
   }
   disable() {
     this.#enabled = false;
   }
-  static bind(fn) {
-    return fn;
+  _enable() {
+    this.#enabled = true;
   }
-  static snapshot() {
-    return (fn, ...args) => fn(...args);
+  getStore() {
+    if (!this.#enabled) return undefined;
+    return currentFrame().get(this);
+  }
+  enterWith(store) {
+    this.#enabled = true;
+    const next = new Map(currentFrame());
+    next.set(this, store);
+    ops.asyncFrameSet(next);
+  }
+  run(store, callback, ...args) {
+    const previous = currentFrame();
+    if (this.#enabled && previous.has(this) && Object.is(previous.get(this), store)) return Reflect.apply(callback, null, args);
+    this.#enabled = true;
+    const next = new Map(previous);
+    next.set(this, store);
+    ops.asyncFrameSet(next);
+    try {
+      return Reflect.apply(callback, null, args);
+    } finally {
+      ops.asyncFrameSet(previous === EMPTY_FRAME ? undefined : previous);
+    }
+  }
+  exit(callback, ...args) {
+    if (!this.#enabled) return Reflect.apply(callback, null, args);
+    this.disable();
+    try {
+      return Reflect.apply(callback, null, args);
+    } finally {
+      this._enable();
+    }
   }
 }
+
+internal.AsyncResource = AsyncResource;
 internal.defineBuiltin("async_hooks", () => ({
   AsyncLocalStorage,
-  AsyncResource: class AsyncResource {
-    constructor(type) {
-      this.type = type;
+  AsyncResource,
+  AsyncHook,
+  createHook: (callbacks) => new AsyncHook(callbacks),
+  executionAsyncId: () => ops.asyncContext()[1],
+  triggerAsyncId: () => ops.asyncContext()[2],
+  executionAsyncResource: () => {
+    const id = ops.asyncContext()[1];
+    let resource = hookResources.get(id);
+    if (!resource) {
+      resource = {};
+      hookResources.set(id, resource);
     }
-    runInAsyncScope(fn, thisArg, ...args) {
-      return fn.apply(thisArg, args);
-    }
-    bind(fn) {
-      return fn.bind(this);
-    }
-    static bind(fn) {
-      return fn;
-    }
-    emitDestroy() {
-      return this;
-    }
+    return resource;
   },
-  createHook: () => ({ enable() {}, disable() {} }),
-  executionAsyncId: () => 1,
-  triggerAsyncId: () => 0,
-}));
-
-internal.defineBuiltin("worker_threads", () => ({
-  isMainThread: true,
-  parentPort: null,
-  workerData: null,
-  threadId: 0,
-  resourceLimits: {},
-  Worker: class Worker {
-    constructor() {
-      throw new Error("worker_threads.Worker is not supported in pi-jsrt");
-    }
-  },
-  MessageChannel: class MessageChannel {},
-  MessagePort: class MessagePort extends EventEmitter {},
-  BroadcastChannel: class BroadcastChannel extends EventEmitter {},
+  asyncWrapProviders: Object.freeze(Object.assign(Object.create(null), {"NONE":0,"DIRHANDLE":1,"DNSCHANNEL":2,"ELDHISTOGRAM":3,"FILEHANDLE":4,"FILEHANDLECLOSEREQ":5,"BLOBREADER":6,"FSEVENTWRAP":7,"FSREQCALLBACK":8,"FSREQPROMISE":9,"GETADDRINFOREQWRAP":10,"GETNAMEINFOREQWRAP":11,"HEAPSNAPSHOT":12,"HTTP2SESSION":13,"HTTP2STREAM":14,"HTTP2PING":15,"HTTP2SETTINGS":16,"HTTPINCOMINGMESSAGE":17,"HTTPCLIENTREQUEST":18,"JSSTREAM":19,"JSUDPWRAP":20,"MESSAGEPORT":21,"PIPECONNECTWRAP":22,"PIPESERVERWRAP":23,"PIPEWRAP":24,"PROCESSWRAP":25,"PROMISE":26,"QUERYWRAP":27,"QUIC_ENDPOINT":28,"QUIC_LOGSTREAM":29,"QUIC_PACKET":30,"QUIC_SESSION":31,"QUIC_STREAM":32,"QUIC_UDP":33,"SHUTDOWNWRAP":34,"SIGNALWRAP":35,"STATWATCHER":36,"STREAMPIPE":37,"TCPCONNECTWRAP":38,"TCPSERVERWRAP":39,"TCPWRAP":40,"TTYWRAP":41,"UDPSENDWRAP":42,"UDPWRAP":43,"SIGINTWATCHDOG":44,"WORKER":45,"WORKERCPUPROFILE":46,"WORKERCPUUSAGE":47,"WORKERHEAPSNAPSHOT":48,"WORKERHEAPSTATISTICS":49,"WRITEWRAP":50,"ZLIB":51,"CHECKPRIMEREQUEST":52,"PBKDF2REQUEST":53,"KEYPAIRGENREQUEST":54,"KEYGENREQUEST":55,"KEYEXPORTREQUEST":56,"CIPHERREQUEST":57,"DERIVEBITSREQUEST":58,"HASHREQUEST":59,"RANDOMBYTESREQUEST":60,"RANDOMPRIMEREQUEST":61,"SCRYPTREQUEST":62,"SIGNREQUEST":63,"TLSWRAP":64,"VERIFYREQUEST":65})),
 }));
 
 internal.defineBuiltin("console", () => globalThis.console);
@@ -729,51 +828,5 @@ function stubModule(name, names, extra = {}) {
     return mod;
   });
 }
-stubModule("zlib", [
-  "gzip",
-  "gzipSync",
-  "gunzip",
-  "gunzipSync",
-  "deflate",
-  "deflateSync",
-  "inflate",
-  "inflateSync",
-  "deflateRaw",
-  "deflateRawSync",
-  "inflateRaw",
-  "inflateRawSync",
-  "brotliCompress",
-  "brotliCompressSync",
-  "brotliDecompress",
-  "brotliDecompressSync",
-  "unzip",
-  "unzipSync",
-  "createGzip",
-  "createGunzip",
-  "createDeflate",
-  "createInflate",
-  "createBrotliCompress",
-  "createBrotliDecompress",
-], { constants: {} });
-stubModule("tls", ["connect", "createServer", "createSecureContext", "TLSSocket"]);
-stubModule("dns", ["lookup", "resolve", "resolve4", "resolve6", "reverse"], { promises: {} });
-stubModule("dgram", ["createSocket"]);
-stubModule("cluster", ["fork", "setupPrimary"], { isPrimary: true, isMaster: true, isWorker: false });
-stubModule("vm", ["runInNewContext", "runInContext", "createContext", "Script", "compileFunction"], {
-  runInThisContext: (code) => (0, eval)(String(code)),
-  isContext: () => false,
-});
-stubModule("v8", ["serialize", "deserialize", "getHeapSnapshot", "writeHeapSnapshot"], {
-  getHeapStatistics: () => ({ total_heap_size: 0, used_heap_size: 0, heap_size_limit: 0 }),
-  setFlagsFromString: () => {},
-});
 stubModule("inspector", ["open", "close", "url", "Session"]);
-stubModule("http2", ["connect", "createServer"], { constants: {}, sensitiveHeaders: Symbol("nodejs.http2.sensitiveHeaders") });
-stubModule("diagnostics_channel", [], {
-  channel: () => ({ hasSubscribers: false, publish() {}, subscribe() {}, unsubscribe() {} }),
-  hasSubscribers: () => false,
-  subscribe() {},
-  unsubscribe() {},
-  tracingChannel: () => ({ hasSubscribers: false, traceSync: (fn, ctx, thisArg, ...args) => fn.apply(thisArg, args), tracePromise: (fn, ctx, thisArg, ...args) => fn.apply(thisArg, args) }),
-});
 stubModule("constants", [], {});

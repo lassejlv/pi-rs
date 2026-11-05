@@ -1,0 +1,3468 @@
+{
+ "chunk": "EMBEDDED-PLAN.md 4.D, tool/codemode half (D2): @earendil-works/pi-durable/codemode, /tool-search, harness/tool.ts tokens, and the embedded @earendil-works/pi-codemode",
+ "runner": "CARGO_TARGET_DIR=<dir> cargo run --release -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=<reference>",
+ "summary": "Each file runs byte-for-byte unchanged in pi-jsrt (Boa) against the embedded modules, in both PI_DURABLE_DOCUMENT_RETENTION_MS modes (unset, 0), no name filter, original timeouts; every case passes. Execution reaches Rust (nativeCalls). Durable code mode runs in the in-process stock service (crates/pi-durable/examples/task_stock_bridge.rs via src/dispatch/transport.rs); only the caller's sandbox, globals and model collections are called back. The sandbox is the embedded @earendil-works/pi-codemode over the native pi-codemode Boa VM (QuickJS wasm cannot run in Boa): Every runtime export of @earendil-works/pi-codemode is embedded: CodemodeSandbox (start and execute with live JS tools, globals, store, abort, close, acquireWorker/onWorkerStarted), InlineCodemodeSandbox (interrupt budget), RemoteCodemodeSandbox and serveCodemodeRemote (the caller's JS remote and exchange), declarations and source. loadQuickJSWasm resolves to an inert stand-in: there is no QuickJS module to load (a wasm promise that rejects still fails executions as upstream). Cases classed n/a depend on QuickJS, Node workers or V8 and are justified per case; every other case passes.",
+ "files": [
+  {
+   "reference": "packages/codemode/test/declarations.test.ts",
+   "sha256": "6f4366071bd15e977da25ef8292996a013505e3b0acc06786128ef4bc434275f",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 17,
+     "total": 17,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 42
+    },
+    {
+     "retention": "0",
+     "passed": 17,
+     "total": 17,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 42
+    }
+   ],
+   "cases": [
+    {
+     "name": "schemaToType renders primitives, literals, and unions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType renders objects on one line with sorted properties",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType puts property descriptions on comment lines",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType puts constraints the type cannot express on property comment lines",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType reads constraints of optional fields from the non-null branch",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType reads draft-04 boolean exclusive bounds",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType leaves out long tags and escapes line terminators",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType drops constraint tags before rendering a type over the budget as unknown",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType resolves local references and stops at recursive ones",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType renders arrays and tuples",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "schemaToType renders types over the budget as unknown",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool declarations renders signatures with normalized identifiers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool declarations renders output schemas shaped like an MCP CallToolResult as plain types",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool declarations renders the per-tool sample",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "renderDeclarations renders tools and globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "renderDeclarations renders namespaced globals and explicit signatures",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "renderDeclarations escapes comment terminators in descriptions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ],
+   "note": "The runner routes packages/codemode (both modes, like scripts/run-stock-codemode-declarations.mjs); rendering is pi_codemode::declarations::json (codemode.sdk.* methods)."
+  },
+  {
+   "reference": "packages/codemode/test/worker-lifetime.test.ts",
+   "sha256": "bbfd2ed4acbe7ceef8eeeae54f304dfdaba1a999e7e860f45bcb86059509d02e",
+   "success": false,
+   "passedAll": false,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 8,
+     "total": 14,
+     "failed": 6,
+     "uncaught": 0,
+     "nativeCalls": 42
+    },
+    {
+     "retention": "0",
+     "passed": 8,
+     "total": 14,
+     "failed": 6,
+     "uncaught": 0,
+     "nativeCalls": 42
+    }
+   ],
+   "cases": [
+    {
+     "name": "worker lifetime does not start a worker when admission is denied",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker lifetime releases admission when worker construction fails",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker lifetime does not acquire admission when wasm loading fails",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker lifetime settles abort without waiting for worker exit",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Spies on node:worker_threads Worker.prototype.terminate/ref/unref of the upstream QuickJS worker; the native VM thread has no Worker object."
+    },
+    {
+     "name": "worker lifetime settles timeout without waiting for worker exit",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "As above (Worker.prototype spies)."
+    },
+    {
+     "name": "worker lifetime settles close without waiting for worker exit",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "As above (Worker.prototype spies)."
+    },
+    {
+     "name": "worker lifetime reports the actual exit of execute() and start() workers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker lifetime requests termination when onWorkerStarted throws",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "Node process lifetime exits promptly after abort with a real worker",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Spawns process.execPath on the upstream fixture fixtures/worker-process-exit.ts (upstream source with a real QuickJS worker)."
+    },
+    {
+     "name": "Node process lifetime exits promptly after timeout with a real worker",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Spawns process.execPath on the upstream fixture fixtures/worker-process-exit.ts (upstream source with a real QuickJS worker)."
+    },
+    {
+     "name": "Node process lifetime exits promptly after close with a real worker",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Spawns process.execPath on the upstream fixture fixtures/worker-process-exit.ts (upstream source with a real QuickJS worker)."
+    },
+    {
+     "name": "Bun process lifetime settles abort promptly with a real worker",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "Bun process lifetime settles timeout promptly with a real worker",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "Bun process lifetime settles close promptly with a real worker",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/codemode/test/portable.test.ts",
+   "sha256": "e80323f38106e4f63590a7ff727965c3b450422b95f6de679d9960b7d9db784f",
+   "success": false,
+   "passedAll": false,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 5,
+     "total": 7,
+     "failed": 2,
+     "uncaught": 0,
+     "nativeCalls": 43
+    },
+    {
+     "retention": "0",
+     "passed": 5,
+     "total": 7,
+     "failed": 2,
+     "uncaught": 0,
+     "nativeCalls": 43
+    }
+   ],
+   "cases": [
+    {
+     "name": "InlineCodemodeSandbox fails a script that computes past its interrupt budget as a timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "InlineCodemodeSandbox counts the budget across waits on tools",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Interrupt budget unit: 1e5 loop iterations per round exceed a 1000 budget of pi-codemode iterations before the first tool call, while QuickJS polls interrupts far less often (the Rust port's test uses 100 iterations)."
+    },
+    {
+     "name": "RemoteCodemodeSandbox runs tools in the caller and the script on the remote",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "RemoteCodemodeSandbox batches output instead of making one exchange per line",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "RemoteCodemodeSandbox caps the interrupt budget and memory at the remote's limits",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Budget half passes; the memory half needs a heap limit, which Boa lacks (only ArrayBuffer allocations are capped, as the Rust port's test checks)."
+    },
+    {
+     "name": "RemoteCodemodeSandbox tells the remote to stop when the caller aborts",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "RemoteCodemodeSandbox reports a failing or vanishing remote as a sandbox error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/codemode/test/deterministic.test.ts",
+   "sha256": "7e052391ea766e58e34ae204c8b641f60a0eeaa47137f3247304c47d2847d912",
+   "success": false,
+   "passedAll": false,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 28,
+     "total": 30,
+     "failed": 2,
+     "uncaught": 0,
+     "nativeCalls": 452
+    },
+    {
+     "retention": "0",
+     "passed": 28,
+     "total": 30,
+     "failed": 2,
+     "uncaught": 0,
+     "nativeCalls": 452
+    }
+   ],
+   "cases": [
+    {
+     "name": "deterministic runs (worker) makes the same calls and output for the same start, seed, and results",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) runs in UTC whatever the host's timezone, and without WeakRef or FinalizationRegistry",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) applies results in seq order, whatever order they are delivered in",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) reports the fingerprint before any call and the calls issued after each result",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Engine identity, by design. The fingerprint names the VM so a replay never continues on a different one: durable code mode records it in CodemodeRunDoc.start.fingerprint on the first run and refuses to resume when it differs (packages/durable/src/codemode/codemode.ts checkFingerprint, test 'refuses to resume when the sandbox's fingerprint or the code mode version changed'). A run started under QuickJS cannot resume on Boa, nor on another QuickJS version, upstream either. Reporting 'quickjs-wasi …, quickjs …' from Boa would let such a run resume on a VM whose observable behaviour differs (error messages, interrupt-budget units, no heap limit), breaking replay without notice. Completed work interchanges: journal entries, results, store values and outputs are plain JSON in the documents. Math.random now produces QuickJS's exact values for every seed (xorshift64*, state seed + 1, one draw at context creation; pi-codemode determinism version 5), so a fresh replay of the same script and results makes the same calls on either engine. The rest of the case (idle/issued reporting) passes. The native fingerprint is 'boa 0.22, prelude …, deterministic 5, stack …, heap …, budget …'."
+    },
+    {
+     "name": "deterministic runs (worker) numbers calls to globals with tools, and answers errors as rejections",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) keeps the clock monotonic and rejects a clock value that is not finite",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) reports the result the VM was processing when the script ended",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) leaves a call waiting when its answer cannot be serialized",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) rejects with an Error carrying the answer's properties",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) rejects rejection properties that are not an object, and tools sharing a script name",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) uses the script names the run passes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) ends with an error the script cannot catch when the caller aborts",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) is finished once it has its outcome",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (worker) rejects a call that is not waiting and a result number used twice",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) makes the same calls and output for the same start, seed, and results",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) runs in UTC whatever the host's timezone, and without WeakRef or FinalizationRegistry",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) applies results in seq order, whatever order they are delivered in",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) reports the fingerprint before any call and the calls issued after each result",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Engine identity, by design. The fingerprint names the VM so a replay never continues on a different one: durable code mode records it in CodemodeRunDoc.start.fingerprint on the first run and refuses to resume when it differs (packages/durable/src/codemode/codemode.ts checkFingerprint, test 'refuses to resume when the sandbox's fingerprint or the code mode version changed'). A run started under QuickJS cannot resume on Boa, nor on another QuickJS version, upstream either. Reporting 'quickjs-wasi …, quickjs …' from Boa would let such a run resume on a VM whose observable behaviour differs (error messages, interrupt-budget units, no heap limit), breaking replay without notice. Completed work interchanges: journal entries, results, store values and outputs are plain JSON in the documents. Math.random now produces QuickJS's exact values for every seed (xorshift64*, state seed + 1, one draw at context creation; pi-codemode determinism version 5), so a fresh replay of the same script and results makes the same calls on either engine. The rest of the case (idle/issued reporting) passes. The native fingerprint is 'boa 0.22, prelude …, deterministic 5, stack …, heap …, budget …'."
+    },
+    {
+     "name": "deterministic runs (remote) numbers calls to globals with tools, and answers errors as rejections",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) keeps the clock monotonic and rejects a clock value that is not finite",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) reports the result the VM was processing when the script ended",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) leaves a call waiting when its answer cannot be serialized",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) rejects with an Error carrying the answer's properties",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) rejects rejection properties that are not an object, and tools sharing a script name",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) uses the script names the run passes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) ends with an error the script cannot catch when the caller aborts",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) is finished once it has its outcome",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote) rejects a call that is not waiting and a result number used twice",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deterministic runs (remote transport) applies results in seq order when the transport reorders replies sent in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "execute() is not deterministic reads the real clock and real randomness",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ],
+   "note": "Math.random matches QuickJS exactly (pinned PINNED_FIRST_RANDOM/PINNED_SEED_ZERO pass). The execute() timezone half passes through pi-jsrt's live process.env (TZ sets the runtime's timezone, as in Node); the serving runtime's TZ applies to remote VMs, as for upstream's in-process remote."
+  },
+  {
+   "reference": "packages/codemode/test/sandbox.test.ts",
+   "sha256": "f9252a9b5851d6187ce3bdbefe89f83fff5c5395b197c378640936fd94a9da63",
+   "success": false,
+   "passedAll": false,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 143,
+     "total": 153,
+     "failed": 10,
+     "uncaught": 0,
+     "nativeCalls": 828
+    },
+    {
+     "retention": "0",
+     "passed": 143,
+     "total": 153,
+     "failed": 10,
+     "uncaught": 0,
+     "nativeCalls": 828
+    }
+   ],
+   "cases": [
+    {
+     "name": "embedded sources parse as JavaScript",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution returns the script's return value after a JSON round trip",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution supports top-level await",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution collects text(), image(), and console output in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution rejects invalid text() and image() arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution accepts wrapped and large base64 image data",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution ends the script successfully on exit(), keeping output and store writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution keeps output produced before a failure",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution reports syntax errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution reports thrown errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution formats stacks like V8 without prelude frames",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution reports non-Error throws",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend script execution reports a non-serializable return value as a script error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools exposes tools as async functions and records calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools runs concurrent calls and lists tool names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools exposes tools under normalized identifiers and lists them in ALL_TOOLS",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools passes undefined arguments and results through",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools turns tool errors into catchable Errors in the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools rejects calls to unknown tools",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools aborts unawaited calls when the script returns",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools names close matches when a script reads a tool that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend tools supports register and unregister between executions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend store and load reads the snapshot and reports writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend store and load returns copies, so mutating a loaded value does not change the store",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend store and load rejects invalid keys, values, and oversized writes inside the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend store and load explains oversized writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend store and load reserves the store and load names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend globals exposes globals as top-level functions without recording them as calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend globals groups namespaced globals and spreads arguments on request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend globals names the members of a namespace when a script reads one that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend globals rejects invalid and reserved global names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime terminates a synchronous infinite loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime runs without a deadline when timeoutMs is Infinity",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime fails a script that waits on a promise nothing can settle",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime terminates a microtask-spinning loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime aborts via signal and cancels in-flight calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime fails a script whose output passes the limits, even if it catches the error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime rejects execute after close",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime runs executions in parallel without sharing state",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend limits and lifetime turns deep recursion into a catchable RangeError",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches has no host globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches keeps eval and Function inside the VM",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches rejects dynamic import",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches ignores patches to built-ins and built-in globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches freezes intrinsics that are only reachable from instances",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches still lets instances override properties of frozen prototypes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches reports errors whose name or message is not a string",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker backend escape hatches keeps tools and console frozen",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution returns the script's return value after a JSON round trip",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution supports top-level await",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution collects text(), image(), and console output in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution rejects invalid text() and image() arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution accepts wrapped and large base64 image data",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution ends the script successfully on exit(), keeping output and store writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution keeps output produced before a failure",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution reports syntax errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution reports thrown errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution formats stacks like V8 without prelude frames",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution reports non-Error throws",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend script execution reports a non-serializable return value as a script error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools exposes tools as async functions and records calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools runs concurrent calls and lists tool names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools exposes tools under normalized identifiers and lists them in ALL_TOOLS",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools passes undefined arguments and results through",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools turns tool errors into catchable Errors in the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools rejects calls to unknown tools",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools aborts unawaited calls when the script returns",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools names close matches when a script reads a tool that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend tools supports register and unregister between executions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend store and load reads the snapshot and reports writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend store and load returns copies, so mutating a loaded value does not change the store",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend store and load rejects invalid keys, values, and oversized writes inside the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend store and load explains oversized writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend store and load reserves the store and load names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend globals exposes globals as top-level functions without recording them as calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend globals groups namespaced globals and spreads arguments on request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend globals names the members of a namespace when a script reads one that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend globals rejects invalid and reserved global names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime terminates a synchronous infinite loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime runs without a deadline when timeoutMs is Infinity",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime fails a script that waits on a promise nothing can settle",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime terminates a microtask-spinning loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime aborts via signal and cancels in-flight calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime fails a script whose output passes the limits, even if it catches the error",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "inline and remote backends only (the worker backend passes): the test gives them an interrupt budget of 20000 QuickJS interrupt polls; pi-codemode counts loop iterations and promise jobs, so 100001 text() calls exhaust it first (the Rust port's remote backend uses 1000000 for this case)."
+    },
+    {
+     "name": "inline backend limits and lifetime rejects execute after close",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime runs executions in parallel without sharing state",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend limits and lifetime turns deep recursion into a catchable RangeError",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches has no host globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches keeps eval and Function inside the VM",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches rejects dynamic import",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches ignores patches to built-ins and built-in globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches freezes intrinsics that are only reachable from instances",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches still lets instances override properties of frozen prototypes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches reports errors whose name or message is not a string",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "inline backend escape hatches keeps tools and console frozen",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution returns the script's return value after a JSON round trip",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution supports top-level await",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution collects text(), image(), and console output in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution rejects invalid text() and image() arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution accepts wrapped and large base64 image data",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution ends the script successfully on exit(), keeping output and store writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution keeps output produced before a failure",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution reports syntax errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution reports thrown errors with the script's line number",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution formats stacks like V8 without prelude frames",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution reports non-Error throws",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend script execution reports a non-serializable return value as a script error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools exposes tools as async functions and records calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools runs concurrent calls and lists tool names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools exposes tools under normalized identifiers and lists them in ALL_TOOLS",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools passes undefined arguments and results through",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools turns tool errors into catchable Errors in the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools rejects calls to unknown tools",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools aborts unawaited calls when the script returns",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools names close matches when a script reads a tool that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend tools supports register and unregister between executions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend store and load reads the snapshot and reports writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend store and load returns copies, so mutating a loaded value does not change the store",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend store and load rejects invalid keys, values, and oversized writes inside the script",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend store and load explains oversized writes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend store and load reserves the store and load names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend globals exposes globals as top-level functions without recording them as calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend globals groups namespaced globals and spreads arguments on request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend globals names the members of a namespace when a script reads one that does not exist",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend globals rejects invalid and reserved global names",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime terminates a synchronous infinite loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime runs without a deadline when timeoutMs is Infinity",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime fails a script that waits on a promise nothing can settle",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime terminates a microtask-spinning loop on timeout",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime aborts via signal and cancels in-flight calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime fails a script whose output passes the limits, even if it catches the error",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "inline and remote backends only (the worker backend passes): the test gives them an interrupt budget of 20000 QuickJS interrupt polls; pi-codemode counts loop iterations and promise jobs, so 100001 text() calls exhaust it first (the Rust port's remote backend uses 1000000 for this case)."
+    },
+    {
+     "name": "remote backend limits and lifetime rejects execute after close",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime runs executions in parallel without sharing state",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend limits and lifetime turns deep recursion into a catchable RangeError",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches has no host globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches keeps eval and Function inside the VM",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches rejects dynamic import",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches ignores patches to built-ins and built-in globals",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches freezes intrinsics that are only reachable from instances",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches still lets instances override properties of frozen prototypes",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches reports errors whose name or message is not a string",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "remote backend escape hatches keeps tools and console frozen",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker host accepts a worker path string",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker host reports a missing worker file as a sandbox error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker host reports a failing wasm module as a sandbox error",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "worker host ignores Node --watch notifications from the worker",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: the fixture is a custom worker script (fixtures/raw-worker.ts) posting raw bridge messages; the embedded VM is native and a custom workerUrl script is not run."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":true,\"value\":\"1\",\"writes\":\"null\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":true,\"value\":\"1\",\"writes\":\"[1]\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":true,\"value\":\"1\",\"writes\":\"[[\\\"k\\\", \\\"{\\\"]]\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":true,\"value\":\"{\",\"writes\":\"[]\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":false,\"error\":\"5\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"done\",\"ok\":false,\"error\":\"{}\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    },
+    {
+     "name": "worker host reports a broken bridge as a sandbox error: {\"type\":\"nonsense\"}",
+     "class": "n/a",
+     "status": {
+      "default": "failed",
+      "0": "failed"
+     },
+     "reason": "Node worker host: same raw-worker.ts fixture; the native bridge's own malformed-payload handling is covered by crates/pi-codemode tests."
+    }
+   ],
+   "note": "'rejects invalid text() and image() arguments' passes after the vendor/boa_engine patch giving JSON.stringify's cyclic-value TypeError V8's wording ('Converting circular structure to JSON'). 'turns deep recursion into a catchable RangeError' passes after the vendor/boa_engine patch making stack overflow a catchable RangeError and truncating the value stack when a handler catches during unwinding."
+  },
+  {
+   "reference": "packages/codemode/test/source.test.ts",
+   "sha256": "95fee0e41ece5f48851a430a933db1660c002034d25f3dd07a0003063c8eb3bb",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 5,
+     "total": 5,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 36
+    },
+    {
+     "retention": "0",
+     "passed": 5,
+     "total": 5,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 36
+    }
+   ],
+   "cases": [
+    {
+     "name": "parseCodemodeSource returns plain code unchanged",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "parseCodemodeSource parses the options line and keeps line numbers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "parseCodemodeSource only treats the first line as an options line",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "parseCodemodeSource rejects an options line that is not the first line",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "parseCodemodeSource rejects empty input and invalid options",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/codemode.test.ts",
+   "sha256": "2d355090072d972420078ce5cf7f0975d8dd0bc56a35b9e517fd8c94ad079c86",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 41,
+     "total": 41,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 69173
+    },
+    {
+     "retention": "0",
+     "passed": 41,
+     "total": 41,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 59129
+    }
+   ],
+   "cases": [
+    {
+     "name": "durable code mode runs a script that calls tools as nested calls, and journals each result before delivering it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode resumes a script after a restart without running its finished calls again",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode replays results in the order they arrived, not the order the calls were made",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode journals globals with their results and hands a replay the recorded ones",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode keeps the script's clock and randomness across a restart",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a resumed script made a different number of calls than before",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call at once when a resumed script waits without making a call it made before",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a resumed script calls a global with other arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode admits no call of a diverging replay, even one the script never made before",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a resumed script ends where it went on before",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a resumed script ends before calls the live run made, even without a recorded count",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a resumed script makes a call an earlier attempt admitted with other arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode records a count the live run never recorded as soon as a replay acknowledges it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode lists the script's tool calls in its result's details",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode stores no outcome when the host closes the sandbox, and replays the script after a restart",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode aborts a call still running when the script ends",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode admits no call once the script has ended, even one it made before ending",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode checks a rerun's calls against an earlier attempt's before admitting any later call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a rerun makes a global call where an earlier attempt made a tool call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a rerun's first run makes fewer calls than an earlier attempt admitted",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode ends the call when a rerun without journal entries ends in its first run, where it went on before",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode checks every call a rerun holds before launching any of them",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode keeps a global's undefined result undefined, live and replayed",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode drops a global's result that arrives after the script finished",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode rejects a failed tool call with its error text and structured output",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode resolves a schema tool's error result that carries its value, and rejects one without with its text",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode resolves a schema-less tool with its text, as its declaration says, also when it returned images",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode delivers a result only after its journal commit",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode refuses to resume when the sandbox's fingerprint or the code mode version changed",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode times a script out across a restart, without admitting new calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode returns a decided outcome after a restart without running the script again",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode keeps store() values per conversation, as of a fork's entry",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode journals results that finish together in one commit",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search lays out text items, console lines, and the returned value under a header",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search cuts text past the token budget to its start and end, with the full text in a file",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search keeps a result inside the tool's output limits whatever max_output_tokens says, spilling the rest",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search writes the result's files to the same paths when it reruns after a crash",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search saves images to files and names them next to the image",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search calls a deferred tool the model is not offered, and finds it in ALL_TOOLS",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search reports a failed script with its error and the calls already made",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "durable code mode output and tool search finds tools with searchTools(), describeTool(), and describeNamespace(), and lists them in ALL_TOOLS",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ],
+   "note": "Release runner, like its stock gate. In a debug build 'keeps a result inside the tool's output limits whatever max_output_tokens says, spilling the rest' exceeds its 5000 ms (6 MiB frames through pi_json strict parse/stringify). Its release time fell from about 14 s to 1.7 s after the vendor/boa_engine patch 'String search from a position was quadratic' (crates/pi-jsrt/tests/boa_patches.rs::string_search_from_a_position_is_linear)."
+  },
+  {
+   "reference": "packages/durable/test/codemode-models.test.ts",
+   "sha256": "f05c7c77d80a627038352c872dc8cf0790fad7cf5a0968575002948f9d563860",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 7,
+     "total": 7,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 13278
+    },
+    {
+     "retention": "0",
+     "passed": 7,
+     "total": 7,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 11287
+    }
+   ],
+   "cases": [
+    {
+     "name": "code mode models.* reads the model catalog without credentials in headers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* classifies through an internal tool: a nested call with its usage, hidden from tools and listings",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* resolves a model call that failed with its result, as the coding agent does",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* rejects a bad classifier context with the expected shape, before any request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* runs at most four model calls at once",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* does not start a model call that waited for a slot after the script ended",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode models.* notes generated images the script did not show",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/codemode-describe.test.ts",
+   "sha256": "dba10134bbef4f6f18ada18beca5850ff267081c0afd94ce89520379d1aba26d",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 5,
+     "total": 5,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 477
+    },
+    {
+     "retention": "0",
+     "passed": 5,
+     "total": 5,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 416
+    }
+   ],
+   "cases": [
+    {
+     "name": "code mode description and section keeps the tool description the same for every conversation",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode description and section lists callable tools as declarations, grouped by namespace, with namespace descriptions",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode description and section lists what fits the budget, every namespace before any is complete, and says what is left out",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode description and section uses the longest matching namespace prefix",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "code mode description and section renders the section from the conversation's callable tools into the system prompt",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/codemode-checkpoints.test.ts",
+   "sha256": "9409c19a882393d3bf656648691b74157de8bc179dd21137d58fa3a9e0415445",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 2,
+     "total": 2,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 4138
+    },
+    {
+     "retention": "0",
+     "passed": 2,
+     "total": 2,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 4181
+    }
+   ],
+   "cases": [
+    {
+     "name": "built-in document checkpoint policies keeps task-scoped documents as deltas until their task retires",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "built-in document checkpoint policies checkpoints the codemode store after 64 deltas without changing historical reads or forks",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/tool-search.test.ts",
+   "sha256": "87b833bbaf325dcea7cdf17878c966db3b6a15801c5831be2b946655bd5f0c93",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 6,
+     "total": 6,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 8454
+    },
+    {
+     "retention": "0",
+     "passed": 6,
+     "total": 6,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 7184
+    }
+   ],
+   "cases": [
+    {
+     "name": "deferred tools and tool_search offers a deferred tool only once tool_search loads it, by appending its declaration",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deferred tools and tool_search appends each loaded tool in load order, not registry order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deferred tools and tool_search records loads by name: unknown and non-deferred names change nothing, remove wins, and a load lifts it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deferred tools and tool_search keeps a loaded tool when its extension is gone for a while, and appends to an explicit array",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deferred tools and tool_search keeps loaded tools per branch and in the baseline after a reset",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "deferred tools and tool_search finds nothing for an unrelated query and loads nothing",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/harness-tools.test.ts",
+   "sha256": "fb5e0ebdb9c5d3ba167a2c8ad35fc67b1539d1d00be096f843b76094813103d7",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 39,
+     "total": 39,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 63296
+    },
+    {
+     "retention": "0",
+     "passed": 39,
+     "total": 39,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 55789
+    }
+   ],
+   "cases": [
+    {
+     "name": "tool round runs input, tool call, tool result, and answer, and settles the input",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round gives tools and hooks the Harness's models",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round answers calls to tools the request did not offer without a task",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round answers a call to a tool deactivated after preparation with tool_unavailable",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round removes unregistered active tools from the offer and adds them back after re-registration",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round produces tool_unavailable when the implementation is unregistered before its task runs",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round reads the execution mode when a round starts and keeps it for the round",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool round runs a round in parallel by default and sequentially when configured or required by a tool",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results uses retained output and the last details when the result omits them, with diagnostics in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results offers the tail window with the configured pace, not a head window, and accepts skipped output",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results bounds explicit text content and keeps other content",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results turns a throw into a tool_error result with the partial output",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results records how long execute() took, excluding hooks, and nothing for calls that did not run",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results validates arguments before and after beforeTool and applies blocks and replacements",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results repairs arguments with prepareArguments before validation, and a throwing repair is invalid",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results lets the first beforeTool block win and skips later handlers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results chains afterTool replacements and observes the round with afterTools",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results runs the hooks of the selected extensions; a task-owned child copies its owner's selection",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results applies addTools and terminates only when every result of the round asks to",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool results does not terminate on terminate: false",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "generation hooks replaces request messages, observes responses, and continues on yield",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "generation hooks keeps the run's input open across an onYield continuation and answers it with the final answer",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "generation hooks observes responses that arrive by polling a deferred request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "generation hooks lets the first onYield continuation win and reports throws without stopping later handlers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "generation hooks keeps durable hook decisions in task memos",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool execution api builds the environment per call from the conversation's cwd and runs commits, memos, and child tasks",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool execution api answers a throwing environment with a tool_error result and reports it once while preparing",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "coding tools answers a failing command with its retained tail and diagnostics in order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "coding tools reads, edits, and runs a command in one run, then answers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime applies the default output limits",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime sanitizes running output but keeps explicit result content as the tool returned it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime drops control keys set to undefined instead of faulting",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime uses explicit null details instead of the last reported value",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime settles details() promises with coalesced progress commits and the terminal commit",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime finishes a call under the implementation it resolved when the tool is replaced mid-call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime uses a section and hook extension reloaded mid-run from the run's next request",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime rejects invocation-bound waits and stops watches when the tool's invocation ends",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime rejects details() still waiting when the call is aborted during afterTool",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool progress and lifetime answers an aborted tool with only its durable output, discarding buffered output",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/harness-tools-recovery.test.ts",
+   "sha256": "9bb1d8354d6167c7d4fa535a97c493bded87c68cc2fb06a44b93289d1361e4e7",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 9,
+     "total": 9,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 11940
+    },
+    {
+     "retention": "0",
+     "passed": 9,
+     "total": 9,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 10253
+    }
+   ],
+   "cases": [
+    {
+     "name": "tool recovery answers an unsafe tool interrupted after intent with its durable partial output",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery reruns a tool only when both the stored and the current replay policy are safe",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery reruns a safe tool with the environment of the conversation's cwd at rerun, and not once it is deselected",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery reruns beforeTool when interrupted before intent, and executes once",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery reruns the generation tools phase interrupted before its commit",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery answers an aborted tool with its partial output and continues the run",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery lets context derivation answer a faulted tool and continues the run",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery answers a real bash command interrupted by close and reopen, then finishes the run",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool recovery clears the interrupted attempt's progress before a safe rerun",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/harness-nested-tools.test.ts",
+   "sha256": "dbe8cb36fb560a8508b3ee41d6edc922dcfe64dad87d0844a56739d939bb8e81",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 33,
+     "total": 33,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 39591
+    },
+    {
+     "retention": "0",
+     "passed": 33,
+     "total": 33,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 33218
+    }
+   ],
+   "cases": [
+    {
+     "name": "nested tool calls stores one document per nested call, keyed by its key, written only by that call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls rejects a nested call of an aborted caller and leaves no document for it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls runs a nested call as its own tool task and returns its result to the caller, not the transcript",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls gives each nested call its own task and call ID",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls runs the tool hooks on nested calls, which see their parent",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls returns an error result for an unavailable tool and invalid arguments",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls returns the call a key already names, and rejects reusing the key for another call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls matches a reused key's arguments regardless of key order",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts the nested calls a caller left running when it returns, keeping their details",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls records a nested call's usage under its tool",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls reports nested calls in pi.live.nestedTools and as tool events with their parent",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts nested calls with their caller",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts a running nested call when its caller throws",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls reattaches a replay-safe caller to the nested calls it made before a restart",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls stops only the wait when a caller cancels it; the call runs on and its key returns its result",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls admits one nested call for a key used by concurrent calls",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts left-running nested calls of a caller interrupted while it cleaned them up",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts a nested call whose admission was still committing when its caller returned",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls aborts every left-running nested call before waiting for any",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls rejects explicit keys that are empty, have a slash, are __proto__, or are positive integers",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls runs nested calls of nested calls, and ends them children first",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls reports the output of several running nested calls, and shows them to a late subscriber",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls commits only the status of a nested call made with progress: false, and keeps its output in the result",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls loses the running output of a nested call made with progress: false when it is aborted",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls shows a nested call's arguments in its slot: as made, then, unbounded, as it runs with them",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls runs a nested call whose repaired arguments set an optional property to undefined",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls finds each nested call's slot after slots in the middle were removed",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls gives callers a result with its task ID and only diagnostics for a nested call the scheduler faulted",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls gives callers what a schema-less tool streamed before it threw",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls shows a finished nested call as a done slot with its summary until its caller settles",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls migrates version 1 tool task input to a model-issued call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool task version 1 records migrates a pending version 1 task and runs it as a model-issued call",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "tool task version 1 records migrates a version 1 task interrupted after intent and settles it interrupted",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  },
+  {
+   "reference": "packages/durable/test/harness-nested-tools-restart.test.ts",
+   "sha256": "5e518bc9e18e928a5d9692bd6950474c3b0992f09dbca9f2ca270a0e663b751a",
+   "success": true,
+   "passedAll": true,
+   "build": "release",
+   "modes": [
+    {
+     "retention": null,
+     "passed": 11,
+     "total": 11,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 15758
+    },
+    {
+     "retention": "0",
+     "passed": 11,
+     "total": 11,
+     "failed": 0,
+     "uncaught": 0,
+     "nativeCalls": 13251
+    }
+   ],
+   "cases": [
+    {
+     "name": "nested tool calls across a restart abandons a replay-unsafe caller's unfinished nested calls before they run again",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart abandons the work an abandoned nested call owns, which never runs a phase again",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart keeps an abandoned task whose definition is missing waiting until it is installed, then runs its abort",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart orphans an abandoned task whose definition is missing once an abort is requested",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart marks nothing when the reopened Harness never starts scheduling",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart lets a replay-safe caller's unfinished nested calls recover and reattaches to them by key",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart clears the slots of nested calls an earlier attempt finished when the rerun makes none",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart aborts a nested call an earlier attempt of a replay-safe caller left running and the rerun never made again",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart reattaches a replay-safe caller by default and explicit keys, and rejects a rerun that calls differently",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart abandons the child tasks a replay-unsafe tool created and awaited in memory",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    },
+    {
+     "name": "nested tool calls across a restart leaves background work under an abandoned nested call running, and settles without it",
+     "class": "embedded",
+     "status": {
+      "default": "passed",
+      "0": "passed"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -9,7 +9,7 @@ use serde_json::Value;
 use tokio_util::sync::CancellationToken;
 
 use crate::types::AnyModel;
-use crate::utils::provider_retry::AbortError;
+use crate::utils::abort::SignalAbortError;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -59,7 +59,7 @@ impl InMemoryModelsStore {
 
 fn check(signal: Option<&CancellationToken>) -> anyhow::Result<()> {
     if signal.is_some_and(|s| s.is_cancelled()) {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }

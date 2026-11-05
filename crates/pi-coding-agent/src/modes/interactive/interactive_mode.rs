@@ -1143,6 +1143,8 @@ impl Inner {
                 this.ui().invalidate();
                 this.request_render();
             }
+            // Startup is done: return the memory its transient allocations left behind.
+            crate::utils::memory::release_free_memory_in_background();
         });
         Ok(())
     }

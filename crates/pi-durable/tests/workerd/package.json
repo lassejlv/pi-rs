@@ -1,0 +1,13 @@
+{
+  "name": "pi-durable-workerd-tests",
+  "private": true,
+  "type": "module",
+  "description": "Runs the Rust pi-durable Durable Object in workerd with upstream's test-workers scenarios",
+  "scripts": {
+    "test": "vitest --run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.4",
+    "vitest": "4.1.12"
+  }
+}

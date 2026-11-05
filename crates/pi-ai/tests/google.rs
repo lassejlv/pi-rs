@@ -582,14 +582,14 @@ fn signed_empty_blocks() {
     let ls = || call("call_1", json!({ "command": "ls" }), None);
 
     let turn = run(&model.id, vec![
-        AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(valid.into()), redacted: None }),
+        AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(valid.into()), redacted: None, ..Default::default() }),
         ls(),
     ]);
     let signed: Vec<&Value> = turn["parts"].as_array().unwrap().iter().filter(|p| p["thoughtSignature"] == valid).collect();
     assert_eq!(signed.len(), 1);
     assert_eq!(signed[0]["thought"], true);
 
-    let turn = run(&model.id, vec![AssistantContent::Text(TextContent { text: String::new(), text_signature: Some(valid.into()) }), ls()]);
+    let turn = run(&model.id, vec![AssistantContent::Text(TextContent { text: String::new(), text_signature: Some(valid.into()), ..Default::default() }), ls()]);
     assert_eq!(turn["parts"].as_array().unwrap().iter().filter(|p| p["thoughtSignature"] == valid).count(), 1);
 
     let turn = run(&model.id, vec![AssistantContent::Thinking(ThinkingContent::new("")), AssistantContent::Text(TextContent::new("   ")), ls()]);
@@ -597,8 +597,8 @@ fn signed_empty_blocks() {
     assert!(turn["parts"][0].get("functionCall").is_some());
 
     let turn = run("other-model", vec![
-        AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(valid.into()), redacted: None }),
-        AssistantContent::Text(TextContent { text: String::new(), text_signature: Some(valid.into()) }),
+        AssistantContent::Thinking(ThinkingContent { thinking: String::new(), thinking_signature: Some(valid.into()), redacted: None, ..Default::default() }),
+        AssistantContent::Text(TextContent { text: String::new(), text_signature: Some(valid.into()), ..Default::default() }),
         ls(),
     ]);
     assert_eq!(turn["parts"].as_array().unwrap().len(), 1);

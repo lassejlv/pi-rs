@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use rand::RngCore;
 use serde_json::{Map, Value, json};
-use tokio::net::TcpListener;
+use crate::utils::wasm::net::TcpListener;
 use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
@@ -106,13 +106,13 @@ struct CallbackServer {
     result: oneshot::Receiver<Result<AuthorizationResult, String>>,
     shutdown: CancellationToken,
     listener: SharedListener,
-    connections: Arc<Mutex<Vec<tokio::task::AbortHandle>>>,
+    connections: Arc<Mutex<Vec<crate::utils::wasm::AbortHandle>>>,
 }
 
 fn close_server(
     shutdown: &CancellationToken,
     listener: &SharedListener,
-    connections: &Mutex<Vec<tokio::task::AbortHandle>>,
+    connections: &Mutex<Vec<crate::utils::wasm::AbortHandle>>,
 ) {
     listener.close();
     shutdown.cancel();
@@ -136,10 +136,10 @@ async fn start_callback_server(expected_state: String) -> anyhow::Result<Callbac
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
     let shutdown = CancellationToken::new();
-    let connections: Arc<Mutex<Vec<tokio::task::AbortHandle>>> = Arc::default();
+    let connections: Arc<Mutex<Vec<crate::utils::wasm::AbortHandle>>> = Arc::default();
     let accept_shutdown = shutdown.clone();
     let accept_connections = connections.clone();
-    tokio::spawn(async move {
+    crate::utils::wasm::spawn(async move {
         loop {
             let accepted = tokio::select! {
                 accepted = accept_listener.accept() => accepted,
@@ -154,7 +154,7 @@ async fn start_callback_server(expected_state: String) -> anyhow::Result<Callbac
             };
             let tx = tx.clone();
             let expected_state = expected_state.clone();
-            let handle = tokio::spawn(async move {
+            let handle = crate::utils::wasm::spawn(async move {
                 let Some((_, target)) = read_request_line(&mut socket).await else {
                     return;
                 };

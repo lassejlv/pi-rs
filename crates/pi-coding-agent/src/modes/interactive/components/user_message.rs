@@ -22,6 +22,8 @@ pub struct UserMessageComponent {
     markdown_theme: MarkdownTheme,
     output_pad: Mutex<usize>,
     markdown_transformers: Vec<MarkdownTransformer>,
+    message_id: Option<String>,
+    timestamp: Option<String>,
 }
 
 impl UserMessageComponent {
@@ -31,6 +33,8 @@ impl UserMessageComponent {
         markdown_theme: Option<&MarkdownTheme>,
         output_pad: Option<i64>,
         markdown_transformers: Option<&[MarkdownTransformer]>,
+        message_id: Option<&str>,
+        timestamp: Option<&str>,
     ) -> Self {
         let component = Self {
             container: Container::new(),
@@ -38,6 +42,8 @@ impl UserMessageComponent {
             markdown_theme: markdown_theme.cloned().unwrap_or_else(get_markdown_theme),
             output_pad: Mutex::new(output_pad.unwrap_or(1).max(0) as usize),
             markdown_transformers: markdown_transformers.map(<[_]>::to_vec).unwrap_or_default(),
+            message_id: message_id.map(str::to_owned),
+            timestamp: timestamp.map(str::to_owned),
         };
         component.rebuild();
         component
@@ -70,6 +76,8 @@ impl UserMessageComponent {
                     CreateMarkdownTransformMessageType::User,
                     false,
                     &self.markdown_transformers,
+                    self.message_id.as_deref(),
+                    self.timestamp.as_deref(),
                 )),
                 ..Default::default()
             }),

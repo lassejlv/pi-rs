@@ -19,6 +19,11 @@
 //! - Numbers beyond the `f64` range (`1e400`, which V8 reads as `Infinity`) and nesting deeper than
 //!   serde_json's recursion limit (128) are rejected with serde_json's message.
 
+pub mod diff;
+pub mod direct;
+pub mod strict;
+pub mod utf8;
+
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
@@ -384,6 +389,10 @@ pub fn number_to_string(value: f64) -> String {
     }
     if value == 0.0 {
         return "0".to_string();
+    }
+    // Integers below 2^53 print as plain digits; skip the shortest-float machinery for them.
+    if value.fract() == 0.0 && value.abs() < 9_007_199_254_740_992.0 {
+        return (value as i64).to_string();
     }
     let negative = value < 0.0;
     // Rust's `{:e}` prints the shortest round-tripping digits, like ECMAScript's Number::toString.

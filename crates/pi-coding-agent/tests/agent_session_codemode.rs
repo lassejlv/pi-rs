@@ -598,10 +598,9 @@ async fn reports_script_failures_with_the_script_location() {
     harness.cleanup();
 }
 
-// Boa has no heap limit (see `CodemodeExecutionOptions::memory_limit_bytes` in pi-codemode): only
-// ArrayBuffer allocations are bounded, so runaway string allocations end at the loop limit instead.
+// The VM's heap limit (`CodemodeExecutionOptions::memory_limit_bytes` in pi-codemode) ends runaway
+// allocations with an error the script can catch.
 #[tokio::test]
-#[ignore = "Boa has no heap limit; pi-codemode bounds only ArrayBuffer allocations"]
 async fn limits_script_memory_so_runaway_allocations_fail_inside_the_script() {
     let harness = setup(false).await;
     let result = run(

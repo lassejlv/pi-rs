@@ -6,9 +6,11 @@ use pi_jsrt::JsHandle;
 use serde_json::{Value, json};
 
 use super::api::{arg, opt, post_call, str_arg};
-use super::{Bridge, CtxEntry, component, provider};
+use super::{Bridge, CtxEntry, component, native, provider};
+use crate::core::model_registry::ModelRegistryRegisterProviderProviderOrName;
 use crate::core::extensions::types::*;
 use crate::core::session_manager::SessionManager;
+use crate::core::session_manager::NewSessionOptions as SmNewSessionOptions;
 
 fn entry(bridge: &Bridge, payload: &Value) -> anyhow::Result<CtxEntry> {
     let id = payload["ctx"].as_u64().unwrap_or_default();
@@ -30,20 +32,60 @@ fn ui_of(entry: &CtxEntry) -> anyhow::Result<Arc<dyn ExtensionUIContext>> {
     }
 }
 
-/// The session manager reachable from a context entry (or a setup callback's manager).
-fn session_manager_of(bridge: &Bridge, payload: &Value) -> anyhow::Result<Arc<SessionManager>> {
-    let id = payload["ctx"].as_u64().unwrap_or_default();
-    if let Some(sm) = bridge.session_managers.get(id) {
-        return Ok(sm);
+/// A session manager handed to JavaScript: host-owned ones are held weakly (they live as long
+/// as pi's session uses them), ones created from JavaScript (`SessionManager.create()`) strongly
+/// until the JS object is collected.
+#[derive(Clone)]
+pub(crate) enum SessionManagerRef {
+    Host(std::sync::Weak<SessionManager>),
+    Owned(Arc<SessionManager>),
+}
+
+/// The id of a host-owned session manager for JavaScript; one id (one JS object) per manager.
+pub(crate) fn session_manager_id(bridge: &Bridge, sm: &Arc<SessionManager>) -> u64 {
+    let key = Arc::as_ptr(sm) as usize;
+    let mut ids = bridge.session_manager_ids.lock();
+    if let Some(id) = ids.get(&key)
+        && let Some(SessionManagerRef::Host(weak)) = bridge.session_managers.get(*id)
+        && weak.upgrade().is_some_and(|existing| Arc::ptr_eq(&existing, sm))
+    {
+        return *id;
     }
-    base(&entry(bridge, payload)?)?.session_manager()
+    // Forget managers that are gone (their addresses may be reused).
+    ids.retain(|_, id| match bridge.session_managers.get(*id) {
+        Some(SessionManagerRef::Host(weak)) if weak.strong_count() > 0 => true,
+        _ => {
+            bridge.session_managers.remove(*id);
+            false
+        }
+    });
+    let id = bridge.session_managers.insert(SessionManagerRef::Host(Arc::downgrade(sm)));
+    ids.insert(key, id);
+    id
+}
+
+/// The session manager a `sm` host call targets (`{ sm: id }`).
+pub(crate) fn session_manager_of(bridge: &Bridge, payload: &Value) -> anyhow::Result<Arc<SessionManager>> {
+    let id = payload["sm"].as_u64().unwrap_or_default();
+    match bridge.session_managers.get(id) {
+        Some(SessionManagerRef::Owned(sm)) => Ok(sm),
+        Some(SessionManagerRef::Host(weak)) => {
+            weak.upgrade().ok_or_else(|| anyhow::anyhow!("This session manager is no longer available"))
+        }
+        None => Err(anyhow::anyhow!("This session manager is no longer available")),
+    }
 }
 
 pub(crate) fn dispatch(bridge: &Arc<Bridge>, op: &str, payload: Value) -> anyhow::Result<Value> {
     match op {
         "ctx.get" => ctx_get(bridge, &payload),
+        "ctx.release" => {
+            bridge.contexts.remove(payload["ctx"].as_u64().unwrap_or_default());
+            Ok(Value::Null)
+        }
         "ctx.call" => ctx_call(bridge, &payload),
         "sm" => session_manager_call(bridge, &payload),
+        "sm.static" => session_manager_static(bridge, &payload),
         "mr" => model_registry_call(bridge, &payload),
         "ui" => ui_call(bridge, &payload),
         _ => Err(anyhow::anyhow!("unknown host call {op}")),
@@ -68,6 +110,7 @@ fn ctx_get(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
             Value::Null
         }
         "mode" => json!(ctx.mode()?.as_str()),
+        "sessionManager" => json!(session_manager_id(bridge, &ctx.session_manager()?)),
         "hasUI" => json!(ctx.has_ui()?),
         "cwd" => json!(ctx.cwd()?),
         "model" => serde_json::to_value(ctx.model()?)?,
@@ -172,8 +215,9 @@ pub(crate) async fn dispatch_async(bridge: Arc<Bridge>, op: &str, payload: Value
         "ctx.async" => ctx_async(&bridge, &payload).await,
         "ui.async" => ui_async(&bridge, &payload).await,
         "mr.async" => model_registry_async(&bridge, &payload).await,
+        "sm.list" => session_manager_list(&bridge, &payload).await,
         "mr.stream" => {
-            let registry = base(&entry(&bridge, &payload)?)?.model_registry()?;
+            let registry = registry_of(&bridge, &payload)?;
             let method = str_arg(&payload, "m");
             let model = serde_json::from_value(arg(&payload, 0))?;
             let context = serde_json::from_value(arg(&payload, 1))?;
@@ -230,10 +274,9 @@ async fn ctx_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Valu
                     let bridge = bridge.clone();
                     let h = h.clone();
                     Box::pin(async move {
-                        let id = super::next_id();
-                        bridge.session_managers.insert_with_id(id, sm);
+                        let id = session_manager_id(&bridge, &sm);
                         let r = bridge.glue_call("invokeSetup", vec![h.to_value(), json!(id)]).await;
-                        bridge.session_managers.remove(id);
+                        drop(sm);
                         r.map(|_| ())
                     }) as futures::future::BoxFuture<'static, anyhow::Result<()>>
                 }) as Arc<dyn Fn(Arc<SessionManager>) -> futures::future::BoxFuture<'static, anyhow::Result<()>> + Send + Sync>
@@ -297,37 +340,202 @@ async fn ctx_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Valu
     }
 }
 
+/// A typed entry serialized on its own: the `type` tag comes from the enclosing enum.
+fn with_type(tag: &str, mut value: Value) -> Value {
+    if let Value::Object(map) = &mut value
+        && !map.contains_key("type")
+    {
+        map.shift_insert(0, "type".to_string(), json!(tag));
+    }
+    value
+}
+
+fn usage_arg(value: &Value) -> anyhow::Result<Option<pi_ai::types::Usage>> {
+    opt(value)
+}
+
+/// Methods of a `SessionManager` instance (TS `SessionManager`; `ctx.sessionManager` is the live
+/// instance, typed `ReadonlySessionManager` but complete at runtime).
 fn session_manager_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
     let sm = session_manager_of(bridge, payload)?;
     let method = str_arg(payload, "m");
     let s = |i: usize| arg(payload, i).as_str().map(str::to_string);
+    let options = |i: usize| -> anyhow::Result<Option<SmNewSessionOptions>> { opt(&arg(payload, i)) };
     Ok(match method.as_str() {
+        "setSessionFile" => {
+            sm.set_session_file(&s(0).unwrap_or_default())?;
+            Value::Null
+        }
+        "newSession" => json!(sm.new_session(options(0)?.as_ref())?),
+        "isPersisted" => json!(sm.is_persisted()),
         "getCwd" => json!(sm.get_cwd()),
         "getSessionDir" => json!(sm.get_session_dir()),
+        "usesDefaultSessionDir" => json!(sm.uses_default_session_dir()),
         "getSessionId" => json!(sm.get_session_id()),
         "getSessionFile" => json!(sm.get_session_file()),
+        "appendMessage" => {
+            let message: pi_agent::types::AgentMessage = serde_json::from_value(arg(payload, 0))?;
+            json!(sm.append_message(message)?)
+        }
+        "appendThinkingLevelChange" => json!(sm.append_thinking_level_change(&s(0).unwrap_or_default())?),
+        "appendModelChange" => json!(sm.append_model_change(&s(0).unwrap_or_default(), &s(1).unwrap_or_default())?),
+        "appendUsage" => {
+            let usage = serde_json::from_value(arg(payload, 3))?;
+            let entry = sm.append_usage(
+                &s(0).unwrap_or_default(),
+                &s(1).unwrap_or_default(),
+                &s(2).unwrap_or_default(),
+                usage,
+                s(4).as_deref(),
+            )?;
+            with_type("usage", serde_json::to_value(entry)?)
+        }
+        "appendCompaction" => json!(sm.append_compaction(
+            &s(0).unwrap_or_default(),
+            s(1).as_deref(),
+            arg(payload, 2).as_f64().unwrap_or_default() as u64,
+            Some(arg(payload, 3)).filter(|v| !v.is_null()),
+            arg(payload, 4).as_bool(),
+            usage_arg(&arg(payload, 5))?,
+        )?),
+        "appendCustomEntry" => json!(sm.append_custom_entry(&s(0).unwrap_or_default(), Some(arg(payload, 1)).filter(|v| !v.is_null()))?),
+        "appendSessionInfo" => json!(sm.append_session_info(&s(0).unwrap_or_default())?),
+        "getSessionName" => json!(sm.get_session_name()),
+        "appendCustomMessageEntry" => json!(sm.append_custom_message_entry(
+            &s(0).unwrap_or_default(),
+            serde_json::from_value(arg(payload, 1))?,
+            arg(payload, 2).as_bool().unwrap_or(false),
+            Some(arg(payload, 3)).filter(|v| !v.is_null()),
+        )?),
+        "appendContextEdit" => {
+            let replacement = arg(payload, 1);
+            if !replacement.is_null()
+                && !(replacement.is_object() && (replacement["content"].is_string() || replacement["content"].is_array()))
+            {
+                anyhow::bail!("Context edit replacement must be null or contain string/array content");
+            }
+            let replacement: Option<crate::core::session_manager::ContextEditEntryReplacement> = opt(&replacement)?;
+            json!(sm.append_context_edit(&s(0).unwrap_or_default(), replacement.as_ref())?)
+        }
         "getLeafId" => json!(sm.get_leaf_id()),
         "getLeafEntry" => serde_json::to_value(sm.get_leaf_entry())?,
         "getEntry" => serde_json::to_value(sm.get_entry(&s(0).unwrap_or_default()))?,
         "getChildren" => serde_json::to_value(sm.get_children(&s(0).unwrap_or_default()))?,
         "getLabel" => json!(sm.get_label(&s(0).unwrap_or_default())),
+        "appendLabelChange" => json!(sm.append_label_change(&s(0).unwrap_or_default(), s(1).as_deref())?),
         "getBranch" => serde_json::to_value(sm.get_branch(s(0).as_deref()))?,
         "buildContextEntries" => serde_json::to_value(sm.build_context_entries())?,
         "buildSessionProjection" => serde_json::to_value(sm.build_session_projection())?,
         "buildSessionContext" => serde_json::to_value(sm.build_session_context())?,
-        "getHeader" => serde_json::to_value(sm.get_header())?,
+        "getHeader" => with_type("session", serde_json::to_value(sm.get_header())?),
         "getEntries" => serde_json::to_value(sm.get_entries())?,
         "getEntryCount" => json!(sm.get_entry_count()),
         "getTree" => serde_json::to_value(sm.get_tree())?,
-        "getSessionName" => json!(sm.get_session_name()),
-        "isPersisted" => json!(sm.is_persisted()),
-        "appendCustomEntry" => json!(sm.append_custom_entry(&s(0).unwrap_or_default(), Some(arg(payload, 1)).filter(|v| !v.is_null()))?),
-        _ => return Err(anyhow::anyhow!("sessionManager.{method} is not available to extensions in pi-rs")),
+        "branch" => {
+            sm.branch(&s(0).unwrap_or_default())?;
+            Value::Null
+        }
+        "resetLeaf" => {
+            sm.reset_leaf();
+            Value::Null
+        }
+        "branchWithSummary" => json!(sm.branch_with_summary(
+            s(0).as_deref(),
+            &s(1).unwrap_or_default(),
+            Some(arg(payload, 2)).filter(|v| !v.is_null()),
+            arg(payload, 3).as_bool(),
+            usage_arg(&arg(payload, 4))?,
+        )?),
+        "createBranchedSession" => json!(sm.create_branched_session(&s(0).unwrap_or_default())?),
+        _ => return Err(anyhow::anyhow!("sessionManager.{method} is not a function")),
     })
 }
 
+/// Static `SessionManager` factories and helpers (`SessionManager.create()`, ...); new managers
+/// are owned by their JavaScript object (`{ sm: id }`).
+fn session_manager_static(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
+    let method = str_arg(payload, "m");
+    let s = |i: usize| arg(payload, i).as_str().map(str::to_string);
+    let options = |i: usize| -> anyhow::Result<Option<SmNewSessionOptions>> { opt(&arg(payload, i)) };
+    let entries = |i: usize| -> anyhow::Result<Option<Vec<crate::core::session_manager::FileEntry>>> { opt(&arg(payload, i)) };
+    let owned = |sm: Arc<SessionManager>| json!({ "sm": bridge.session_managers.insert(SessionManagerRef::Owned(sm)) });
+    let cwd = || s(0).unwrap_or_else(|| bridge.cwd.clone());
+    Ok(match method.as_str() {
+        "new" => owned(Arc::new(SessionManager::new(
+            &cwd(),
+            &s(1).unwrap_or_default(),
+            s(2).as_deref(),
+            arg(payload, 3).as_bool().unwrap_or(false),
+            options(4)?.as_ref(),
+            entries(5)?,
+        )?)),
+        "create" => owned(SessionManager::create(&cwd(), s(1).as_deref(), options(2)?.as_ref())?),
+        "open" => owned(SessionManager::open(&s(0).unwrap_or_default(), s(1).as_deref(), s(2).as_deref())?),
+        "continueRecent" => owned(SessionManager::continue_recent(&cwd(), s(1).as_deref())?),
+        "inMemory" => owned(SessionManager::in_memory(Some(&cwd()), options(1)?.as_ref(), entries(2)?)?),
+        "forkFrom" => owned(SessionManager::fork_from(
+            &s(0).unwrap_or_default(),
+            &s(1).unwrap_or_default(),
+            s(2).as_deref(),
+            options(3)?.as_ref(),
+        )?),
+        "findById" => json!(SessionManager::find_by_id(&cwd(), &s(1).unwrap_or_default(), s(2).as_deref())?),
+        "release" => {
+            if let Some(id) = payload["id"].as_u64()
+                && let Some(SessionManagerRef::Owned(_)) = bridge.session_managers.get(id)
+            {
+                bridge.session_managers.remove(id);
+            }
+            Value::Null
+        }
+        _ => return Err(anyhow::anyhow!("SessionManager.{method} is not a function")),
+    })
+}
+
+/// `SessionManager.list()` / `listAll()`.
+async fn session_manager_list(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
+    let method = str_arg(payload, "m");
+    let s = |i: usize| arg(payload, i).as_str().map(str::to_string);
+    let on_progress = bridge.handle(&payload["onProgress"]).map(|h| {
+        Arc::new(move |loaded: i64, total: i64, partial: Option<Vec<crate::core::session_manager::SessionInfo>>| {
+            let mut args = vec![json!(loaded), json!(total)];
+            if let Some(partial) = partial {
+                args.push(serde_json::to_value(partial).unwrap_or(Value::Null));
+            }
+            post_call(&h, None, args);
+        }) as crate::core::session_manager::SessionListProgress
+    });
+    let signal = bridge.token(&payload["signal"]);
+    let sessions = if method == "listAll" {
+        SessionManager::list_all(s(0).as_deref(), on_progress, signal).await?
+    } else {
+        SessionManager::list(&s(0).unwrap_or_else(|| bridge.cwd.clone()), s(1).as_deref(), on_progress, signal).await?
+    };
+    Ok(serde_json::to_value(sessions)?)
+}
+
+/// The model registry a `mr` host call targets: `ctx.modelRegistry` (`{ ctx }`) or one created
+/// with `new ModelRegistry(runtime)` (`{ registry }`).
+pub(crate) fn registry_of(bridge: &Bridge, payload: &Value) -> anyhow::Result<Arc<crate::core::model_registry::ModelRegistry>> {
+    if let Some(id) = payload["registry"].as_u64() {
+        return bridge.model_registries.get(id).ok_or_else(|| anyhow::anyhow!("This model registry is no longer available"));
+    }
+    base(&entry(bridge, payload)?)?.model_registry()
+}
+
 fn model_registry_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
-    let registry = base(&entry(bridge, payload)?)?.model_registry()?;
+    if str_arg(payload, "m") == "new" {
+        let runtime = super::sdk::runtime_of(bridge, &json!({ "runtime": arg(payload, 0) }))?;
+        let registry = Arc::new(crate::core::model_registry::ModelRegistry::new(runtime));
+        return Ok(json!(bridge.model_registries.insert(registry)));
+    }
+    if str_arg(payload, "m") == "release" {
+        if let Some(id) = payload["registry"].as_u64() {
+            bridge.model_registries.remove(id);
+        }
+        return Ok(Value::Null);
+    }
+    let registry = registry_of(bridge, payload)?;
     let method = str_arg(payload, "m");
     let s = |i: usize| arg(payload, i).as_str().unwrap_or_default().to_string();
     Ok(match method.as_str() {
@@ -347,17 +555,64 @@ fn model_registry_call(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<
         "getProviderAuthStatus" => serde_json::to_value(registry.get_provider_auth_status(&s(0)))?,
         "getProviderDisplayName" => json!(registry.get_provider_display_name(&s(0))),
         "getRegisteredProviderIds" => json!(registry.get_registered_provider_ids()),
-        _ => return Err(anyhow::anyhow!("modelRegistry.{method} is not available to extensions in pi-rs")),
+        "runtime" => json!(super::sdk::runtime_id(bridge, registry.runtime())),
+        "getProvider" => match registry.get_provider(&s(0)) {
+            Some(p) => native::provider_to_js(bridge, p),
+            None => Value::Null,
+        },
+        "getRegisteredNativeProvider" => match registry.get_registered_native_provider(&s(0)) {
+            Some(p) => native::provider_to_js(bridge, p),
+            None => Value::Null,
+        },
+        "getRegisteredProviderConfig" => match registry.get_registered_provider_config_revision(&s(0)) {
+            Some((rev, config)) => json!({ "rev": rev, "config": native::provider_config_to_js(bridge, &config) }),
+            None => Value::Null,
+        },
+        "registerProvider" => {
+            let registration = arg(payload, 0);
+            match registration["name"].as_str() {
+                Some(name) => {
+                    let config = provider::js_provider_config(bridge, &registration["config"])?;
+                    registry.register_provider(&ModelRegistryRegisterProviderProviderOrName::String(name.to_string()), Some(&config))?;
+                }
+                None => {
+                    let native = native::native_provider(bridge, &registration["provider"])?;
+                    registry.register_provider(&ModelRegistryRegisterProviderProviderOrName::Arc(native), None)?;
+                }
+            }
+            Value::Null
+        }
+        "unregisterProvider" => {
+            registry.unregister_provider(&s(0));
+            Value::Null
+        }
+        "registerVirtualModel" => {
+            registry.register_virtual_model(&provider::js_virtual_model_definition(bridge, &arg(payload, 0))?)?;
+            Value::Null
+        }
+        "unregisterVirtualModel" => {
+            registry.unregister_virtual_model(&s(0), &s(1));
+            Value::Null
+        }
+        _ => return Err(anyhow::anyhow!("modelRegistry.{method} is not a function")),
     })
 }
 
 async fn model_registry_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::Result<Value> {
-    let registry = base(&entry(bridge, payload)?)?.model_registry()?;
+    let registry = registry_of(bridge, payload)?;
     let method = str_arg(payload, "m");
     Ok(match method.as_str() {
         "refresh" => {
-            registry.refresh(None).await?;
-            Value::Null
+            let options = arg(payload, 0);
+            let result = registry
+                .refresh(Some(pi_ai::models::ModelsRefreshOptions {
+                    allow_network: options["allowNetwork"].as_bool(),
+                    providers: opt(&options["providers"])?,
+                    force: options["force"].as_bool(),
+                    signal: bridge.token(&options["signal"]),
+                }))
+                .await?;
+            json!({ "aborted": result.aborted, "errors": result.errors })
         }
         "getApiKeyAndHeaders" => {
             let model = serde_json::from_value(arg(payload, 0))?;
@@ -371,20 +626,17 @@ async fn model_registry_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::
         }
         "getApiKeyForProvider" => json!(registry.get_api_key_for_provider(arg(payload, 0).as_str().unwrap_or_default()).await),
         "getProviderAuth" => match registry.get_provider_auth(arg(payload, 0).as_str().unwrap_or_default()).await? {
-            Some(auth) => json!({
-                "auth": {
-                    "apiKey": auth.auth.api_key,
-                    "headers": serde_json::to_value(&auth.auth.headers)?,
-                    "baseUrl": auth.auth.base_url,
-                },
-                "env": serde_json::to_value(&auth.env)?,
-                "source": auth.source,
-            }),
+            Some(auth) => native::auth_result_to_js(&auth),
             None => Value::Null,
         },
-        "getAvailableOfType" => serde_json::to_value(
-            registry.get_available_of_type(serde_json::from_value(arg(payload, 0))?, arg(payload, 1).as_str(), None).await?,
-        )?,
+        "getAvailableOfType" => {
+            let options = crate::compat::AuthOperationOptions { signal: bridge.token(&arg(payload, 2)["signal"]) };
+            serde_json::to_value(
+                registry
+                    .get_available_of_type(serde_json::from_value(arg(payload, 0))?, arg(payload, 1).as_str(), Some(&options))
+                    .await?,
+            )?
+        }
         "classify" => {
             let model = serde_json::from_value(arg(payload, 0))?;
             let context = serde_json::from_value(arg(payload, 1))?;
@@ -397,7 +649,7 @@ async fn model_registry_async(bridge: &Arc<Bridge>, payload: &Value) -> anyhow::
             let options = provider::stream_options_from_json(bridge, &arg(payload, 2));
             serde_json::to_value(registry.generate_images(model, context, Some(options.into())).await)?
         }
-        _ => return Err(anyhow::anyhow!("modelRegistry.{method} is not available to extensions in pi-rs")),
+        _ => return Err(anyhow::anyhow!("modelRegistry.{method} is not a function")),
     })
 }
 

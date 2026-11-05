@@ -179,13 +179,13 @@ fn compat_to_map(compat: Option<&ModelCompat>) -> Option<Map<String, Value>> {
     })
 }
 
-fn map_to_compat(map: Option<Map<String, Value>>) -> Option<ModelCompat> {
+fn map_to_compat(map: Option<Map<String, Value>>) -> Option<Box<ModelCompat>> {
     map.and_then(|m| serde_json::from_value(Value::Object(m)).ok())
 }
 
-fn merge_compat(base: Option<&ModelCompat>, over: Option<&Map<String, Value>>) -> Option<ModelCompat> {
+fn merge_compat(base: Option<&ModelCompat>, over: Option<&Map<String, Value>>) -> Option<Box<ModelCompat>> {
     if over.is_none() {
-        return base.cloned();
+        return base.cloned().map(Box::new);
     }
     map_to_compat(merge_compat_maps(compat_to_map(base), over))
 }
@@ -296,7 +296,7 @@ fn apply_model_override(model: &Model, over: &ModelsJsonModelOverride) -> Model 
         model.sampling_params_by_thinking_level.as_ref(),
         over.sampling_params_by_thinking_level.as_ref(),
     );
-    out.compat = merge_compat(model.compat.as_ref(), over.compat.as_ref());
+    out.compat = merge_compat(model.compat.as_deref(), over.compat.as_ref());
     out
 }
 
@@ -509,7 +509,7 @@ fn apply_models_json(
                 model.set_base_url(base_url.clone());
             }
             if let AnyModel::Chat(chat) = &mut model {
-                chat.compat = merge_compat(chat.compat.as_ref(), config.compat.as_ref());
+                chat.compat = merge_compat(chat.compat.as_deref(), config.compat.as_ref());
             }
             model
         })

@@ -21,12 +21,12 @@ use std::sync::{Arc, LazyLock};
 
 pub use tool_renderer::{ToolHtmlRenderer, ToolHtmlRendererRenderResultResult, ToolHtmlRendererRenderResultResult2};
 
-pub const TEMPLATE_HTML: &str = include_str!("template.html");
-pub const TEMPLATE_CSS: &str = include_str!("template.css");
-pub const TEMPLATE_JS: &str = include_str!("template.js");
-pub const MARKED_JS: &str = include_str!("vendor/marked.min.js");
-pub const MARKED_CJK_FRIENDLY_JS: &str = include_str!("vendor/marked-cjk-friendly.min.js");
-pub const HIGHLIGHT_JS: &str = include_str!("vendor/highlight.min.js");
+pub const TEMPLATE_HTML: pi_embed::Embedded = pi_embed::include_str!("template.html");
+pub const TEMPLATE_CSS: pi_embed::Embedded = pi_embed::include_str!("template.css");
+pub const TEMPLATE_JS: pi_embed::Embedded = pi_embed::include_str!("template.js");
+pub const MARKED_JS: pi_embed::Embedded = pi_embed::include_str!("vendor/marked.min.js");
+pub const MARKED_CJK_FRIENDLY_JS: pi_embed::Embedded = pi_embed::include_str!("vendor/marked-cjk-friendly.min.js");
+pub const HIGHLIGHT_JS: pi_embed::Embedded = pi_embed::include_str!("vendor/highlight.min.js");
 
 /// Pre-rendered HTML for a custom tool call and result
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -269,17 +269,17 @@ fn generate_html(session_data: &SessionData, theme_name: Option<&str>) -> anyhow
         base64::engine::general_purpose::STANDARD.encode(serde_json::to_string(session_data)?);
 
     // Build the CSS with theme variables injected
-    let mut css = replace_first(TEMPLATE_CSS, "{{THEME_VARS}}", &theme_vars);
+    let mut css = replace_first(TEMPLATE_CSS.get(), "{{THEME_VARS}}", &theme_vars);
     css = replace_first(&css, "{{BODY_BG}}", &body_bg);
     css = replace_first(&css, "{{CONTAINER_BG}}", &container_bg);
     css = replace_first(&css, "{{INFO_BG}}", &info_bg);
 
-    let mut html = replace_first(TEMPLATE_HTML, "{{CSS}}", &css);
-    html = replace_first(&html, "{{JS}}", TEMPLATE_JS);
+    let mut html = replace_first(TEMPLATE_HTML.get(), "{{CSS}}", &css);
+    html = replace_first(&html, "{{JS}}", TEMPLATE_JS.get());
     html = replace_first(&html, "{{SESSION_DATA}}", &session_data_base64);
-    html = replace_first(&html, "{{MARKED_JS}}", MARKED_JS);
-    html = replace_first(&html, "{{MARKED_CJK_FRIENDLY_JS}}", MARKED_CJK_FRIENDLY_JS);
-    html = replace_first(&html, "{{HIGHLIGHT_JS}}", HIGHLIGHT_JS);
+    html = replace_first(&html, "{{MARKED_JS}}", MARKED_JS.get());
+    html = replace_first(&html, "{{MARKED_CJK_FRIENDLY_JS}}", MARKED_CJK_FRIENDLY_JS.get());
+    html = replace_first(&html, "{{HIGHLIGHT_JS}}", HIGHLIGHT_JS.get());
     Ok(html)
 }
 
@@ -496,17 +496,17 @@ mod tests {
 
     #[test]
     fn template_assets_are_embedded() {
-        assert!(TEMPLATE_HTML.contains("{{SESSION_DATA}}"));
-        assert!(TEMPLATE_CSS.contains("{{THEME_VARS}}"));
-        assert!(TEMPLATE_JS.contains("parseSkillBlock"));
-        assert!(!MARKED_JS.is_empty() && !HIGHLIGHT_JS.is_empty() && !MARKED_CJK_FRIENDLY_JS.is_empty());
+        assert!(TEMPLATE_HTML.get().contains("{{SESSION_DATA}}"));
+        assert!(TEMPLATE_CSS.get().contains("{{THEME_VARS}}"));
+        assert!(TEMPLATE_JS.get().contains("parseSkillBlock"));
+        assert!(!MARKED_JS.get().is_empty() && !HIGHLIGHT_JS.get().is_empty() && !MARKED_CJK_FRIENDLY_JS.get().is_empty());
     }
 
     /// Port of export-html-xss.test.ts / export-html-skill-block.test.ts / whitespace CSS checks:
     /// the embedded template keeps its sanitization and rendering hooks.
     #[test]
     fn template_keeps_sanitization_and_rendering_hooks() {
-        let js = TEMPLATE_JS;
+        let js = TEMPLATE_JS.get();
         let re = |pattern: &str| regex::Regex::new(pattern).unwrap();
         assert!(re(r"link\s*\(\s*token\s*\)").is_match(js));
         assert!(re(r"image\s*\(\s*token\s*\)").is_match(js));
@@ -537,7 +537,7 @@ mod tests {
         assert!(js.contains("safeMarkedParse(skillBlock.content)"));
         assert!(js.contains("tree-role-skill"));
         // Whitespace handling.
-        let css = TEMPLATE_CSS;
+        let css = TEMPLATE_CSS.get();
         assert!(
             re(r"\.output-preview > div:not\(\.expand-hint\),\s*\.output-full > div:not\(\.expand-hint\) \{[\s\S]*?white-space:\s*pre-wrap;")
                 .is_match(css)

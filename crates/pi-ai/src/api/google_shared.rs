@@ -27,7 +27,7 @@ use crate::utils::headers::{provider_headers_to_record, to_provider_headers};
 use crate::utils::identity::{ClientIdentityTarget, get_identity_headers};
 use crate::utils::provider_retry::{AbortError, ProviderRetryOptions, retry_provider_request};
 use crate::utils::sanitize_unicode::sanitize_surrogates;
-use crate::utils::text::get_system_message_text;
+use crate::utils::text::{get_system_message_text, get_system_message_text_is_empty};
 use crate::utils::transcript::{collapse_system_messages, get_current_tools, get_initial_system_message, without_initial_system_message};
 
 /// Version of `@google/genai` whose request shape this module reproduces.
@@ -223,7 +223,7 @@ pub fn convert_messages(model: &Model, context: &TranscriptContext) -> Vec<Value
                     match block {
                         AssistantContent::Text(text) => {
                             let signature = resolve_thought_signature(same, text.text_signature.as_deref());
-                            if text.text.trim().is_empty() && signature.is_none() {
+                            if text.is_blank() && signature.is_none() {
                                 continue;
                             }
                             let mut part = Map::new();
@@ -236,7 +236,7 @@ pub fn convert_messages(model: &Model, context: &TranscriptContext) -> Vec<Value
                         AssistantContent::Thinking(thinking) => {
                             if same {
                                 let signature = resolve_thought_signature(same, thinking.thinking_signature.as_deref());
-                                if thinking.thinking.trim().is_empty() && signature.is_none() {
+                                if thinking.is_blank() && signature.is_none() {
                                     continue;
                                 }
                                 let mut part = Map::new();
@@ -247,7 +247,7 @@ pub fn convert_messages(model: &Model, context: &TranscriptContext) -> Vec<Value
                                 }
                                 parts.push(Value::Object(part));
                             } else {
-                                if thinking.thinking.trim().is_empty() {
+                                if thinking.is_blank() {
                                     continue;
                                 }
                                 parts.push(json!({ "text": sanitize_surrogates(&thinking.thinking) }));
@@ -283,7 +283,8 @@ pub fn convert_messages(model: &Model, context: &TranscriptContext) -> Vec<Value
                 } else {
                     Vec::new()
                 };
-                let has_text = !text_result.trim().is_empty();
+                let removed = result.content.iter().filter_map(UserContentBlock::as_text).any(|t| t.lone_surrogates_removed);
+                let has_text = !crate::types::is_blank_text(&text_result, removed);
                 let has_images = !images.is_empty();
                 let multimodal = supports_multimodal_function_response(&model.id);
                 let response_value = if has_text {
@@ -1049,7 +1050,7 @@ impl GoogleClient {
             }
             anyhow::bail!("{message}");
         }
-        Ok(GoogleChunkReader::new(Box::pin(response.bytes_stream()), signal.cloned()))
+        Ok(GoogleChunkReader::new(Box::pin(crate::utils::wasm::assert_send(response.bytes_stream())), signal.cloned()))
     }
 }
 
@@ -1258,6 +1259,7 @@ pub fn build_params(model: &Model, context: &TranscriptContext, options: &Stream
         resolve_google_function_calling_mode(&current_tools, tool_choice.as_deref(), supports_strict)?
     };
     let system_instruction = initial_system.map(get_system_message_text).unwrap_or_default();
+    let system_instruction_empty = initial_system.is_none_or(get_system_message_text_is_empty);
 
     let mut config = Map::new();
     if let Some(temperature) = options.temperature {
@@ -1266,7 +1268,7 @@ pub fn build_params(model: &Model, context: &TranscriptContext, options: &Stream
     if let Some(max_tokens) = options.max_tokens {
         config.insert("maxOutputTokens".into(), json!(max_tokens));
     }
-    if !system_instruction.is_empty() {
+    if !system_instruction_empty {
         config.insert("systemInstruction".into(), json!(sanitize_surrogates(&system_instruction)));
     }
     if let Some(tools) = convert_tools(&current_tools, false, supports_strict)? {

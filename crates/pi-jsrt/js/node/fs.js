@@ -314,6 +314,31 @@ const sync = {
   ftruncateSync(fd, len = 0) {
     ops.fsSync("ftruncate", fd, len);
   },
+  futimesSync(fd, atime, mtime) {
+    const t = (v) => (v instanceof Date ? v.getTime() / 1000 : Number(v));
+    ops.fsSync("futimes", fd, t(atime), t(mtime));
+  },
+  lutimesSync(p, atime, mtime) {
+    sync.utimesSync(p, atime, mtime);
+  },
+  fchmodSync(fd, mode) {
+    ops.fsSync("fchmod", fd, typeof mode === "string" ? parseInt(mode, 8) : mode);
+  },
+  fchownSync() {},
+  readvSync(fd, buffers, position) {
+    let total = 0;
+    for (const b of buffers) {
+      const n = sync.readSync(fd, b, 0, b.byteLength, position === undefined || position === null ? null : position + total);
+      total += n;
+      if (n < b.byteLength) break;
+    }
+    return total;
+  },
+  writevSync(fd, buffers, position) {
+    let total = 0;
+    for (const b of buffers) total += sync.writeSync(fd, b, 0, b.byteLength, position === undefined || position === null ? null : position + total);
+    return total;
+  },
 };
 
 function numericFlags(n) {
@@ -575,6 +600,21 @@ callbackApi.write = (fd, data, ...rest) => {
   const cb = rest.pop();
   new FileHandle(fd).write(data, ...rest).then((r) => cb(null, r.bytesWritten, r.buffer), cb);
 };
+// fd-based calls without a promise counterpart run synchronously and report via the callback.
+for (const name of ["fsync", "fdatasync", "ftruncate", "futimes", "lutimes", "fchmod", "fchown", "readv", "writev"]) {
+  callbackApi[name] = (...args) => {
+    const cb = typeof args[args.length - 1] === "function" ? args.pop() : () => {};
+    let result;
+    try {
+      result = sync[`${name}Sync`](...args);
+    } catch (err) {
+      process.nextTick(cb, err);
+      return;
+    }
+    if (name === "readv" || name === "writev") process.nextTick(cb, null, result, args[1]);
+    else process.nextTick(cb, null);
+  };
+}
 callbackApi.fstat = (fd, options, cb) => {
   if (typeof options === "function") cb = options;
   ops.fsAsync("fstat", fd).then((s) => cb(null, new Stats(s)), cb);
@@ -653,6 +693,7 @@ function createWriteStream(p, options = {}) {
     return opening;
   };
   const stream = new Writable({
+    highWaterMark: options.highWaterMark,
     decodeStrings: true,
     defaultEncoding: options.encoding ?? "utf8",
     write(chunk, encoding, cb) {

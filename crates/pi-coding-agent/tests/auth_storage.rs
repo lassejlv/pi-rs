@@ -304,7 +304,7 @@ async fn pre_aborted_file_operations_do_not_create_the_backing_file_or_run_the_m
             Some(&signal),
         )
         .await;
-    assert!(result.unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(result.unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     assert!(!auth.path.exists());
 }
@@ -335,7 +335,7 @@ async fn aborts_while_waiting_for_a_held_file_lock_without_running_the_mutation_
         )
         .await;
     aborter.await.unwrap();
-    assert!(result.unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(result.unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     std::fs::remove_dir(lock).unwrap();
     tokio::time::sleep(Duration::from_millis(150)).await;
     assert_eq!(calls.load(Ordering::SeqCst), 0);
@@ -387,7 +387,7 @@ async fn holds_the_file_lock_until_a_cancelled_active_callback_settles_without_c
     tokio::time::sleep(Duration::from_millis(20)).await;
     assert_eq!(competing_calls.load(Ordering::SeqCst), 0);
     finish_tx.send(()).unwrap();
-    assert!(pending.await.unwrap().unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(pending.await.unwrap().unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     competing.await.unwrap().unwrap();
     assert_eq!(competing_calls.load(Ordering::SeqCst), 1);
     assert_eq!(auth.read(), json!({ "google": { "type": "api_key", "key": "committed" } }));
@@ -410,7 +410,7 @@ async fn cancels_a_signalled_credential_read_waiting_for_a_held_file_lock() {
     };
     let result = storage.read("anthropic", Some(&signal)).await;
     aborter.await.unwrap();
-    assert!(result.unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(result.unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     std::fs::remove_dir(lock).unwrap();
     assert_eq!(storage.read("anthropic", None).await.unwrap(), Some(api_key("new-value")));
 }
@@ -512,7 +512,7 @@ async fn cancels_a_queued_in_memory_mutation_without_running_it_later() {
     };
     tokio::time::sleep(Duration::from_millis(10)).await;
     signal.cancel();
-    assert!(second.await.unwrap().unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(second.await.unwrap().unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     finish_tx.send(()).unwrap();
     first.await.unwrap().unwrap();
     tokio::time::sleep(Duration::from_millis(10)).await;
@@ -551,7 +551,7 @@ async fn preserves_the_stored_credential_after_cancelling_an_active_refresh_muta
     };
     started_rx.await.unwrap();
     signal.cancel();
-    assert!(pending.await.unwrap().unwrap_err().is::<pi_ai::utils::provider_retry::AbortError>());
+    assert!(pending.await.unwrap().unwrap_err().is::<pi_ai::utils::abort::SignalAbortError>());
     let calls = Arc::new(AtomicUsize::new(0));
     let competing = {
         let storage = storage.clone();

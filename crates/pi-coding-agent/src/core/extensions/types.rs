@@ -1111,6 +1111,25 @@ pub type ToolExecuteFn = Arc<
         + Send
         + Sync,
 >;
+/// What an extension renderer returns when its code failed (TS: the renderer threw). Callers with
+/// a fallback (tool calls and results, custom messages and entries) treat it like TS's `catch`;
+/// elsewhere it shows the error text.
+pub struct RenderFailed {
+    pub message: String,
+}
+
+impl pi_tui::tui::Component for RenderFailed {
+    fn render(&self, width: usize) -> Vec<String> {
+        let text = format!("[extension render error: {}]", self.message);
+        vec![pi_tui::utils::truncate_to_width(&text, width, "...", false)]
+    }
+}
+
+/// The error message when `component` is a [`RenderFailed`].
+pub fn render_failure(component: &ComponentRef) -> Option<&str> {
+    component.as_any().downcast_ref::<RenderFailed>().map(|f| f.message.as_str())
+}
+
 /// `renderCall(args, theme, context)`.
 pub type ToolRenderCallFn =
     Arc<dyn Fn(&Value, &Arc<Theme>, &ToolRenderContext) -> ComponentRef + Send + Sync>;
@@ -1149,6 +1168,11 @@ pub struct ToolDefinition {
     pub prompt_guidelines: Option<Vec<String>>,
     /// Parameter JSON schema (TypeBox in TS).
     pub parameters: Value,
+    /// `parameters` was built with TypeBox (TS: the schema carries the non-enumerable `~kind`), so
+    /// argument validation runs TypeBox's `Value.Convert` before the JSON Schema coercion. Set for
+    /// the built-in tools and for JS extension tools whose schema comes from TypeBox; plain JSON
+    /// schemas (MCP tools) leave it unset.
+    pub parameters_typebox: bool,
     /// Provider-side constrained sampling request. TS `false` is `None`.
     pub constrained_sampling: Option<ConstrainedSamplingConfig>,
     /// Whether the tool execution component renders the standard shell or the tool its own framing.
@@ -1218,6 +1242,7 @@ impl ToolDefinition {
             prompt_snippet: None,
             prompt_guidelines: None,
             parameters,
+            parameters_typebox: false,
             constrained_sampling: None,
             render_shell: None,
             prepare_arguments: None,
@@ -2527,12 +2552,18 @@ pub enum MarkdownMessageType {
     AssistantThinking,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkdownTransformContext {
     pub message_type: MarkdownMessageType,
     pub is_streaming: bool,
     pub available_width: usize,
+    /// Persisted session-entry id; absent for live messages or live rendering.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
+    /// Persisted session-entry ISO timestamp; absent for live messages or live rendering.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<String>,
 }
 
 pub type MarkdownTransformer = Arc<dyn Fn(&str, &MarkdownTransformContext) -> String + Send + Sync>;

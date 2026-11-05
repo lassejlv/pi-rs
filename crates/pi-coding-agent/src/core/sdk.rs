@@ -788,6 +788,7 @@ mod tests {
                     image(),
                 ]),
                 timestamp: 0,
+                ..Default::default()
             }),
             Message::ToolResult(ToolResultMessage {
                 content: vec![image()],

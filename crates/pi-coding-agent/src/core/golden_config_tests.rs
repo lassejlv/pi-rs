@@ -412,6 +412,8 @@ fn run_settings_op(rt: &tokio::runtime::Runtime, s: &SettingsManager, op: &Value
 
 #[test]
 fn golden_settings() {
+    // `~` expands against HOME, which other golden tests swap while holding this lock.
+    let _env = crate::core::package_manager::TEST_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let fixture = fixture();
     let rt = runtime();
     let mut failures = Vec::new();
@@ -724,7 +726,17 @@ fn golden_resource_discovery() {
             .filter(|file| file.path.starts_with(&tree.root))
             .map(|file| to_json(&file))
             .collect();
-        check(&mut failures, &case.name, &case.out, &tree.relativize(Value::Array(files)));
+        // The golden file was generated on a case-sensitive filesystem. On a case-insensitive one the
+        // `AGENTS.md` / `CLAUDE.md` candidates match their `.MD` spellings first, as in upstream.
+        let mut expected = case.out.clone();
+        if std::fs::metadata(tree.path("AGENT")).is_ok() {
+            for file in expected.as_array_mut().into_iter().flatten() {
+                if let Some(path) = file["path"].as_str().filter(|p| p.ends_with("/AGENTS.MD") || p.ends_with("/CLAUDE.MD")) {
+                    file["path"] = json!(format!("{}.md", path.strip_suffix(".MD").unwrap()));
+                }
+            }
+        }
+        check(&mut failures, &case.name, &expected, &tree.relativize(Value::Array(files)));
     }
     finish("resource discovery", failures);
 }
@@ -842,6 +854,21 @@ fn golden_model_resolution() {
 // -------------------------------------------------------------------------------------------------
 // Keybindings
 
+/// The golden file is generated on Linux, where the tree fold/unfold defaults are
+/// `[ctrl+<dir>, alt+<dir>]`; upstream orders them `[alt+<dir>, ctrl+<dir>]` on darwin.
+fn darwin_keybinding_defaults(mut expected: Value) -> Value {
+    if cfg!(target_os = "macos")
+        && let Some(effective) = expected.get_mut("effective").and_then(Value::as_object_mut)
+    {
+        for (key, dir) in [("app.tree.foldOrUp", "left"), ("app.tree.unfoldOrDown", "right")] {
+            if effective.get(key) == Some(&json!([format!("ctrl+{dir}"), format!("alt+{dir}")])) {
+                effective.insert(key.into(), json!([format!("alt+{dir}"), format!("ctrl+{dir}")]));
+            }
+        }
+    }
+    expected
+}
+
 #[test]
 fn golden_keybindings() {
     let fixture = fixture();
@@ -868,7 +895,7 @@ fn golden_keybindings() {
             "conflicts": manager.get_conflicts().into_iter().map(|c| json!({ "key": c.key, "keybindings": c.keybindings })).collect::<Vec<_>>(),
             "migrated": migrated,
         });
-        check(&mut failures, &case.name, &case.out, &actual);
+        check(&mut failures, &case.name, &darwin_keybinding_defaults(case.out.clone()), &actual);
     }
     finish("keybindings", failures);
 }
@@ -955,6 +982,8 @@ fn golden_provider_composition() {
 #[test]
 fn golden_resource_loader() {
     use crate::core::resource_loader::{DefaultResourceLoader, DefaultResourceLoaderOptions, ResourceLoader};
+    // The generator ran with an empty home; the real ~/.agents/skills would leak into the output.
+    let _home = crate::core::package_manager::IsolatedHome::new();
     let fixture = fixture();
     let rt = runtime();
     let mut failures = Vec::new();

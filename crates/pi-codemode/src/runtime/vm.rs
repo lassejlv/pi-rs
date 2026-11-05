@@ -1,7 +1,6 @@
 //! Native djs execution behind the transport-independent codemode VM protocol.
 //! Persistent JavaScript values are GC handles; host callbacks suspend the interpreter.
 
-use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -17,7 +16,7 @@ use djs_core::interp::Status;
 use djs_core::value::Value;
 use djs_core::vm::{Vm as Engine, VmOptions, WeakRefs};
 
-const DETERMINISTIC_VERSION: u32 = 7;
+const DETERMINISTIC_VERSION: u32 = 6;
 const FUEL_PER_POLL: u64 = 10_000;
 const VM_THREAD_STACK_SIZE: usize = 8 * 1024 * 1024;
 /// Default fuel limit for one synchronous invocation, including generated code.
@@ -160,45 +159,12 @@ fn vm_main(
     }
 }
 
-/// The host's UTC offset at `unix_time_seconds`, honoring `TZ`.
-#[cfg(unix)]
-fn local_offset_seconds(unix_time_seconds: i64) -> i32 {
-    let time = unix_time_seconds as libc::time_t;
-    // SAFETY: `localtime_r` writes into the provided `tm` and reads `time`; both outlive the call.
-    unsafe {
-        let mut tm: libc::tm = std::mem::zeroed();
-        if libc::localtime_r(&time, &mut tm).is_null() {
-            return 0;
-        }
-        tm.tm_gmtoff as i32
-    }
-}
-
-#[cfg(not(unix))]
-fn local_offset_seconds(_unix_time_seconds: i64) -> i32 {
-    0
-}
-
-/// mulberry32: a small, fast PRNG; one 32-bit draw per call.
-struct Prng {
-    state: Cell<u32>,
-}
-
-impl Prng {
-    fn next(&self) -> u32 {
-        let state = self.state.get().wrapping_add(0x6d2b_79f5);
-        self.state.set(state);
-        let mut value = (state ^ (state >> 15)).wrapping_mul(1 | state);
-        value = (value.wrapping_add((value ^ (value >> 7)).wrapping_mul(61 | value))) ^ value;
-        value ^ (value >> 14)
-    }
-
-    /// A double in [0, 1) from 53 random bits.
-    fn next_f64(&self) -> f64 {
-        let high = u64::from(self.next() >> 5);
-        let low = u64::from(self.next() >> 6);
-        ((high << 26) | low) as f64 / (1u64 << 53) as f64
-    }
+/// A `TZ` value interpreted as an IANA name or POSIX rule, with UTC fallback.
+pub fn timezone_named(tz: &str) -> jiff::tz::TimeZone {
+    let name = tz.strip_prefix(':').unwrap_or(tz);
+    jiff::tz::TimeZone::get(name)
+        .or_else(|_| jiff::tz::TimeZone::posix(name))
+        .unwrap_or(jiff::tz::TimeZone::UTC)
 }
 
 struct Vm {
@@ -210,9 +176,7 @@ struct Vm {
     post: Arc<dyn Fn(VmReport) + Send + Sync>,
     interrupt: Arc<AtomicBool>,
     clock: Option<f64>,
-    zone_checked_at: f64,
-    zone_offset: i32,
-    prng: Option<Prng>,
+    timezone: jiff::tz::TimeZone,
     next_seq: u64,
     early: BTreeMap<u64, HostToWorkerMessage>,
     issued: u64,
@@ -222,6 +186,7 @@ struct Vm {
     dead: bool,
     settled: bool,
     polling: bool,
+    lossless_json: bool,
     fingerprint: Option<String>,
     limits: VmLimits,
 }
@@ -245,38 +210,25 @@ impl Vm {
         };
         let engine =
             djs_prelude::new_vm(opts).map_err(|e| format!("Failed to create the VM: {e:?}"))?;
-        let fingerprint = data.deterministic.map(|_| format!(
-                "djs {:016x}, prelude {}, deterministic {DETERMINISTIC_VERSION}, stack {}, heap {}, budget {}, fuel per poll {FUEL_PER_POLL}, invocation fuel {}",
+        let timezone = if data.deterministic.is_some() {
+            jiff::tz::TimeZone::UTC
+        } else {
+            data.timezone
+                .as_deref()
+                .map(timezone_named)
+                .unwrap_or_else(jiff::tz::TimeZone::system)
+        };
+        let mut vm = Self {
+            engine, api: None, settle: None, run: None, stalled: None, post, interrupt,
+            clock: data.deterministic.map(|d| d.started_at), timezone, next_seq: 1, early: BTreeMap::new(),
+            issued: 0, current: 0, ticks: 0, fuel_since_tick: 0, dead: false, settled: false, polling: false, lossless_json: data.lossless_json,
+            fingerprint: data.deterministic.map(|_| format!(
+                "djs {:016x}, prelude {}, deterministic {DETERMINISTIC_VERSION}, stack {}, heap {}, budget {}, fuel per poll {FUEL_PER_POLL}, invocation fuel {}{}",
                 djs_core::vm::BUILD_HASH, *PRELUDE_HASH, limits.recursion_limit,
                 data.memory_limit_bytes.map_or_else(|| "none".into(), |n| n.to_string()),
                 limits.interrupt_budget.map_or_else(|| "none".into(), |n| n.to_string()),
                 limits.loop_iteration_limit.map_or_else(|| "none".into(), |n| n.to_string()),
-                ));
-        let mut vm = Self {
-            engine,
-            api: None,
-            settle: None,
-            run: None,
-            stalled: None,
-            post,
-            interrupt,
-            clock: data.deterministic.map(|d| d.started_at),
-            zone_checked_at: f64::NEG_INFINITY,
-            zone_offset: 0,
-            prng: data.deterministic.map(|d| Prng {
-                state: Cell::new(d.seed ^ 0x9e37_79b9),
-            }),
-            next_seq: 1,
-            early: BTreeMap::new(),
-            issued: 0,
-            current: 0,
-            ticks: 0,
-            fuel_since_tick: 0,
-            dead: false,
-            settled: false,
-            polling: false,
-            fingerprint,
-            limits,
+                if data.lossless_json { ", UTF16 JSON 3" } else { "" })), limits,
         };
         let bridge = vm
             .engine
@@ -295,23 +247,13 @@ impl Vm {
             Object.defineProperty(globalThis, "performance", {{value: {{now() {{return Date.now() - {origin};}}}}, configurable:true}});
             delete globalThis.Temporal;"#, tick_name=crate::js::quote(super::instrument::TICK)))?;
         vm.free(setup);
-        if data.deterministic.is_some() {
-            let random = vm
-                .engine
-                .new_host_function(2, "random")
-                .map_err(|e| format!("{e:?}"))?;
-            let random = vm.root(random)?;
-            let setter = vm.eval("(random => { Math.random = random; })")?;
-            let result = vm.invoke(setter, None, &[random])?;
-            for handle in [random, setter, result] {
-                vm.free(handle);
-            }
-        }
         let factory = vm.eval(&PRELUDE_SOURCE)?;
         let tools = vm.string(&serde_json::to_string(&data.tools).map_err(|e| e.to_string())?)?;
         let globals =
             vm.string(&serde_json::to_string(&data.globals).map_err(|e| e.to_string())?)?;
-        let store = vm.string(&serde_json::to_string(&data.store).map_err(|e| e.to_string())?)?;
+        let store = vm.string(&data.store_json.clone().unwrap_or_else(|| {
+            serde_json::to_string(&data.store).unwrap_or_else(|_| "{}".into())
+        }))?;
         let api = vm.invoke(factory, None, &[bridge, tools, globals, store])?;
         vm.api = Some(api);
         for h in [factory, bridge, tools, globals, store] {
@@ -332,7 +274,13 @@ impl Vm {
         opts.exec.max_stack =
             u32::try_from(limits.recursion_limit.saturating_mul(32).max(2048)).unwrap_or(u32::MAX);
         vm.engine.set_options(opts);
-        if data.deterministic.is_none() {
+        if let Some(d) = data.deterministic {
+            let mut seed = u64::from(d.seed) + 1;
+            seed ^= seed >> 12;
+            seed ^= seed << 25;
+            seed ^= seed >> 27;
+            vm.engine.set_random_seed(seed);
+        } else {
             vm.engine.set_random_seed(origin.to_bits());
         }
         vm.polling = true;
@@ -359,6 +307,14 @@ impl Vm {
             .map_err(|e| format!("{e:?}"))?;
         self.root(Value::string(s))
     }
+    fn utf16(&mut self, text: &[u16]) -> Result<Handle, String> {
+        let s = self
+            .engine
+            .heap_mut()
+            .alloc_utf16(text)
+            .map_err(|e| format!("{e:?}"))?;
+        self.root(Value::string(s))
+    }
     fn send(&mut self, message: WorkerToHostMessage) {
         if self.settled {
             return;
@@ -382,22 +338,11 @@ impl Vm {
     }
     fn set_clock(&mut self) {
         let now = self.clock.unwrap_or_else(wall_time);
-        self.engine.set_now(if self.clock.is_some() {
-            now.round()
-        } else {
-            now.trunc()
-        });
-        let offset = if self.clock.is_some() {
-            0
-        } else {
-            // libc may consult timezone files. Do not do that at every loop tick.
-            if now - self.zone_checked_at >= 1000.0 || now < self.zone_checked_at {
-                self.zone_offset = local_offset_seconds((now / 1000.0) as i64) / 60;
-                self.zone_checked_at = now;
-            }
-            self.zone_offset
-        };
-        self.engine.set_time_zone_offset(offset);
+        self.engine.set_now(now);
+        let at =
+            jiff::Timestamp::from_millisecond(now as i64).unwrap_or(jiff::Timestamp::UNIX_EPOCH);
+        self.engine
+            .set_time_zone_offset(self.timezone.to_offset(at).seconds() / 60);
     }
     fn eval(&mut self, source: &str) -> Result<Handle, String> {
         let f = self
@@ -461,16 +406,6 @@ impl Vm {
                         if self.polling {
                             self.charge(1)?;
                         }
-                    } else if fn_id == 2 {
-                        let value = self
-                            .prng
-                            .as_ref()
-                            .ok_or("Missing deterministic PRNG")?
-                            .next_f64();
-                        self.engine
-                            .resolve_host_call(call_id, Ok(Value::number(value)))
-                            .map_err(|e| format!("{e:?}"))?;
-                        continue;
                     } else {
                         return Err(format!("Unknown host function {fn_id}"));
                     }
@@ -505,6 +440,12 @@ impl Vm {
             .and_then(|v| v.as_string())
             .map(|s| self.engine.heap().str_to_string(s))
     }
+    fn units_arg(&self, args: &[Value], index: usize) -> Vec<u16> {
+        args.get(index)
+            .and_then(|v| v.as_string())
+            .map(|s| self.engine.heap().str_to_utf16(s))
+            .unwrap_or_default()
+    }
     fn bridge(&mut self, args: &[Value]) -> Result<(), String> {
         if self.settled || self.interrupt.load(Ordering::SeqCst) {
             return Err("Execution interrupted".into());
@@ -519,31 +460,48 @@ impl Vm {
                     CodemodeCallTarget::Global
                 };
                 let payload = self.text_arg(args, 3);
-                self.send(WorkerToHostMessage::Call {
-                    id,
-                    target,
-                    name: self.text_arg(args, 2).unwrap_or_default(),
-                    args: payload,
-                });
+                if self.lossless_json {
+                    self.send(WorkerToHostMessage::CallUtf16 {
+                        id,
+                        target,
+                        name: self.units_arg(args, 2),
+                        args: payload,
+                    });
+                } else {
+                    self.send(WorkerToHostMessage::Call {
+                        id,
+                        target,
+                        name: self.text_arg(args, 2).unwrap_or_default(),
+                        args: payload,
+                    });
+                }
             }
             Some("output") => {
                 let kind = self.text_arg(args, 1).unwrap_or_default();
-                let text = self.text_arg(args, 2).unwrap_or_default();
-                let item = match kind.as_str() {
-                    "image" => CodemodeOutputItem::Image {
-                        data: text,
-                        mime_type: self.text_arg(args, 3).unwrap_or_default(),
-                    },
-                    "console" => CodemodeOutputItem::Text {
-                        text,
-                        console: Some(true),
-                    },
-                    _ => CodemodeOutputItem::Text {
-                        text,
-                        console: None,
-                    },
-                };
-                self.send(WorkerToHostMessage::Output { item });
+                if self.lossless_json {
+                    self.send(WorkerToHostMessage::OutputUtf16 {
+                        kind,
+                        data: self.units_arg(args, 2),
+                        mime_type: self.units_arg(args, 3),
+                    });
+                } else {
+                    let text = self.text_arg(args, 2).unwrap_or_default();
+                    let item = match kind.as_str() {
+                        "image" => CodemodeOutputItem::Image {
+                            data: text,
+                            mime_type: self.text_arg(args, 3).unwrap_or_default(),
+                        },
+                        "console" => CodemodeOutputItem::Text {
+                            text,
+                            console: Some(true),
+                        },
+                        _ => CodemodeOutputItem::Text {
+                            text,
+                            console: None,
+                        },
+                    };
+                    self.send(WorkerToHostMessage::Output { item });
+                }
             }
             Some("done") => {
                 let mut done = if args.get(1).and_then(|v| v.as_bool()) == Some(true) {
@@ -568,8 +526,15 @@ impl Vm {
         if let Some(fingerprint) = self.fingerprint.clone() {
             self.send(WorkerToHostMessage::Started { fingerprint });
         }
-        let wrapper = format!("(async (tools, console) => {{{}\n}})", data.code);
-        let wrapper = super::instrument::instrument_loops(&wrapper).unwrap_or(wrapper);
+        let wrapper = if let Some(code) = &data.code_utf16 {
+            let mut wrapper: Vec<u16> = "(async (tools, console) => {".encode_utf16().collect();
+            wrapper.extend_from_slice(code);
+            wrapper.extend("\n})".encode_utf16());
+            utf16_source(&super::instrument::instrument_loops_utf16(&wrapper).unwrap_or(wrapper))
+        } else {
+            let wrapper = format!("(async (tools, console) => {{{}\n}})", data.code);
+            super::instrument::instrument_loops(&wrapper).unwrap_or(wrapper)
+        };
         let function = match self
             .engine
             .compile(wrapper.as_bytes(), &CompileOptions::script("codemode.js"))
@@ -629,6 +594,21 @@ impl Vm {
                     },
                     properties,
                 ),
+                HostToWorkerMessage::ResultUtf16 {
+                    id,
+                    ok,
+                    payload,
+                    properties,
+                    ..
+                } => (
+                    *id,
+                    *ok,
+                    match payload {
+                        Some(p) => self.utf16(p)?,
+                        None => self.root(Value::UNDEFINED)?,
+                    },
+                    properties,
+                ),
             };
             let id = self.root(Value::number(id as f64))?;
             let ok = self.root(Value::bool(ok))?;
@@ -657,6 +637,7 @@ impl Vm {
         };
         let (id, seq) = match &message {
             HostToWorkerMessage::Result { id, seq, .. } => (*id, *seq),
+            HostToWorkerMessage::ResultUtf16 { id, seq, .. } => (*id, Some(*seq)),
         };
         let seq = match seq {
             Some(seq) if seq >= self.next_seq && !self.early.contains_key(&seq) => seq,
@@ -674,6 +655,7 @@ impl Vm {
         while let Some(next) = self.early.remove(&self.next_seq) {
             let now = match &next {
                 HostToWorkerMessage::Result { now, .. } => *now,
+                HostToWorkerMessage::ResultUtf16 { now, .. } => Some(*now),
             };
             // Never backwards: a resumed host's clock may be behind the one that started the run.
             if let Some(now) = now
@@ -701,6 +683,19 @@ fn wall_time() -> f64 {
         .unwrap_or_default()
         .as_secs_f64()
         * 1000.0
+}
+
+/// UTF-16 source as UTF-8 for the parser. Lone surrogates (only meaningful inside string and
+/// template literals) become `\uXXXX` escapes, which denote the same code unit there.
+fn utf16_source(units: &[u16]) -> String {
+    let mut out = String::with_capacity(units.len());
+    for unit in char::decode_utf16(units.iter().copied()) {
+        match unit {
+            Ok(c) => out.push(c),
+            Err(e) => out.push_str(&format!("\\u{:04X}", e.unpaired_surrogate())),
+        }
+    }
+    out
 }
 
 #[cfg(test)]

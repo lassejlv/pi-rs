@@ -67,7 +67,8 @@ impl AbortController {
         self.signal.clone()
     }
 
-    /// Abort without a reason; an aborted execution then reports "Execution aborted".
+    /// Abort without a reason; like Node's `controller.abort()`, an aborted execution then reports
+    /// the default reason "This operation was aborted".
     pub fn abort(&self) {
         self.signal.token.cancel();
     }

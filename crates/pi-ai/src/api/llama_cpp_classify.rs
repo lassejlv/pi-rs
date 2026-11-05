@@ -509,6 +509,6 @@ pub struct LlamaCppClassifyApi;
 #[async_trait]
 impl ProviderClassifier for LlamaCppClassifyApi {
     async fn classify(&self, model: &ClassifierModel, context: &ClassifierContext, options: StreamOptions) -> ClassifierResult {
-        classify(model, context, options).await
+        crate::utils::wasm::assert_send(classify(model, context, options)).await
     }
 }

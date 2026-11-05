@@ -24,11 +24,13 @@ pub fn build(kind: &str, input: &Value) -> Option<Built> {
                 Some(opt_s(input, "hiddenLabel").unwrap_or("Thinking...")),
                 Some(opt_i(input, "outputPad").unwrap_or(1)),
                 None,
+                None,
+                None,
             );
             c.update_content(from(input, "message"), Some(b(input, "streaming")));
             component(c)
         }
-        "user_message" => component(UserMessageComponent::new(s(input, "text"), None, Some(opt_i(input, "outputPad").unwrap_or(1)), None)),
+        "user_message" => component(UserMessageComponent::new(s(input, "text"), None, Some(opt_i(input, "outputPad").unwrap_or(1)), None, None, None)),
         "bash_execution" => {
             let c = BashExecutionComponent::new(
                 s(input, "command"),

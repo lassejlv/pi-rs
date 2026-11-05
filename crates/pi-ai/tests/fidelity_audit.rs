@@ -61,6 +61,9 @@ fn context() -> TranscriptContext {
 }
 
 fn cancel_after(ms: u64) -> CancellationToken {
+    // Build the shared HTTP client first: a cold build under parallel tests can outlast the delay
+    // and abort the request before it is sent.
+    let _ = pi_ai::utils::http::client_for("http://127.0.0.1", None);
     let signal = CancellationToken::new();
     let trigger = signal.clone();
     tokio::spawn(async move {

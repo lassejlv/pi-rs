@@ -543,6 +543,11 @@ pub trait AgentTool: Send + Sync {
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         None
     }
+    /// The parameters were built with TypeBox (TS: the schema carries `~kind`), so validation runs
+    /// TypeBox's `Value.Convert` on the arguments first (see [`Tool::typebox`]).
+    fn parameters_typebox(&self) -> bool {
+        false
+    }
     /// Execute the tool call. Return `Err` on failure, or a result with `is_error: Some(true)`.
     async fn execute(
         &self,
@@ -559,6 +564,7 @@ pub trait AgentTool: Send + Sync {
             description: self.description().to_string(),
             parameters: self.parameters().clone(),
             constrained_sampling: self.constrained_sampling().cloned(),
+            typebox: self.parameters_typebox(),
         }
     }
 }

@@ -1,0 +1,29 @@
+[package]
+name = "pi-durable-workerd"
+version = "0.0.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Built on its own so the host workspace never needs the wasm32 toolchain.
+[workspace]
+
+[features]
+default = ["harness", "wake"]
+# The faux-provider Harness turn (harness_turn.rs, harness.test.ts).
+harness = ["dep:pi-ai", "dep:pi-chord", "dep:serde_json"]
+# Harness wake scenarios; needs the Harness to build for wasm32.
+wake = ["dep:pi-ai", "dep:pi-chord", "dep:anyhow", "dep:indexmap", "dep:serde_json", "dep:tokio"]
+
+[dependencies]
+pi-durable = { path = "../../..", default-features = false, features = ["cloudflare"] }
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "=0.4.79"
+js-sys = "=0.3.106"
+pi-ai = { path = "../../../../pi-ai", optional = true }
+pi-chord = { path = "../../../../pi-chord", optional = true }
+anyhow = { version = "1", optional = true }
+indexmap = { version = "2", optional = true }
+serde_json = { version = "1", optional = true }
+tokio = { version = "1", default-features = false, features = ["sync"], optional = true }

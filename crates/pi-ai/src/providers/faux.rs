@@ -353,7 +353,7 @@ async fn schedule_chunk(chunk: &str, tokens_per_second: Option<f64>) {
         None => tokio::task::yield_now().await,
         Some(tps) => {
             let delay_ms = (estimate_tokens(chunk) as f64 / tps) * 1000.0;
-            tokio::time::sleep(Duration::from_secs_f64(delay_ms / 1000.0)).await;
+            crate::utils::wasm::sleep(Duration::from_secs_f64(delay_ms / 1000.0)).await;
         }
     }
 }
@@ -614,7 +614,7 @@ impl FauxCore {
         let this = self.clone();
         let model = model.clone();
         let context = context.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             let result: anyhow::Result<()> = async {
                 if let Some(on_response) = &options.on_response {
                     on_response(ProviderResponse { status: 200, headers: Default::default() }, model.clone()).await;
@@ -686,7 +686,7 @@ impl FauxCore {
         let this = self.clone();
         let model = model.clone();
         let handle = handle.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             let result: anyhow::Result<()> = async {
                 if let Some(on_response) = &options.on_response {
                     on_response(ProviderResponse { status: 200, headers: Default::default() }, model.clone()).await;

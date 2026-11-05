@@ -343,7 +343,7 @@ async fn generate_e2e() {
         (target("Google Vertex (API key)", Gate::Env(&["GOOGLE_CLOUD_API_KEY"]), "google-vertex", "gemini-3-flash-preview")
             .api_key(&env("GOOGLE_CLOUD_API_KEY").unwrap_or_default()),
             vec![it("should complete basic text generation with Vertex API key", basic_text_generation)]),
-        (target("OpenAI Completions (gpt-4o-mini)", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+        (target("OpenAI Completions (gpt-4o-mini)", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
             vec![basic(), tools(), streaming(), image()]),
         (target("DeepSeek (deepseek-flash)", Gate::Env(&["DEEPSEEK_API_KEY"]), "deepseek", "deepseek-flash"), standard(effort("high"))),
         (target("OpenAI Responses (gpt-5.4)", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-5.4"),

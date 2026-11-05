@@ -102,64 +102,9 @@ pub fn js_to_fixed(value: f64, digits: usize) -> String {
     format!("{signed:.digits$}")
 }
 
-/// Collation weight class of an ASCII character in ICU root collation order (used by
-/// `localeCompare` without locales): whitespace, punctuation and symbols, digits, letters.
-fn icu_ascii_primary(c: char) -> Option<u32> {
-    // Order of ASCII non-alphanumerics in the CLDR root collation.
-    const ORDER: &str = "\t\n\u{b}\u{c}\r _-,;:!?.'\"()[]{}@*/\\&#%`^+<=>|~$";
-    if let Some(index) = ORDER.find(c) {
-        return Some(index as u32);
-    }
-    if c.is_ascii_digit() {
-        return Some(100 + (c as u32 - '0' as u32));
-    }
-    if c.is_ascii_alphabetic() {
-        return Some(200 + (c.to_ascii_lowercase() as u32 - 'a' as u32));
-    }
-    None
-}
-
-fn primary_key(s: &str) -> Vec<u32> {
-    use unicode_normalization::UnicodeNormalization;
-    let mut key = Vec::with_capacity(s.len());
-    for c in s.nfd() {
-        // Combining marks only differ at the secondary level.
-        if unicode_normalization::char::is_combining_mark(c) {
-            continue;
-        }
-        match icu_ascii_primary(c) {
-            Some(weight) => key.push(weight),
-            None => {
-                let lower = c.to_lowercase().next().unwrap_or(c);
-                key.push(1000 + lower as u32);
-            }
-        }
-    }
-    key
-}
-
-/// Approximation of `String.prototype.localeCompare` with the ICU root collation: compares
-/// primary weights first (punctuation < digits < letters, case and accents ignored), then accents,
-/// then case (lowercase first), then code points.
+/// `String.prototype.localeCompare` without locales: ICU's root collation, as in V8.
 pub fn locale_compare(a: &str, b: &str) -> Ordering {
-    use unicode_normalization::UnicodeNormalization;
-    primary_key(a)
-        .cmp(&primary_key(b))
-        .then_with(|| {
-            let marks = |s: &str| -> Vec<char> {
-                s.nfd()
-                    .filter(|c| unicode_normalization::char::is_combining_mark(*c))
-                    .collect()
-            };
-            marks(a).cmp(&marks(b))
-        })
-        .then_with(|| {
-            let case = |s: &str| -> Vec<u8> {
-                s.chars().map(|c| u8::from(c.is_uppercase())).collect()
-            };
-            case(a).cmp(&case(b))
-        })
-        .then_with(|| a.cmp(b))
+    pi_tui::collation::locale_compare(a, b)
 }
 
 #[cfg(test)]

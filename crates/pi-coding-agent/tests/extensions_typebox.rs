@@ -35,6 +35,13 @@ export default function (pi) {
 		}),
 		execute: async () => ({ content: [] }),
 	});
+	pi.registerTool({
+		name: "plain",
+		label: "Plain",
+		description: "plain JSON schema",
+		parameters: { type: "object", properties: { limit: { type: "integer" } } },
+		execute: async () => ({ content: [] }),
+	});
 }
 "#;
 
@@ -64,6 +71,10 @@ async fn typebox_builders_match_real_typebox() {
     }
     assert!(mismatches.is_empty(), "{} mismatches:\n{}", mismatches.len(), mismatches.join("\n"));
     assert_eq!(ours["aliases"], Value::Bool(true));
+
+    // TypeBox schemas (hidden `~kind`) make validation run `Value.Convert`; plain JSON ones do not.
+    assert!(tool.parameters_typebox);
+    assert!(!extension.tools["plain"].definition.parameters_typebox);
 
     // The declaration a provider receives keeps TypeBox's key order.
     assert_eq!(

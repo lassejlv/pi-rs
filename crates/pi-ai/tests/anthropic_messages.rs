@@ -194,6 +194,10 @@ async fn missing_api_key_errors() {
     assert_eq!(result.error_message.as_deref(), Some("No API key for provider: anthropic"));
 }
 
+/// The federation client (and its token cache) is one process-wide slot, as in the SDK: tests that
+/// use different configs would evict each other's cached token when run in parallel.
+static FEDERATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 fn federation_env(token_file: &std::path::Path, workspace: Option<&str>) -> ProviderEnv {
     let mut env = ProviderEnv::new();
     env.insert("ANTHROPIC_FEDERATION_RULE_ID".into(), "fdrl_rule".into());
@@ -218,6 +222,7 @@ fn identity_token_file(name: &str, contents: &str) -> std::path::PathBuf {
 /// sends the access token as a bearer with the OAuth beta, and caches it across requests.
 #[tokio::test]
 async fn workload_identity_federation_exchanges_and_caches_the_token() {
+    let _federation = FEDERATION_LOCK.lock().await;
     let token = r#"{"access_token":"fed-access","expires_in":3600,"token_type":"Bearer"}"#;
     let server = serve(vec![
         MockResponse::json(200, token),
@@ -261,6 +266,7 @@ async fn workload_identity_federation_exchanges_and_caches_the_token() {
 
 #[tokio::test]
 async fn workload_identity_federation_reexchanges_after_401_and_reports_exchange_errors() {
+    let _federation = FEDERATION_LOCK.lock().await;
     let server = serve(vec![
         MockResponse::json(200, r#"{"access_token":"first","expires_in":3600}"#),
         MockResponse::json(401, r#"{"type":"error","error":{"type":"authentication_error","message":"invalid token"}}"#),
@@ -302,6 +308,7 @@ async fn workload_identity_federation_reexchanges_after_401_and_reports_exchange
 
 #[tokio::test]
 async fn workload_identity_federation_requires_a_readable_identity_token() {
+    let _federation = FEDERATION_LOCK.lock().await;
     let model = model_at("https://api.anthropic.com", "claude-haiku-4-5");
     let missing = std::env::temp_dir().join("pi-ai-federation-missing/token.jwt");
     let result = anthropic_messages::stream(

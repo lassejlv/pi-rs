@@ -114,6 +114,8 @@ pub fn create_write_tool_definition(cwd: &str, options: Option<&WriteToolOptions
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(WRITE_SNIPPET.to_string());
     definition.prompt_guidelines = Some(WRITE_GUIDELINES.iter().map(|s| s.to_string()).collect());
     definition.constrained_sampling = Some(ConstrainedSamplingConfig::JsonSchema {

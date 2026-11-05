@@ -144,7 +144,7 @@ pub async fn read_identity_token(path: &str) -> Result<String, WorkloadIdentityE
     if path.is_empty() {
         return Err(WorkloadIdentityError::new("Identity token file path is empty"));
     }
-    let content = tokio::fs::read(path).await.map_err(|error| {
+    let content = crate::utils::wasm::fs::read(path).await.map_err(|error| {
         WorkloadIdentityError::new(format!(
             "Failed to read identity token file at {path}: {}",
             node_read_error(&error, path)
@@ -206,6 +206,13 @@ fn js_number(value: Option<&Value>) -> f64 {
     }
 }
 
+/// wasm32: reqwest's fetch backend has no incremental `chunk()`.
+#[cfg(target_arch = "wasm32")]
+async fn read_limited_text(response: reqwest::Response) -> String {
+    let bytes = response.bytes().await.unwrap_or_default();
+    String::from_utf8_lossy(&bytes[..bytes.len().min(MAX_TOKEN_RESPONSE_BYTES)]).into_owned()
+}
+#[cfg(not(target_arch = "wasm32"))]
 async fn read_limited_text(response: reqwest::Response) -> String {
     let mut response = response;
     let mut bytes: Vec<u8> = Vec::new();
@@ -393,7 +400,7 @@ impl TokenCache {
         }
         let refresh = self.do_refresh(false);
         let state = self.state.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             if refresh.await.is_err() {
                 // Keep serving the stale token; back off before the next advisory attempt.
                 state.lock().last_advisory_error = now_as_seconds();
@@ -452,7 +459,7 @@ pub fn federation_token_cache(
         let base_url = exchange_base_url.clone();
         let client = client.clone();
         let user_agent = user_agent.clone();
-        async move { exchange_token(&config, &base_url, &client, &user_agent).await }.boxed()
+        crate::utils::wasm::boxed(async move { exchange_token(&config, &base_url, &client, &user_agent).await })
     });
     let cache = Arc::new(TokenCache::new(provider));
     *current = Some((key, cache.clone()));
@@ -535,7 +542,7 @@ mod tests {
             if calls.load(Ordering::SeqCst) == 2 {
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+            crate::utils::wasm::sleep(std::time::Duration::from_millis(2)).await;
         }
         assert_eq!(calls.load(Ordering::SeqCst), 2);
 

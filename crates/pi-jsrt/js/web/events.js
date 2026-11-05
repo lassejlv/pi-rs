@@ -212,6 +212,7 @@ class AbortController {
 }
 
 internal.Event = Event;
+internal.clearEventListeners = (target, name) => (name === undefined ? target[kListeners].clear() : target[kListeners].delete(name));
 internal.EventTarget = EventTarget;
 internal.DOMException = DOMException;
 for (const [name, value] of Object.entries({ DOMException, Event, CustomEvent, EventTarget, AbortController, AbortSignal })) {

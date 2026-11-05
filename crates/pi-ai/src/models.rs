@@ -32,7 +32,7 @@ use crate::utils::model_operations::{
     classifier_error_result, image_error_result,
 };
 pub use crate::utils::models_error::{ModelsError, ModelsErrorCode};
-use crate::utils::provider_retry::AbortError;
+use crate::utils::abort::SignalAbortError;
 use crate::utils::transcript::normalize_context;
 
 // ---------------------------------------------------------------------------
@@ -841,7 +841,7 @@ impl Models {
                 let watcher = {
                     let caller = caller_signal.clone();
                     let controller = controller.clone();
-                    tokio::spawn(async move {
+                    crate::utils::wasm::spawn(async move {
                         tokio::select! {
                             _ = caller.cancelled() => {},
                             _ = controller.cancelled() => {},
@@ -948,7 +948,7 @@ impl Models {
         signal: &CancellationToken,
     ) -> anyhow::Result<Vec<(Arc<dyn Provider>, Option<Credential>)>> {
         if signal.is_cancelled() {
-            return Err(AbortError.into());
+            return Err(SignalAbortError.into());
         }
         let providers: Vec<Arc<dyn Provider>> = match provider_id {
             Some(id) => self.get_provider(id).into_iter().collect(),
@@ -1063,7 +1063,7 @@ impl Models {
     ) -> anyhow::Result<Credential> {
         let signal = signal.unwrap_or_default();
         if signal.is_cancelled() {
-            return Err(AbortError.into());
+            return Err(SignalAbortError.into());
         }
         let provider = self
             .get_provider(provider_id)
@@ -1091,7 +1091,7 @@ impl Models {
             .await;
         if let Err(error) = result {
             if signal.is_cancelled() {
-                return Err(AbortError.into());
+                return Err(SignalAbortError.into());
             }
             return Err(ModelsError::with_cause(
                 ModelsErrorCode::Auth,
@@ -1107,11 +1107,11 @@ impl Models {
     pub async fn logout(&self, provider_id: &str, signal: Option<CancellationToken>) -> anyhow::Result<()> {
         let signal = signal.unwrap_or_default();
         if signal.is_cancelled() {
-            return Err(AbortError.into());
+            return Err(SignalAbortError.into());
         }
         self.inner.credentials.delete(provider_id, Some(&signal)).await.map_err(|error| {
             if signal.is_cancelled() {
-                return AbortError.into();
+                return SignalAbortError.into();
             }
             ModelsError::with_cause(ModelsErrorCode::Auth, format!("Credential store delete failed for {provider_id}"), &error)
                 .into()

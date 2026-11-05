@@ -240,7 +240,7 @@ pub use crate::core::model_runtime::CredentialSynchronizationOperation;
 pub use crate::core::model_runtime::ModelRuntime;
 pub use crate::core::model_runtime::ModelRuntimeAuthOverrides;
 pub use crate::core::package_manager::DefaultPackageManager;
-pub use crate::core::package_manager::PackageManager;
+pub use crate::core::package_manager::{PackageInstallFailure, PackageManager};
 pub use crate::core::package_manager::PathMetadata;
 pub use crate::core::package_manager::ProgressCallback;
 pub use crate::core::package_manager::ProgressEvent;

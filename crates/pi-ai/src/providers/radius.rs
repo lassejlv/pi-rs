@@ -96,7 +96,7 @@ impl Provider for RadiusProvider {
             Some(Credential::ApiKey(key)) => key.key.clone(),
             None => None,
         };
-        let config = load_radius_gateway_config(&self.gateway, api_key.as_deref(), Some(&context.signal)).await?;
+        let config = crate::utils::wasm::assert_send(load_radius_gateway_config(&self.gateway, api_key.as_deref(), Some(&context.signal))).await?;
         if context.signal.is_cancelled() {
             return Ok(());
         }

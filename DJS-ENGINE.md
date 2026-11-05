@@ -1,92 +1,85 @@
-# Replace native codemode engine with djs
+# djs engine migration
 
-This change replaces Boa in `pi-codemode` with `djs-core` and `djs-prelude`, pinned
-to `23b4548c4dfe40c833ca271d0b008cd08acb2d01` from
-[earendil-works/djs#1](https://github.com/earendil-works/djs/pull/1). Cargo.lock records canonical git
-sources; there are no sibling path dependencies. It is based on published main
-`9411c5b` and does not bring in the divergent local-main changes.
+`pi-codemode` now embeds `djs-core` and `djs-prelude`, pinned to
+`65ab48705d07ab42f58f81ba42084ab4c5100175` in Cargo.toml and Cargo.lock.
+No sibling checkout is required to build. This is the native codemode milestone.
+`pi-jsrt`, `pi-quickjs`, and extension execution still use QuickJS.
 
-`pi-jsrt` and extension execution remain on Boa. The eventual goal is full engine
-replacement, but this change delivers the native codemode milestone while
-upstream executable ES modules and the broader embedding migration are pending.
+## Codemode embedding
 
-## Preserved contracts
+The public `VmLauncher`/`VmChannel` API, thread lifecycle, and remote protocol are
+unchanged. The existing prelude implements tools, globals, store helpers, output
+limits and lockdown. Its bridge is passed directly and captured in a closure.
+No filesystem, network, process, timer, module loader or general host dispatcher
+is installed in script globals.
 
-The public `VmLauncher`/`VmChannel` API, start/delivery messages, thread lifecycle,
-remote transport and existing JavaScript prelude are unchanged. No UTF-16 protocol
-extensions, pi-json updates or durable runtime changes are included.
+The Rust adapter services synchronous djs host-call suspensions. Tool calls return
+prelude promises, resolved through `settle` when the host delivers results. djs
+then runs their promise jobs. Persistent values use moving-GC handles. Temporary
+argument/result handles are released after calls. The GC regression collects both
+before script start and while a tool is pending.
 
-The prelude retains its bridge in a closure. Tools and injected globals return
-promises; the Rust adapter processes djs host-call suspensions, and delivered
-results settle the prelude's promises. There are no filesystem, network, timer,
-process, module-loading or general host-dispatch globals in the sandbox.
+The memory cap applies to the djs arena at creation and throughout execution.
+Allocation failures may be caught by scripts; failure to create the VM or host
+allocation failure reports a sandbox error. Cancellation and fatal exhaustion
+abort the interpreter and cannot be caught by scripts. Interrupts are checked
+at host calls and between 10,000-fuel interpreter slices. Terminal reports prevent
+further host effects.
 
-Persistent JavaScript values use djs GC handles; temporary handles are released
-after calls. A regression explicitly collects before start and while awaiting a
-tool. Strings continue crossing this base's existing String/JSON protocol. djs
-uses UTF-16 internally; this PR does not claim a lossless UTF-16 host protocol.
+Deterministic runs use UTC, disable WeakRef/FinalizationRegistry, set Date from
+start/delivery timestamps, buffer out-of-order results and keep time monotonic.
+The random seed advances xorshift once from `seed + 1`, preserving existing pinned
+random values. Fingerprints name the djs build hash, prelude hash, adapter version
+6, stack allowance, heap cap, budget, fuel slice size, invocation cap and UTF-16 mode. QuickJS fingerprints do not
+match. Call names, output and delivered strings retain lone surrogates through
+djs UTF-16 APIs. There is no new snapshot persistence API.
 
-Deterministic runs retain UTC, monotonic delivery timestamps, ordered result
-buffering, disabled WeakRef/FinalizationRegistry and the original pinned
-mulberry32 random sequence. Math.random uses a suspended native function with
-the same algorithm as the previous Boa adapter. Fingerprints identify the djs
-build, prelude, adapter version 7, stack allowance, arena cap, budget, fuel slice
-size and invocation cap. Replay must reject a different fingerprint.
+## Intentional semantic differences
 
-Cancellation is checked at host calls and between 10,000-fuel runs. Fatal stops
-abort interpreter state, so user catch blocks cannot defeat them. Actual fuel
-is charged across short host-call suspensions and deliveries; frequent host calls
-cannot reset the budget. Terminal outcomes prevent further host effects. The
-prelude's output/store limits are unchanged.
-
-## Intentional differences
-
-- djs is always strict. Undeclared assignment throws ReferenceError and attempted
-  writes to frozen built-ins throw TypeError. The tampering test requires every
-  mutation to throw, then retains the original tool/JSON/store integrity checks.
-  `eval` is indirect and cannot read the caller's locals.
-- The memory cap now applies to the whole arena, including ordinary JS objects.
-  Boa only capped ArrayBuffer allocations. Failed script allocations throw
-  InternalError rather than Boa's ArrayBuffer RangeError. Failure to create the
-  VM or allocate host memory reports a sandbox error. The portable cap test
-  retains its exact success/error-name assertion with the new engine's name.
+- djs is always strict. Undeclared assignment throws ReferenceError; frozen
+  built-in mutations throw TypeError. The tampering test requires each mutation
+  to throw, then retains its original tool/JSON/store protection assertions.
+  `eval` is indirect and cannot access caller locals.
 - `interrupt_budget` counts instrumented loop iterations plus each 10,000 fuel
-  consumed cumulatively. Jobs, built-ins and generated code consume fuel;
-  trusted setup does not. Existing `loop_iteration_limit` retains its API name
-  but now caps fuel per invocation, including its promise jobs.
-- `recursion_limit` is an approximate allowance translated to djs value-stack
-  slots with space reserved for the prelude, rather than exact call depth.
-  Stack exhaustion throws a catchable RangeError instead of Boa's fatal runtime
-  limit. Tests require both successful catching and the uncaught script error.
-- Non-deterministic dates use the host's offset at the execution clock, honoring
-  TZ on Unix. The offset lookup is cached for up to one second to avoid libc
-  timezone-file work at every loop tick. djs's fixed-offset hook does not provide full historical/DST
-  timezone behavior. Non-Unix uses UTC, as the previous adapter did.
-- Error messages and exact stack columns depend on the engine. The cyclic JSON
-  error is now `TypeError: circular reference`, asserted exactly in the test. SharedArrayBuffer
-  is unavailable. No snapshot persistence functionality is added.
+  consumed, cumulatively across host calls and deliveries. Promise jobs and
+  generated code consume fuel. Trusted prelude setup is excluded.
+- `loop_iteration_limit` retains its API name but now caps interpreter fuel per
+  invocation, including promise jobs. It is not a JavaScript loop count.
+- `recursion_limit` is an approximate allowance translated to value-stack slots,
+  with space reserved for the prelude, rather than an exact call-depth cap.
+- Non-deterministic Date uses the requested/system timezone's offset at the
+  execution clock. djs has a fixed-offset hook, so historical dates spanning
+  different DST offsets lack full IANA timezone semantics.
+- Exact error messages and stack columns depend on the engine. SharedArrayBuffer
+  is unavailable. The interpreter is optimized in development builds to make
+  JavaScript execution and large output-limit tests practical.
 
-The Rust interpreter is optimized in development builds so JavaScript execution
-and the large output-limit tests remain practical.
+## Remaining pi-jsrt migration
 
-## Remaining full replacement
+Upstream ES modules must land before switching the extension runtime. The
+read-only `issue/0168-pi-es-modules` work currently implements an arena binding
+graph with live aliases and TDZ; source linking and async evaluation are pending.
+The pinned revision has no usable source ESM embedding API.
 
-The pinned djs revision executes acyclic source-module graphs with live bindings
-and synthetic host exports. It is an experimental upstream PR, not complete ESM.
-Extensions still need cyclic graph instantiation/evaluation, namespace objects,
-export-star resolution, dynamic import, import.meta, top-level await and TypeScript
-module grammar before their engine can switch.
+Required integration work:
 
-Then migrate `pi-jsrt/src/loader.rs` from Boa's ModuleLoader, Module parsing,
-load/link/evaluate promises and synthetic initializers to the upstream API while
-preserving TypeScript, package resolution, virtual modules and CJS/JSON interop.
-Migrate Boa values and native callback captures to owned djs GC handles, including
-host-held functions, conversion markers and shutdown ownership. Adapt
-`pi-jsrt/src/engine.rs` JobExecutor, native sync/async functions, timers and host
-operations to suspended dispatch. Verify module, runtime, Node shim and extension
-suites before switching pi-jsrt. This PR introduces no dummy module APIs or
-partial extension backend.
+1. Replace raw `JSModuleDef` pointers and loader callbacks in
+   `crates/pi-jsrt/src/loader.rs` with upstream source/synthetic module APIs.
+   Preserve cycles, live imports/exports, namespace objects, dynamic import,
+   import.meta, top-level await, CJS/JSON interop, aliases, virtual modules,
+   TypeScript and package resolution.
+2. Replace `pi-quickjs` value/object/string/error wrappers with owned djs GC
+   handles. Define cloning, host-held callback and shutdown ownership. Preserve
+   `pi-jsrt/src/convert.rs` conversion semantics and handle-marker adoption.
+3. Adapt `pi-jsrt/src/engine.rs` native callbacks to a suspended host-call
+   dispatcher integrated with messages, timers and async operations. Existing
+   raw QuickJS job-context hooks provide async-local state and rejection tracking;
+   those need actual djs equivalents or a redesigned integration.
+4. Run pi-jsrt module/runtime/Node-shim and extension integration suites,
+   including callback cleanup, async hooks, cycles, dynamic imports and example
+   extensions. Codemode tests cannot establish extension compatibility.
 
-The upstream PR remains unmerged; the exact commit is pinned for reproducible
-review and testing. Full pi-jsrt replacement remains a follow-up once the remaining
-upstream module contracts are available.
+No dummy APIs, stub loader, renamed QuickJS crate or partial optional extension
+backend is introduced. Keeping the existing extension runtime working is
+necessary until these contracts exist. Parent owns review and publication of
+both upstream and pi PRs; this worktree does not push or publish.

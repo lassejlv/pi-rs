@@ -11,10 +11,10 @@ use std::sync::LazyLock;
 /// Built from the generated `schemas/settings.schema.json` artifact of the TS package (embedded
 /// next to this module) with the shared `$defs` inlined again, which yields the TypeBox schema.
 pub static SETTINGS_SCHEMA: LazyLock<Value> =
-    LazyLock::new(|| strip_generated_schema(SETTINGS_SCHEMA_ARTIFACT));
+    LazyLock::new(|| strip_generated_schema(SETTINGS_SCHEMA_ARTIFACT.get()));
 
 /// The published `settings.schema.json` artifact (with `$schema`, `$id` and `$defs`).
-pub const SETTINGS_SCHEMA_ARTIFACT: &str = include_str!("schemas/settings.schema.json");
+pub const SETTINGS_SCHEMA_ARTIFACT: pi_embed::Embedded = pi_embed::include_str!("schemas/settings.schema.json");
 
 /// Parse a generated schema artifact, drop the artifact headers (`$schema`, `$id`, `$comment`) and
 /// inline its `$defs` references, keeping per-use annotations.

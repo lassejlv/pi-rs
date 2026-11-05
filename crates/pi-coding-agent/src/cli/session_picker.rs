@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use pi_tui::tui::{ComponentRef, TuiStopOptions};
 use tokio::sync::oneshot;
 
-use crate::cli::startup_ui::{create_startup_tui, start_startup_tui};
+use crate::cli::startup_ui::{create_startup_tui, start_startup_tui_tracked};
 use crate::core::keybindings::KeybindingsManager;
 use crate::core::settings_manager::SettingsManager;
 use crate::modes::interactive::components::session_selector::{
@@ -84,8 +84,11 @@ pub async fn select_session(
     ui.add_child(component);
     let list: ComponentRef = selector.get_session_list();
     ui.set_focus(Some(list));
-    // Node exits (with `process.exitCode`, 0 when unset) once stdin ends and nothing else keeps
-    // the event loop alive; the selector promise never settles then.
+    // Node exits (with `process.exitCode`, 0 when unset) once stdin has ended and nothing else
+    // keeps the event loop alive; the selector promise never settles then. The session list load,
+    // the terminal color query (which times out) and the renders they request still run first, so
+    // the list is drawn before the process exits, and the terminal is restored by the exit hook
+    // (`restoreOnExit`, to the real stdout), not by `ui.stop()`.
     let (eof_tx, eof_rx) = oneshot::channel::<()>();
     let eof_tx = Mutex::new(Some(eof_tx));
     pi_tui::terminal::set_stdin_end_handler(Some(Arc::new(move || {
@@ -93,12 +96,15 @@ pub async fn select_session(
             let _ = tx.send(());
         }
     })));
-    start_startup_tui(ui.clone(), settings_manager);
+    let colors = start_startup_tui_tracked(ui.clone(), settings_manager);
     let selected = tokio::select! {
         selected = rx => selected.unwrap_or(None),
         Ok(()) = eof_rx => {
             pi_tui::terminal::set_stdin_end_handler(None);
-            ui.stop(TuiStopOptions::default());
+            let _ = colors.await;
+            while selector.is_loading() || ui.has_pending_render() {
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
             exit(crate::utils::process_exit::exit_code().unwrap_or(0));
         }
     };

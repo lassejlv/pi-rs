@@ -74,15 +74,18 @@ function authCall(id, m, payload) {
 	return callAsync("aip.p.auth", { id, m, ...payload }).then(u);
 }
 
-/** A Rust `Provider` (built-in factories) as a JavaScript `Provider`. */
+/**
+ * A Rust `Provider` (built-in factories) as a JavaScript `Provider`: an object with the own
+ * properties, in the order, of the object pi-ai's `createProvider()` returns.
+ */
 class RustProvider {
 	constructor(desc) {
 		const id = desc.native;
 		Object.defineProperty(this, "__piNative", { value: id, enumerable: false });
 		this.id = desc.id;
 		this.name = desc.name;
-		if (desc.baseUrl !== undefined && desc.baseUrl !== null) this.baseUrl = desc.baseUrl;
-		if (desc.headers !== undefined && desc.headers !== null) this.headers = desc.headers;
+		this.baseUrl = desc.baseUrl ?? undefined;
+		this.headers = desc.headers ?? undefined;
 		const auth = {};
 		const apiKey = desc.auth?.apiKey;
 		if (apiKey) {
@@ -118,22 +121,34 @@ class RustProvider {
 			};
 		}
 		this.auth = auth;
-		if (desc.refresh) {
-			this.refreshModels = async (context) => {
-				await callAsync("aip.p.refreshModels", {
-					id,
-					context: {
-						credential: context.credential ?? null,
-						stored: context.stored ?? null,
-						publish: context.publish,
-						allowNetwork: !!context.allowNetwork,
-						force: context.force ?? null,
-						signal: tokenFor(context.signal),
-						baseUrl: context.baseUrl ?? null,
-					},
-				});
-			};
-		}
+		this.getModels = () => call("aip.p.getModels", { id }) ?? [];
+		this.getAllModels = () => call("aip.p.getAllModels", { id }) ?? [];
+		this.refreshModels = desc.refresh
+			? async (context) => {
+					await callAsync("aip.p.refreshModels", {
+						id,
+						context: {
+							credential: context.credential ?? null,
+							stored: context.stored ?? null,
+							publish: context.publish,
+							allowNetwork: !!context.allowNetwork,
+							force: context.force ?? null,
+							signal: tokenFor(context.signal),
+							baseUrl: context.baseUrl ?? null,
+						},
+					});
+				}
+			: undefined;
+		this.filterModels = desc.filter
+			? (models, credential) => call("aip.p.filterModels", { id, models, credential: credential ?? null })
+			: undefined;
+		this.filterAllModels = desc.filterAll
+			? (models, credential) => call("aip.p.filterAllModels", { id, models, credential: credential ?? null })
+			: undefined;
+		this.stream = (model, context, options) =>
+			streamFromHost("aip.p.stream", { id, method: "stream", model, context, options: optionsToRust(options) });
+		this.streamSimple = (model, context, options) =>
+			streamFromHost("aip.p.stream", { id, method: "streamSimple", model, context, options: optionsToRust(options) });
 		if (desc.fetchDeferred) {
 			this.fetchDeferred = (model, handle, options) =>
 				streamFromHost("aip.p.stream", { id, method: "fetchDeferred", model, handle, options: optionsToRust(options) });
@@ -152,43 +167,132 @@ class RustProvider {
 				await callAsync("aip.p.classify", { id, model, context, options: optionsToRust(options) });
 		}
 	}
+}
 
-	getModels() {
-		return call("aip.p.getModels", { id: this.__piNative }) ?? [];
+/** Rust providers handed to extensions by pi (`ctx.modelRegistry.getProvider()`), by native id. */
+const hostProviders = new Map();
+
+/**
+ * A provider from `provider_to_js` (Rust): the extension's own object, or one `RustProvider` per
+ * Rust provider so repeated reads return the same object, as TS does.
+ */
+export function providerFromHost(value) {
+	if (!value) return undefined;
+	if (value.object !== undefined) return value.object;
+	const id = value.native ?? value.desc?.native;
+	let provider = hostProviders.get(id);
+	if (!provider && value.desc) {
+		provider = new RustProvider(value.desc);
+		hostProviders.set(id, provider);
 	}
+	return provider;
+}
 
-	getAllModels() {
-		return call("aip.p.getAllModels", { id: this.__piNative }) ?? [];
-	}
+const nativeId = (value) => (value && typeof value === "object" && typeof value.$native === "number" ? value.$native : undefined);
 
-	filterModels(models, credential) {
-		return call("aip.p.filterModels", { id: this.__piNative, models, credential: credential ?? null });
-	}
+function refreshContextToRust(context) {
+	return {
+		credential: context.credential ?? null,
+		stored: context.stored ?? null,
+		publish: context.publish,
+		allowNetwork: !!context.allowNetwork,
+		force: context.force ?? null,
+		signal: tokenFor(context.signal),
+		baseUrl: context.baseUrl ?? null,
+	};
+}
 
-	filterAllModels(models, credential) {
-		return call("aip.p.filterAllModels", { id: this.__piNative, models, credential: credential ?? null });
-	}
-
-	stream(model, context, options) {
-		return streamFromHost("aip.p.stream", {
-			id: this.__piNative,
-			method: "stream",
-			model,
-			context,
-			options: optionsToRust(options),
-		});
-	}
-
-	streamSimple(model, context, options) {
-		return streamFromHost("aip.p.stream", {
-			id: this.__piNative,
-			method: "streamSimple",
-			model,
-			context,
-			options: optionsToRust(options),
-		});
+/** Config parts that pi holds as Rust objects (registered outside this runtime) as JS values. */
+function configPartFromHost(key, value) {
+	const id = nativeId(value);
+	switch (key) {
+		case "streamSimple":
+			if (id === undefined) return value;
+			return (model, context, options) =>
+				streamFromHost("aip.p.stream", { id, method: "streamSimple", model, context, options: optionsToRust(options) });
+		case "refreshModels":
+			if (id === undefined) return value;
+			return async (context) => u(await callAsync("aip.p.refreshModels", { id, context: refreshContextToRust(context) }));
+		case "images":
+			return Object.fromEntries(
+				Object.entries(value).map(([api, part]) => {
+					const partId = nativeId(part);
+					if (partId === undefined) return [api, part];
+					return [
+						api,
+						{
+							generateImages: async (model, context, options) =>
+								await callAsync("aip.p.generateImages", { id: partId, model, context, options: optionsToRust(options) }),
+						},
+					];
+				}),
+			);
+		case "classifiers":
+			return Object.fromEntries(
+				Object.entries(value).map(([api, part]) => {
+					const partId = nativeId(part);
+					if (partId === undefined) return [api, part];
+					return [
+						api,
+						{
+							classify: async (model, context, options) =>
+								await callAsync("aip.p.classify", { id: partId, model, context, options: optionsToRust(options) }),
+						},
+					];
+				}),
+			);
+		case "oauth": {
+			if (!value || typeof value.$oauth !== "number") return value;
+			const oauthId = value.$oauth;
+			const oauth = { name: value.name };
+			if (value.isSubscription !== undefined) oauth.isSubscription = value.isSubscription;
+			if (value.usesCallbackServer !== undefined) oauth.usesCallbackServer = value.usesCallbackServer;
+			oauth.login = async (callbacks) =>
+				u(
+					await callAsync("aip.cfg.oauth", {
+						id: oauthId,
+						m: "login",
+						callbacks: ref(callbacks),
+						manual: typeof callbacks?.onManualCodeInput === "function",
+						signal: tokenFor(callbacks?.signal),
+					}),
+				);
+			oauth.refreshToken = async (credentials, signal) =>
+				u(await callAsync("aip.cfg.oauth", { id: oauthId, m: "refreshToken", credentials, signal: tokenFor(signal) }));
+			oauth.getApiKey = (credentials) => call("aip.cfg.oauthSync", { id: oauthId, m: "getApiKey", credentials });
+			if (value.modifyModels) {
+				oauth.modifyModels = (models, credentials) =>
+					call("aip.cfg.oauthSync", { id: oauthId, m: "modifyModels", models, credentials });
+			}
+			return oauth;
+		}
+		default:
+			return value;
 	}
 }
+
+/** Registered provider config objects by provider id: `{ rev, object }`. */
+const hostProviderConfigs = new Map();
+
+/**
+ * The config object of `ctx.modelRegistry.getRegisteredProviderConfig(id)`: one object per
+ * registration (TS returns the stored `{ ...previous, ...config }` object), holding the
+ * extension's own functions and objects.
+ */
+export function providerConfigFromHost(providerId, value) {
+	if (!value) {
+		hostProviderConfigs.delete(providerId);
+		return undefined;
+	}
+	const cached = hostProviderConfigs.get(providerId);
+	if (cached && cached.rev === value.rev) return cached.object;
+	const object = {};
+	for (const [key, part] of Object.entries(value.config)) object[key] = configPartFromHost(key, part);
+	hostProviderConfigs.set(providerId, { rev: value.rev, object });
+	return object;
+}
+
+globalThis.__piAiRust = { providerFromHost, providerConfigFromHost };
 
 // ---------------------------------------------------------------------------
 // providers/all.ts

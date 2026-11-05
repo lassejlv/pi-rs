@@ -37,6 +37,7 @@
 
 pub mod alt_screen_search;
 pub mod autocomplete;
+pub mod collation;
 pub mod colors;
 pub mod components;
 pub mod event_loop;

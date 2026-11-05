@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use tokio_util::sync::CancellationToken;
 
 use super::types::{Credential, CredentialInfo, CredentialStore, ModifyCredentialFn};
-use crate::utils::provider_retry::AbortError;
+use crate::utils::abort::SignalAbortError;
 
 /// Default in-memory credential store. Writes are serialized per provider.
 #[derive(Default)]
@@ -29,7 +29,7 @@ impl InMemoryCredentialStore {
 
 fn check(signal: Option<&CancellationToken>) -> anyhow::Result<()> {
     if signal.is_some_and(|s| s.is_cancelled()) {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }
@@ -42,7 +42,7 @@ async fn acquire(
     match signal {
         Some(signal) => tokio::select! {
             guard = lock.clone().lock_owned() => Ok(guard),
-            _ = signal.cancelled() => Err(AbortError.into()),
+            _ = signal.cancelled() => Err(SignalAbortError.into()),
         },
         None => Ok(lock.clone().lock_owned().await),
     }

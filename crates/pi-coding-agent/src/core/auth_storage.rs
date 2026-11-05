@@ -22,7 +22,7 @@ use pi_ai::auth::types::{
     ApiKeyCredential, AuthType, Credential, CredentialInfo, CredentialStore, ModifyCredentialFn,
 };
 use pi_ai::utils::abort::race_with_abort_signal;
-use pi_ai::utils::provider_retry::AbortError;
+use pi_ai::utils::abort::SignalAbortError;
 use serde_json::Value;
 use tokio_util::sync::CancellationToken;
 
@@ -124,7 +124,7 @@ impl<B: AuthStorageBackend + ?Sized> AuthStorageBackendExt for B {}
 
 fn throw_if_aborted(signal: Option<&CancellationToken>) -> anyhow::Result<()> {
     if signal.is_some_and(CancellationToken::is_cancelled) {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }
@@ -416,7 +416,7 @@ impl FileAuthStorageBackend {
                     };
                     if signal.is_some_and(CancellationToken::is_cancelled) {
                         let _ = lock.release();
-                        return Err(AbortError.into());
+                        return Err(SignalAbortError.into());
                     }
                     return Ok(lock);
                 }
@@ -442,7 +442,7 @@ impl FileAuthStorageBackend {
                         Some(signal) => {
                             tokio::select! {
                                 _ = tokio::time::sleep(delay) => {}
-                                _ = signal.cancelled() => return Err(AbortError.into()),
+                                _ = signal.cancelled() => return Err(SignalAbortError.into()),
                             }
                         }
                         None => tokio::time::sleep(delay).await,

@@ -21,16 +21,16 @@ use pi_agent::types::{AgentMessage, AgentToolRef};
 use pi_ai::auth::types::{ApiKeyCredential, Credential};
 use pi_ai::compat::{FauxProviderRegistration, register_faux_provider};
 use pi_ai::providers::faux::{FauxModelDefinition, FauxResponseStep, RegisterFauxProviderOptions};
-use pi_ai::types::{
-    Model, ToolResultMessage, UserContent,
-};
+use pi_ai::types::{Model, ToolResultMessage, UserContent};
 use pi_coding_agent::core::agent_session::{
     AgentSession, AgentSessionConfig, AgentSessionConfigExtensionRunnerRef, AgentSessionEvent,
     AgentSessionEventListener,
 };
 use pi_coding_agent::core::auth_storage::AuthStorage;
 use pi_coding_agent::core::event_bus::create_event_bus;
-use pi_coding_agent::core::extensions::loader::{create_extension_runtime, load_extension_from_factory};
+use pi_coding_agent::core::extensions::loader::{
+    create_extension_runtime, load_extension_from_factory,
+};
 use pi_coding_agent::core::extensions::types::{
     AfterProviderResponseEvent, ExtensionEvent, ExtensionFactory, ExtensionRef,
     LoadExtensionsResult, ProviderChatModelConfig, ProviderConfig, ProviderModelConfig,
@@ -136,7 +136,10 @@ pub struct TestExtension {
 
 impl TestExtension {
     pub fn new(factory: ExtensionFactory) -> Self {
-        Self { factory, path: None }
+        Self {
+            factory,
+            path: None,
+        }
     }
 
     pub fn with_path(factory: ExtensionFactory, path: impl Into<String>) -> Self {
@@ -233,7 +236,9 @@ impl ResourceLoader for TestResourceLoader {
     fn get_append_system_prompt(&self) -> Vec<String> {
         self.append_system_prompt.lock().clone()
     }
-    fn get_append_system_prompt_sources(&self) -> Vec<ResourceLoaderGetAppendSystemPromptSourcesResult> {
+    fn get_append_system_prompt_sources(
+        &self,
+    ) -> Vec<ResourceLoaderGetAppendSystemPromptSourcesResult> {
         Vec::new()
     }
     fn extend_resources(&self, _paths: &ResourceExtensionPaths) {}
@@ -503,10 +508,12 @@ pub async fn create_harness(options: HarnessOptions) -> anyhow::Result<Harness> 
                     && runner.has_handlers("after_provider_response")
                 {
                     let _ = runner
-                        .emit(ExtensionEvent::AfterProviderResponse(AfterProviderResponseEvent {
-                            status: response.status,
-                            headers: response.headers,
-                        }))
+                        .emit(ExtensionEvent::AfterProviderResponse(
+                            AfterProviderResponseEvent {
+                                status: response.status,
+                                headers: response.headers,
+                            },
+                        ))
                         .await;
                 }
             })

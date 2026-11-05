@@ -163,7 +163,7 @@ async fn response_id_e2e() {
             target("Google", Gate::Env(&["GEMINI_API_KEY"]), "google", "gemini-2.5-flash"),
             vertex_adc,
             vertex_key,
-            target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").as_api("openai-completions"),
+            target("OpenAI Completions", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-4o-mini").api_without_compat("openai-completions"),
             target("OpenAI Responses", Gate::Env(&["OPENAI_API_KEY"]), "openai", "gpt-5-mini"),
             target("Anthropic", Gate::Env(&["ANTHROPIC_API_KEY"]), "anthropic", "claude-sonnet-4-5"),
             target("Azure OpenAI Responses", Gate::Azure, "azure", "gpt-4o-mini"),

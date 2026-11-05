@@ -4,17 +4,12 @@ use std::future::Future;
 
 use tokio_util::sync::CancellationToken;
 
-/// The default abort reason (`DOMException` named `AbortError`).
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("The operation was aborted")]
-pub struct OperationAbortedError;
-
-impl OperationAbortedError {
-    /// The JS error name.
-    pub fn name(&self) -> &'static str {
-        "AbortError"
-    }
-}
+/// The default abort reason (`DOMException` named `AbortError`, "This operation was aborted").
+///
+/// TS falls back to `new Error("The operation was aborted")` only for a signal without a reason,
+/// which no `AbortController.abort()` produces; a `CancellationToken` aborts like `abort()`
+/// without an argument, so its reason is the `DOMException`.
+pub use pi_ai::utils::abort::SignalAbortError as OperationAbortedError;
 
 /// Normalize an optional public signal without imposing a deadline.
 pub fn operation_signal(signal: Option<CancellationToken>) -> CancellationToken {
@@ -70,7 +65,7 @@ mod tests {
         let signal = CancellationToken::new();
         signal.cancel();
         let err = race_with_abort_signal(async { Ok(5) }, Some(signal)).await.unwrap_err();
-        assert_eq!(err.to_string(), "The operation was aborted");
+        assert_eq!(err.to_string(), "This operation was aborted");
     }
 
     #[tokio::test]

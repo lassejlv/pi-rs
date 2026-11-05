@@ -49,7 +49,7 @@ use pi_ai::utils::model_operations::{
     assert_chat_model, assert_classifier_input_supported, assert_classifier_model,
     assert_image_model, classifier_error_result, image_error_result,
 };
-use pi_ai::utils::provider_retry::AbortError;
+use pi_ai::utils::abort::SignalAbortError;
 use pi_ai::utils::transcript::normalize_context;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -223,7 +223,7 @@ pub struct ModelRuntimeResolveModelOptions {
 
 fn throw_if_aborted(signal: &CancellationToken) -> anyhow::Result<()> {
     if signal.is_cancelled() {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }
@@ -242,11 +242,17 @@ fn spawn_detached(future: futures::future::BoxFuture<'static, ()>) {
     }
 }
 
+/// Source of `RuntimeState::extension_provider_revisions`.
+static PROVIDER_REVISION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
 /// Mutable runtime state. Never held across an await or a call into a provider.
 struct RuntimeState {
     builtins: IndexMap<String, Arc<dyn Provider>>,
     native_extension_providers: IndexMap<String, Arc<dyn Provider>>,
     extension_providers: IndexMap<String, ProviderConfigInput>,
+    /// Registration revision of each entry of `extension_providers`: TS hands out the stored config
+    /// object itself, whose identity changes with every registration.
+    extension_provider_revisions: HashMap<String, u64>,
     /// Virtual models by provider id, then model id.
     virtual_models: IndexMap<String, IndexMap<String, RegisteredVirtualModel>>,
     composition_errors: IndexMap<String, String>,
@@ -318,6 +324,7 @@ impl ModelRuntime {
                 builtins: default_builtins.clone(),
                 native_extension_providers: IndexMap::new(),
                 extension_providers: IndexMap::new(),
+                extension_provider_revisions: HashMap::new(),
                 virtual_models: IndexMap::new(),
                 composition_errors: IndexMap::new(),
                 config,
@@ -535,17 +542,23 @@ impl ModelRuntime {
     /// Recompose every provider. Providers are replaced one by one (and stale ones removed) rather
     /// than cleared first, so concurrent readers never observe an empty collection.
     fn rebuild_providers(&self) {
-        let _composition = self.composition.lock();
-        self.state.lock().composition_errors.clear();
-        let ids = self.provider_ids();
-        for provider_id in &ids {
-            self.recompose_provider(provider_id);
-        }
-        for provider in self.models.get_providers() {
-            if !ids.contains(provider.id()) {
-                self.models.delete_provider(provider.id());
+        {
+            let _composition = self.composition.lock();
+            self.state.lock().composition_errors.clear();
+            let ids = self.provider_ids();
+            for provider_id in &ids {
+                self.recompose_provider(provider_id);
+            }
+            for provider in self.models.get_providers() {
+                if !ids.contains(provider.id()) {
+                    self.models.delete_provider(provider.id());
+                }
             }
         }
+        // Outside the composition lock, like every other recomposition: the snapshot reads each
+        // provider's models, and an extension's provider answers on its JS thread, which may be
+        // waiting for this lock in `registerProvider` (a refresh running beside an extension that
+        // registers providers deadlocked here).
         self.update_model_snapshot();
     }
 
@@ -826,6 +839,14 @@ impl ModelRuntime {
         self.state.lock().extension_providers.get(provider_id).cloned()
     }
 
+    /// The registered config plus its registration revision, which changes with every
+    /// `register_provider` call (the identity of the stored config object in TS).
+    pub fn get_registered_provider_config_revision(&self, provider_id: &str) -> Option<(u64, ProviderConfigInput)> {
+        let state = self.state.lock();
+        let config = state.extension_providers.get(provider_id)?.clone();
+        Some((state.extension_provider_revisions.get(provider_id).copied().unwrap_or_default(), config))
+    }
+
     pub fn get_registered_provider_ids(&self) -> Vec<String> {
         let state = self.state.lock();
         let mut ids: IndexSet<String> = state.extension_providers.keys().cloned().collect();
@@ -933,7 +954,7 @@ impl ModelRuntime {
             .clone();
         let guard = tokio::select! {
             guard = lock.lock_owned() => guard,
-            _ = signal.cancelled() => return Err(AbortError.into()),
+            _ = signal.cancelled() => return Err(SignalAbortError.into()),
         };
         throw_if_aborted(signal)?;
         let result = task.await;
@@ -1480,6 +1501,7 @@ impl ModelRuntime {
             {
                 let mut state = self.state.lock();
                 state.extension_providers.shift_remove(&provider_id);
+                state.extension_provider_revisions.remove(&provider_id);
                 state.native_extension_providers.insert(provider_id.clone(), provider);
             }
             self.recompose_provider(&provider_id);
@@ -1542,6 +1564,9 @@ impl ModelRuntime {
                 None => config.clone(),
             };
             state.extension_providers.insert(provider_id.to_string(), effective.clone());
+            state
+                .extension_provider_revisions
+                .insert(provider_id.to_string(), PROVIDER_REVISION.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
             effective
         };
         self.recompose_provider(provider_id);
@@ -1567,6 +1592,7 @@ impl ModelRuntime {
             {
                 let mut state = self.state.lock();
                 state.extension_providers.shift_remove(provider_id);
+                state.extension_provider_revisions.remove(provider_id);
                 state.native_extension_providers.shift_remove(provider_id);
             }
             self.recompose_provider(provider_id);

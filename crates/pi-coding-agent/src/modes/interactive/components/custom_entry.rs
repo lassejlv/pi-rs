@@ -84,10 +84,16 @@ impl CustomEntryComponent {
         let t = theme();
         let options = EntryRenderOptions { expanded };
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (self.renderer)(&self.entry, &options, &t)));
-        let component: Option<ComponentRef> = match result {
-            Ok(component) => component,
-            Err(payload) => {
-                let message = panic_message(payload.as_ref());
+        let failure = |payload: Result<Option<ComponentRef>, Box<dyn std::any::Any + Send>>| match payload {
+            Ok(Some(component)) => {
+                crate::core::extensions::types::render_failure(&component).map(str::to_string).ok_or(Some(component))
+            }
+            Ok(None) => Err(None),
+            Err(payload) => Ok(panic_message(payload.as_ref())),
+        };
+        let component: Option<ComponentRef> = match failure(result) {
+            Err(component) => component,
+            Ok(message) => {
                 let box_component = BoxComponent::new(
                     output_pad,
                     1,

@@ -1,0 +1,139 @@
+{
+  "files": [
+    {
+      "reference": "packages/durable/test/examples/16-coding-tools.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_16_coding_tools.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "JSONL storage, read/edit/bash/missing-file cat via public Harness, beforeTool/afterTool timing hook. The 1 GB file is replaced by a missing temp-dir file (error result asserted); the storage directory is a temp dir removed on exit."
+    },
+    {
+      "reference": "packages/durable/test/examples/17-print.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_17_print.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Offline faux model only; the OPENAI_API_KEY branch is not ported. Sample project directory replaces process.cwd() so the ls output is asserted."
+    },
+    {
+      "reference": "packages/durable/test/examples/18-json.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_18_json.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Both modes (events and view-op frames) run over SQLite, JSONL and memory storage and assert the line shapes instead of printing JSON lines; OpenAI branch and CLI flags are not ported. Ops lines carry op counts and entry counts (the view itself is not serialized)."
+    },
+    {
+      "reference": "packages/durable/test/examples/19-inbox.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_19_inbox.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "followUp mode all, steer, queued write, reject, withdraw, statuses and transcript order asserted. The queued write is placed at the first boundary and is not listed in the InboxDoc snapshot taken afterwards (inbox lists the follow-up and steer only)."
+    },
+    {
+      "reference": "packages/durable/test/examples/20-late-join.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_20_late_join.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Late view and snapshot-event clients; live tool output and text deltas observed after joining. Uses serde_json views of events."
+    },
+    {
+      "reference": "packages/durable/test/examples/21-subagent-foreground.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_21_subagent_foreground.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Task-owned child conversation, details-based attach with indented event output asserted; OpenAI branch not ported. Abort-propagation is not exercised (the upstream example does not exercise it either)."
+    },
+    {
+      "reference": "packages/durable/test/examples/22-subagent-background.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_22_subagent_background.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Anchor/reporter background tasks, request-id idempotence, steer/follow-up, stop, status, SQLite restart while a subagent works. After the restart the interrupted unsafe-replay subagent call reports the harness interruption error, as the upstream comments describe. OpenAI branch not ported."
+    },
+    {
+      "reference": "packages/durable/test/examples/23-child-tasks.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_23_child_tasks.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Declined card failFast, cancel with task-graph tree, restart on SQLite."
+    },
+    {
+      "reference": "packages/durable/test/examples/24-compaction.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_24_compaction.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Runs with upstream's exact settings. Upstream 24-compaction.ts was executed (node with a source-resolving loader) and compared step by step: identical contexts, entry counts and reasons at every step, including the final step where the blocking threshold compacts before the one-shot overflow rejection and the run ends in model_error. Native estimator (3.5 chars/token, newest-assistant usage plus trailing estimates) and faux usage estimate match upstream; no native change was needed. The example asserts that upstream outcome."
+    },
+    {
+      "reference": "packages/durable/test/examples/25-coding-agent.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_25_coding_agent.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Section reads env cwd, settings reader is live (parallel/sequential read both observed), env follows conversation cwd after configure."
+    },
+    {
+      "reference": "packages/durable/test/examples/26-plan-mode.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_26_plan_mode.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Plan document, terminate control, tool/extension switching and system-prompt change messages asserted."
+    },
+    {
+      "reference": "packages/durable/test/examples/27-reviewer.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_27_reviewer.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Second model, extension order, read-only tool, own cwd, onYield review loop."
+    },
+    {
+      "reference": "packages/durable/test/examples/28-sandbox-per-conversation.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_28_sandbox_per_conversation.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Per-conversation sandbox document via init and env factory; adds a sandbox-less third conversation asserting the clean tool error."
+    },
+    {
+      "reference": "packages/durable/test/examples/29-tool-override.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_29_tool_override.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Same-name tool replacement and a wrap_tool timing wrapper over whichever bash wins. The wrapper rebuilds a NativeTool field by field because NativeTool is not Clone."
+    },
+    {
+      "reference": "packages/durable/test/examples/30-reload-and-restart.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/examples/ex_30_reload_and_restart.rs",
+        "crates/pi-durable/examples/ex_b_support/mod.rs"
+      ],
+      "note": "Reload during a running call (v1 then v2), restart on SQLite, stored names binding to later-installed code."
+    }
+  ]
+}

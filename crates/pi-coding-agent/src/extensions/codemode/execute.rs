@@ -1,6 +1,6 @@
 //! Port of `packages/coding-agent/src/extensions/codemode/execute.ts`.
 //!
-//! Runs one codemode script in the sandbox (`pi-codemode`, a Boa VM on its own thread per run).
+//! Runs one codemode script in the sandbox (`pi-codemode`, a QuickJS VM on its own thread per run).
 
 use crate::core::extensions::types::{ExecuteToolOptions, ExtensionToolContext, ToolNamespace};
 use crate::core::model_registry::ModelRegistry;
@@ -78,7 +78,7 @@ const ERROR_PREVIEW_CHARS: usize = 500;
 /// `models.classify()` and `models.generateImages()` calls one script may have in flight; `Promise.all`
 /// over many items queues the rest.
 const MAX_CONCURRENT_MODEL_CALLS: usize = 4;
-/// Heap limit for the VM. Boa has no heap limit; kept for parity with the TS sandbox options.
+/// Heap limit for the VM (QuickJS's heap limit), as in the TS sandbox options.
 const CODEMODE_MEMORY_LIMIT_BYTES: u64 = 256 * 1024 * 1024;
 /// Shared across calls and sessions. Allow one replacement while a cancelled worker is still exiting.
 const DEFAULT_MAX_CODEMODE_WORKERS: usize = 2;
@@ -790,7 +790,8 @@ pub async fn execute_codemode(
     if admission != Admission::Reserved {
         let waited = seconds_text(started_at);
         let error = if admission == Admission::Aborted {
-            "Script aborted: Execution aborted".to_string()
+            // `reason.message` of the signal's default `DOMException` reason.
+            "Script aborted: This operation was aborted".to_string()
         } else if deadline <= CODEMODE_WORKER_WAIT_MS {
             format!(
                 "Script timed out: Execution timed out after {} ms while waiting for a free codemode worker",
@@ -850,7 +851,7 @@ pub async fn execute_codemode(
         let result = sandbox
             .execute(
                 &parsed.code,
-                CodemodeExecuteOptions { signal: signal.as_ref().map(Into::into), timeout_ms: None, store: Some(store) },
+                CodemodeExecuteOptions { signal: signal.as_ref().map(Into::into), timeout_ms: None, store: Some(store), timezone: None },
             )
             .await;
         sandbox.close().await;

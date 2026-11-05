@@ -199,7 +199,7 @@ pub struct OpenRouterImagesApi;
 #[async_trait]
 impl ProviderImages for OpenRouterImagesApi {
     async fn generate_images(&self, model: &ImageModel, context: &ImagesContext, options: StreamOptions) -> AssistantImages {
-        generate_images(model, context, options).await
+        crate::utils::wasm::assert_send(generate_images(model, context, options)).await
     }
 }
 

@@ -115,26 +115,14 @@ impl ProviderHttpError {
             e.name = "APIConnectionTimeoutError".to_string();
             e
         } else {
-            Self::connection(format!("Connection error. {}", describe_reqwest_error(error)).trim().to_string())
+            // Like the SDKs' APIConnectionError: the cause is not part of the message.
+            Self::connection("Connection error.")
         }
     }
 
     pub fn header(&self, name: &str) -> Option<&str> {
         self.headers.as_ref().and_then(|h| h.get(name)).and_then(|v| v.to_str().ok())
     }
-}
-
-fn describe_reqwest_error(error: &reqwest::Error) -> String {
-    let mut parts = Vec::new();
-    let mut source: Option<&dyn std::error::Error> = std::error::Error::source(error);
-    while let Some(s) = source {
-        let text = s.to_string();
-        if !parts.contains(&text) {
-            parts.push(text);
-        }
-        source = s.source();
-    }
-    if parts.is_empty() { String::new() } else { format!("({})", parts.join(": ")) }
 }
 
 fn status_error_name(status: u16) -> &'static str {
@@ -241,5 +229,16 @@ mod tests {
         let detail = ProviderHttpError::from_response(502, HeaderMap::new(), r#"{"detail":"x"}"#.into(), SdkErrorStyle::OpenAI);
         assert_eq!(detail.message, "502 status code (no body)");
         assert_eq!(truncate_error_text("abcdef", 3), "abc... [truncated 3 chars]");
+    }
+
+    #[tokio::test]
+    async fn connection_failures_read_like_the_sdks() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1", listener.local_addr().unwrap());
+        drop(listener);
+        let error = reqwest::Client::new().get(url).send().await.unwrap_err();
+        let http = ProviderHttpError::from_reqwest(&error);
+        assert_eq!(http.message, "Connection error.");
+        assert_eq!(http.name, "APIConnectionError");
     }
 }

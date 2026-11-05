@@ -47,7 +47,7 @@ fn matches_the_committed_artifacts() {
         ("keybindings", KEYBINDINGS_SCHEMA_ARTIFACT),
     ] {
         let committed = std::fs::read_to_string(dir.join(format!("schemas/{name}.schema.json"))).unwrap();
-        assert_eq!(embedded, committed, "schemas/{name}.schema.json is stale");
+        assert_eq!(embedded.get(), committed, "schemas/{name}.schema.json is stale");
     }
     // The theme schema is generated from the theme tokens; compare it with the inlined artifact.
     let mut committed: Value =
@@ -110,7 +110,7 @@ fn preserves_editor_guidance_in_the_theme_schema() {
 
 #[test]
 fn preserves_moved_model_and_settings_guidance() {
-    let models = artifact(MODELS_SCHEMA_ARTIFACT);
+    let models = artifact(MODELS_SCHEMA_ARTIFACT.get());
     let cost = &models["$defs"]["ModelCost"]["properties"];
     assert!(cost["input"]["description"].as_str().unwrap().contains("USD per million tokens"));
     assert!(cost["tiers"]["description"].as_str().unwrap().contains("highest matching input threshold"));
@@ -120,7 +120,7 @@ fn preserves_moved_model_and_settings_guidance() {
             .unwrap()
             .contains("serialized provider request size")
     );
-    let settings = artifact(SETTINGS_SCHEMA_ARTIFACT);
+    let settings = artifact(SETTINGS_SCHEMA_ARTIFACT.get());
     let properties = &settings["properties"];
     assert!(properties["quietStartup"]["description"].as_str().unwrap().contains("hide all startup output"));
     assert!(properties["defaultTools"]["description"].as_str().unwrap().contains("+name and -name"));
@@ -129,7 +129,7 @@ fn preserves_moved_model_and_settings_guidance() {
 
 #[test]
 fn validates_representative_documents() {
-    let models = artifact(MODELS_SCHEMA_ARTIFACT);
+    let models = artifact(MODELS_SCHEMA_ARTIFACT.get());
     assert!(check(
         &models,
         json!({ "providers": { "local": {
@@ -148,7 +148,7 @@ fn validates_representative_documents() {
     ));
     assert!(!check(&models, json!({ "providers": { "local": { "models": [{ "id": "" }] } } })));
 
-    let settings = artifact(SETTINGS_SCHEMA_ARTIFACT);
+    let settings = artifact(SETTINGS_SCHEMA_ARTIFACT.get());
     assert!(check(
         &settings,
         json!({
@@ -159,14 +159,14 @@ fn validates_representative_documents() {
     ));
     assert!(!check(&settings, json!({ "cacheWarming": "always" })));
 
-    let keybindings = artifact(KEYBINDINGS_SCHEMA_ARTIFACT);
+    let keybindings = artifact(KEYBINDINGS_SCHEMA_ARTIFACT.get());
     assert!(check(&keybindings, json!({ "app.session.new": "ctrl+n", "extension.action": ["alt+x"] })));
     assert!(!check(&keybindings, json!({ "app.session.new": 42 })));
 }
 
 #[test]
 fn rejects_non_positive_model_token_limits() {
-    let models = artifact(MODELS_SCHEMA_ARTIFACT);
+    let models = artifact(MODELS_SCHEMA_ARTIFACT.get());
     for field in ["contextWindow", "maxTokens"] {
         for value in [0, -1] {
             assert!(
@@ -222,7 +222,7 @@ fn rejects_settings_values_that_runtime_accessors_reject() {
 
 #[test]
 fn describes_legacy_settings_migrations_accurately() {
-    let schema = artifact(SETTINGS_SCHEMA_ARTIFACT);
+    let schema = artifact(SETTINGS_SCHEMA_ARTIFACT.get());
     assert!(
         schema["properties"]["retry"]["properties"]["maxDelayMs"]["description"]
             .as_str()

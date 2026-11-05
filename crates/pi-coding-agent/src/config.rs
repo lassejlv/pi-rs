@@ -255,12 +255,17 @@ fn materialize_package_assets(target: &Path) -> std::io::Result<()> {
         std::process::id()
     ));
     let write_all = || -> std::io::Result<()> {
-        for (rel, contents, executable) in PACKAGE_ASSETS {
+        for (rel, contents, executable, compressed) in PACKAGE_ASSETS {
             let path = staging.join(rel);
             if let Some(dir) = path.parent() {
                 std::fs::create_dir_all(dir)?;
             }
-            std::fs::write(&path, contents)?;
+            if *compressed {
+                let mut file = std::fs::File::create(&path)?;
+                std::io::copy(&mut flate2::read::GzDecoder::new(*contents), &mut file)?;
+            } else {
+                std::fs::write(&path, contents)?;
+            }
             #[cfg(unix)]
             if *executable {
                 use std::os::unix::fs::PermissionsExt;

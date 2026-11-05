@@ -32,7 +32,7 @@ fn env_force_color() -> Option<u8> {
 }
 
 fn has_flag(flag: &str) -> bool {
-    let position = |needle: &str| std::env::args().position(|a| a == needle);
+    let position = |needle: &str| crate::cli::setup::process_args().iter().position(|a| a == needle);
     let prefix = if flag.starts_with('-') {
         ""
     } else if flag.len() == 1 {

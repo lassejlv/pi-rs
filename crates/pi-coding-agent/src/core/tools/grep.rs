@@ -242,7 +242,9 @@ async fn execute_grep(
     };
     let effective_limit = input.limit.unwrap_or(DEFAULT_LIMIT).max(1.0);
 
+    // Keep the tool contract independent of ambient RIPGREP_CONFIG_PATH settings.
     let mut args: Vec<String> = vec![
+        "--no-config".into(),
         "--json".into(),
         "--line-number".into(),
         "--color=never".into(),
@@ -470,6 +472,8 @@ pub fn create_grep_tool_definition(cwd: &str, options: Option<&GrepToolOptions>)
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(GREP_SNIPPET.to_string());
     let renderers = crate::core::tools::renderers::grep::grep_renderers();
     definition.render_call = renderers.render_call;

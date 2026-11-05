@@ -1,12 +1,11 @@
 //! Port of `packages/coding-agent/src/utils/frontmatter.ts`.
 //!
-//! YAML is parsed with `yaml-rust2` (YAML 1.2 core schema, like the `yaml` npm package) and
-//! converted to JSON values.
+//! YAML is parsed by `utils::yaml`, a port of the `yaml` npm package that TypeScript pi uses, so
+//! values and error messages match.
 
 use crate::utils::text::strip_bom;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Number, Value};
-use yaml_rust2::{Yaml, YamlLoader};
+use serde_json::{Map, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,65 +39,11 @@ fn extract_frontmatter(content: &str) -> (Option<String>, String) {
     (Some(yaml), body)
 }
 
-fn yaml_key_to_string(key: &Yaml) -> String {
-    match key {
-        Yaml::String(s) | Yaml::Real(s) => s.clone(),
-        Yaml::Integer(i) => i.to_string(),
-        Yaml::Boolean(b) => b.to_string(),
-        Yaml::Null => "null".to_string(),
-        other => yaml_to_json(other).to_string(),
-    }
-}
-
-/// Convert a parsed YAML node to JSON.
-pub fn yaml_to_json(yaml: &Yaml) -> Value {
-    match yaml {
-        Yaml::Real(s) => {
-            let parsed = match s.as_str() {
-                ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf" | "+.INF" => None,
-                "-.inf" | "-.Inf" | "-.INF" => None,
-                ".nan" | ".NaN" | ".NAN" => None,
-                other => other.parse::<f64>().ok(),
-            };
-            match parsed.and_then(Number::from_f64) {
-                Some(n) => {
-                    // Whole numbers are integers in JS.
-                    let f = n.as_f64().unwrap_or(0.0);
-                    if f.fract() == 0.0 && f.abs() < 9_007_199_254_740_992.0 {
-                        Value::Number(Number::from(f as i64))
-                    } else {
-                        Value::Number(n)
-                    }
-                }
-                None => Value::Null,
-            }
-        }
-        Yaml::Integer(i) => Value::Number(Number::from(*i)),
-        Yaml::String(s) => Value::String(s.clone()),
-        Yaml::Boolean(b) => Value::Bool(*b),
-        Yaml::Array(items) => Value::Array(items.iter().map(yaml_to_json).collect()),
-        Yaml::Hash(hash) => {
-            let mut map = Map::new();
-            for (k, v) in hash {
-                map.insert(yaml_key_to_string(k), yaml_to_json(v));
-            }
-            Value::Object(map)
-        }
-        Yaml::Alias(_) | Yaml::Null | Yaml::BadValue => Value::Null,
-    }
-}
-
-/// Parse a YAML document into JSON. Empty or comment-only documents yield `null`.
+/// Parse a YAML document into JSON like `YAML.parse` of the `yaml` package (2.9.0): values
+/// follow the core schema and `JSON.stringify`, and errors carry the package's messages.
+/// Empty or comment-only documents yield `null`.
 pub fn parse_yaml(source: &str) -> anyhow::Result<Value> {
-    let docs = YamlLoader::load_from_str(source).map_err(|e| {
-        anyhow::anyhow!(
-            "{} at line {}, column {}",
-            e.info(),
-            e.marker().line(),
-            e.marker().col() + 1
-        )
-    })?;
-    Ok(docs.first().map(yaml_to_json).unwrap_or(Value::Null))
+    crate::utils::yaml::parse(source).map_err(|message| anyhow::anyhow!(message))
 }
 
 /// Parse YAML frontmatter. Errors when the frontmatter is not valid YAML.

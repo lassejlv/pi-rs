@@ -91,7 +91,7 @@ impl Target {
     }
 
     /// `{ ...getModel(...), api }` without `compat` (the TS `{ compat: _, ...base }` spread).
-    pub fn as_api(mut self, api: &'static str) -> Self {
+    pub fn api_without_compat(mut self, api: &'static str) -> Self {
         self.api = Some(api);
         self.strip_compat = true;
         self

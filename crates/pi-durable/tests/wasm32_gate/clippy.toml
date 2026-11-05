@@ -1,0 +1,22 @@
+# wasm32-only lint configuration (selected with CLIPPY_CONF_DIR by check.sh).
+# wasm32-unknown-unknown has no tokio runtime, timer driver or std clock: these
+# compile there but panic at runtime. Code compiled for wasm32 goes through the
+# runtime seams instead: `pi_chord::rt` (pi-chord, pi-durable) and
+# `pi_ai::utils::wasm` (pi-ai). Native builds are not checked with this file.
+# Mirrors the workspace clippy.toml (CLIPPY_CONF_DIR replaces it).
+type-complexity-threshold = 500
+
+disallowed-methods = [
+    { path = "tokio::spawn", reason = "no tokio runtime on wasm32; use pi_chord::rt::spawn / pi_ai::utils::wasm::spawn" },
+    { path = "tokio::task::spawn", reason = "no tokio runtime on wasm32; use the runtime seam" },
+    { path = "tokio::task::spawn_blocking", reason = "no threads on wasm32" },
+    { path = "tokio::time::sleep", reason = "no tokio timer driver on wasm32; use the seam's sleep (setTimeout)" },
+    { path = "tokio::time::sleep_until", reason = "no tokio timer driver on wasm32; use the seam" },
+    { path = "tokio::time::timeout", reason = "no tokio timer driver on wasm32; use the seam" },
+    { path = "tokio::time::interval", reason = "no tokio timer driver on wasm32" },
+    { path = "tokio::time::Instant::now", reason = "std clock panics on wasm32; use the seam's Instant" },
+    { path = "tokio::runtime::Handle::current", reason = "no tokio runtime on wasm32" },
+    { path = "tokio::runtime::Handle::try_current", reason = "no tokio runtime on wasm32" },
+    { path = "std::time::Instant::now", reason = "panics on wasm32-unknown-unknown; use web_time::Instant" },
+    { path = "std::time::SystemTime::now", reason = "panics on wasm32-unknown-unknown; use web_time::SystemTime" },
+]

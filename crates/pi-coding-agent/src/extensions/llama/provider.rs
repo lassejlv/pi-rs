@@ -227,7 +227,7 @@ fn to_pi_model(model: &LlamaModelInfo, server_url: &str, props: Option<&LlamaSer
         cost: zero_cost(),
         context_window,
         max_tokens: context_window,
-        compat: Some(ModelCompat {
+        compat: Some(Box::new(ModelCompat {
             supports_store: Some(false),
             supports_developer_role: Some(false),
             supports_reasoning_effort: Some(false),
@@ -236,7 +236,7 @@ fn to_pi_model(model: &LlamaModelInfo, server_url: &str, props: Option<&LlamaSer
             max_tokens_field: Some(MaxTokensField::MaxTokens),
             thinking_format: reasoning.then_some(ThinkingFormat::QwenChatTemplate),
             ..Default::default()
-        }),
+        })),
         ..Default::default()
     }
 }

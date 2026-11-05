@@ -1,0 +1,964 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "runner": "crates/pi-durable-jsrt/examples/embedded_stock.rs",
+  "binding": "pi-durable-jsrt: js/internal/harness-service.js, registry.js, src/dispatch/{transport,harness}.rs over the shared stock service (task_stock_bridge.rs + examples/support)",
+  "files": [
+    {
+      "test": "packages/durable/test/harness-blocked.test.ts",
+      "sha256": "b7c40f118c81879bed20c6d5ec649438881fa8c9d5f22bd5e57e3005f33488e3",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "total": 12,
+          "nativeCalls": 7499,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "total": 12,
+          "nativeCalls": 7001,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-callers.test.ts",
+      "sha256": "b35ad471f8be27ef9116396a82cbfde4ded30517c0501fe87360dd6bdd7b0355",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 6796,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 6300,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-cancellation-barrier.test.ts",
+      "sha256": "0c6e6cf8e83d579d4449b83d958a9e56da413d8415cc95139ab5e533f87e5a53",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 1101,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 981,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-compaction.test.ts",
+      "sha256": "b42fee6eff50dafb8db2c512b3cb9b14c979d32d4d1a8a2c4ed8799e610e13e5",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 108,
+          "failed": 0,
+          "skipped": 0,
+          "total": 108,
+          "nativeCalls": 205981,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 108,
+          "failed": 0,
+          "skipped": 0,
+          "total": 108,
+          "nativeCalls": 189628,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-context.test.ts",
+      "sha256": "08e0b9093dc25c9b2f2fa0a9e18718e85f217782e75de1ef4bf1f14563f5f3c5",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 22,
+          "failed": 0,
+          "skipped": 0,
+          "total": 22,
+          "nativeCalls": 32092,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 22,
+          "failed": 0,
+          "skipped": 0,
+          "total": 22,
+          "nativeCalls": 29212,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-conversations.test.ts",
+      "sha256": "9de21114fcad5d101a8d3e42e7b516c507338356b8d2e95ec965af827a893b81",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "total": 12,
+          "nativeCalls": 1978,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "total": 12,
+          "nativeCalls": 1627,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-events.test.ts",
+      "sha256": "328027abe5380d375351e4d7ea5df839c5777d61e032c84aa22e2a66a225b188",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 18955,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 16925,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-failed-run-inbox.test.ts",
+      "sha256": "3973e5e7c3d0b74e0b95a0fe70281f736abac87014c344752f4fc3ae37bd6491",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 3608,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 3244,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-generation-recovery.test.ts",
+      "sha256": "0b1671654c1f7fec7b9181bad172f866bd2f29c864d33047ca31a52eac7f1ab9",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "total": 8,
+          "nativeCalls": 6573,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0,
+          "total": 8,
+          "nativeCalls": 6149,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-generation.test.ts",
+      "sha256": "d4377ee349a3141c940bf58bba38ff9d10209fe6505451280d781ddc24bec37a",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "total": 25,
+          "nativeCalls": 16947,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "total": 25,
+          "nativeCalls": 15836,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-host-inputs.test.ts",
+      "sha256": "f6b046f5c9ee9e53a7421330e6ebe9cda26db57b534156da18f311a8e01afefe",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 1335,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 841,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-inbox.test.ts",
+      "sha256": "96a53de3dfdd859d8a87298664aa81a00da73423b7d7155c67f0aa5753e5b5ee",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "total": 32,
+          "nativeCalls": 30711,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 32,
+          "failed": 0,
+          "skipped": 0,
+          "total": 32,
+          "nativeCalls": 28746,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-input-entries.test.ts",
+      "sha256": "943b4c459da117c91afd33862e804942d6a77a5e2199526f7469d86b2af3bd57",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 10236,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 9336,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-inspect.test.ts",
+      "sha256": "05a12f76ab3f4cd2b8b18db14180ebd61976512f7715001e575a516651ca266f",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "total": 2,
+          "nativeCalls": 805,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "total": 2,
+          "nativeCalls": 618,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-lifecycle.test.ts",
+      "sha256": "d565006c65eb1b3f76ae47d659a49f6ba3377abbe01858102e876f9fbe6d3cb9",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 4400,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 3791,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-live-deltas.test.ts",
+      "sha256": "199ffbec2d1bc93695857dbba0246ddd4b484b7f34c7f8b8ea7074cc0f0108c1",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 13604,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 12643,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-nested-tools-restart.test.ts",
+      "sha256": "5e518bc9e18e928a5d9692bd6950474c3b0992f09dbca9f2ca270a0e663b751a",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 19387,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 11,
+          "failed": 0,
+          "skipped": 0,
+          "total": 11,
+          "nativeCalls": 17633,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-nested-tools.test.ts",
+      "sha256": "dbe8cb36fb560a8508b3ee41d6edc922dcfe64dad87d0844a56739d939bb8e81",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 33,
+          "failed": 0,
+          "skipped": 0,
+          "total": 33,
+          "nativeCalls": 48112,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 33,
+          "failed": 0,
+          "skipped": 0,
+          "total": 33,
+          "nativeCalls": 43876,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-ownership.test.ts",
+      "sha256": "f5dee1c886edaa25f844dc1a693b0d87634d8dc4543cf18f5b540e143b2f6083",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 0,
+          "total": 41,
+          "nativeCalls": 1084814,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 41,
+          "failed": 0,
+          "skipped": 0,
+          "total": 41,
+          "nativeCalls": 698051,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-prompt.test.ts",
+      "sha256": "760441af9f04eb48cc4c02d0e74769048919c99f0285deab9cae84a08b5c79ff",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "total": 9,
+          "nativeCalls": 1650,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "total": 9,
+          "nativeCalls": 1363,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-read-only.test.ts",
+      "sha256": "18a7cb17058c1129effa37e03e9a5157396defb49057b304291a1061fe4291d7",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 1279,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 1211,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-registry.test.ts",
+      "sha256": "6b473080d955d5b4edcdae09a5ceaddbf56c8340c27ae0f26d7d8a3bff764a81",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 713,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 713,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-reports.test.ts",
+      "sha256": "f0eceabb4618291349a6dabdcb9ef5c8fac163739519edbb856754b3d32a2d17",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 679,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "total": 4,
+          "nativeCalls": 574,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-scheduler-indexes.test.ts",
+      "sha256": "da92cb862c59ed56f1dda264625321b89ea030d4d111d1497c57c4c134c2571a",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 2069,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 1730,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-scheduler-retention.test.ts",
+      "sha256": "3ff6cd6a338800957464d44f6e8777a2f052170eb0e0f05df7c41d21c2a8cfec",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 1023742,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 650374,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-sleep.test.ts",
+      "sha256": "f0bca60a45161e19eeb01c4870a6dc5c84dbedd907cbd4624800617d94819cc8",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0,
+          "total": 13,
+          "nativeCalls": 4961,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 13,
+          "failed": 0,
+          "skipped": 0,
+          "total": 13,
+          "nativeCalls": 4182,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-storage-failure.test.ts",
+      "sha256": "bd44bb05c43b37fa181b6cf5f1940ae930206c52d8aa4fae4f4a33aaff0e9506",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 8102,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 7606,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-structured-output.test.ts",
+      "sha256": "a55053e5da67d93a58cc61ffe420f4e24634a02afcd8daec2f9c06c158a81a74",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 31528,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 29102,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-structured.test.ts",
+      "sha256": "dac438f32984a3d05c81b4a54daccd90c0ce3bad97a41654a993cc508f4d219b",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 0,
+          "total": 58,
+          "nativeCalls": 32496,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 58,
+          "failed": 0,
+          "skipped": 0,
+          "total": 58,
+          "nativeCalls": 23407,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-submissions.test.ts",
+      "sha256": "ab49770da6814b343a2edde23b6894549b9e05e8aedaa80ddeb99ef817f34e05",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 6275,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0,
+          "total": 10,
+          "nativeCalls": 5981,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-task-graph.test.ts",
+      "sha256": "30c0a50d83f19e4ec6645c001dc2f9cedf755b9900c8658e5777c8e1029bb2ca",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 1745,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 0,
+          "total": 5,
+          "nativeCalls": 1359,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-tasks-recovery.test.ts",
+      "sha256": "89176944cccaf505eb8306caaae4a72188bbf3e4de4df274fef92a2f0389078f",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 6151,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 4882,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-tasks.test.ts",
+      "sha256": "30f976d952aa535ec97c8c46c586b641915cac6877f34dd0b0a4b7c60973cd73",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 36,
+          "failed": 0,
+          "skipped": 0,
+          "total": 36,
+          "nativeCalls": 9833,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 36,
+          "failed": 0,
+          "skipped": 0,
+          "total": 36,
+          "nativeCalls": 7063,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-telemetry-options.test.ts",
+      "sha256": "63a9df866bc34626ad83b304d86897f484408b94b20996112453aa6d6fa4286e",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "total": 1,
+          "nativeCalls": 0,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "total": 1,
+          "nativeCalls": 0,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-telemetry.test.ts",
+      "sha256": "bdadee7352c44e72a29916768b89954bdc271313a76114e7dcf6055f10a87c6a",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 19770,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 24,
+          "failed": 0,
+          "skipped": 0,
+          "total": 24,
+          "nativeCalls": 18371,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-tools-recovery.test.ts",
+      "sha256": "9bb1d8354d6167c7d4fa535a97c493bded87c68cc2fb06a44b93289d1361e4e7",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "total": 9,
+          "nativeCalls": 14546,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 9,
+          "failed": 0,
+          "skipped": 0,
+          "total": 9,
+          "nativeCalls": 13642,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-tools.test.ts",
+      "sha256": "fb5e0ebdb9c5d3ba167a2c8ad35fc67b1539d1d00be096f843b76094813103d7",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 0,
+          "total": 39,
+          "nativeCalls": 72838,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 39,
+          "failed": 0,
+          "skipped": 0,
+          "total": 39,
+          "nativeCalls": 68216,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "test": "packages/durable/test/harness-view.test.ts",
+      "sha256": "82b419b66aa0a3a1af0f58d2c7306f58541a8241b29b68306767d0da01bbd2fc",
+      "success": true,
+      "modes": [
+        {
+          "retention": "default",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 8317,
+          "failures": []
+        },
+        {
+          "retention": "0",
+          "passed": 14,
+          "failed": 0,
+          "skipped": 0,
+          "total": 14,
+          "nativeCalls": 7400,
+          "failures": []
+        }
+      ]
+    }
+  ],
+  "build": "CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 cargo build --release -p pi-durable-jsrt --example embedded_stock",
+  "notes": [
+    "Every harness-*.test.ts runs byte-for-byte unchanged in both PI_DURABLE_DOCUMENT_RETENTION_MS modes (unset, 0) with no name filter and the original timeouts.",
+    "harness-telemetry-options.test.ts is type-level (NO_NATIVE in the runner): it imports only types from pi-durable, so no native call is expected.",
+    "Known flake: harness-context 'drops an idle conversation's context read on a timer when nothing else runs' (default retention mode only). After the context-retention host timer fires, the native Session disarms its 600000 ms document-eviction background timer and its re-arm can land after the test's vi.getTimerCount() check; mode 0 has no eviction timer. Native document-retention timer ordering, not glue.",
+    "Timing-heavy cases (harness-ownership deep chain, harness-scheduler-retention 20k chain, harness-context 150-step reads) need the optimized build, like their stock gates; they pass within the original timeouts at normal machine load and can time out under very high load (load average > 100)."
+  ]
+}

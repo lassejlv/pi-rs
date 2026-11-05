@@ -42,7 +42,7 @@ pub fn lazy_stream(
     let started_at = crate::utils::now_ms();
     let (sender, outer) = AssistantMessageEventStream::new();
     let model = model.clone();
-    tokio::spawn(async move {
+    crate::utils::wasm::spawn(async move {
         let observer = observer.unwrap_or_default();
         match setup.await {
             Ok(mut inner) => {

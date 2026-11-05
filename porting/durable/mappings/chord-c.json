@@ -1,0 +1,518 @@
+{
+  "files": [
+    {
+      "reference": "packages/chord/test/delta-tracker/tracker.test.ts",
+      "cases": [
+        {
+          "name": "delta tracker transactional overlay lifecycle > materializes an immutable next revision and adopts it by pointer swap",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::drafts_survive_await_and_authority_changes_only_after_adoption",
+          "note": "covered; draft mutation replaced by whole-state assignment diffed at prepare. Proxy/TypeError on settled draft maps to Err."
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > keeps a transaction live across await and seals it only at prepare",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::drafts_survive_await_and_authority_changes_only_after_adoption",
+          "note": "covered"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > allows Promise resolution to inspect a settled draft without reporting a false failure",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "JS thenable probing of a settled proxy"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > aborts idempotently and revokes held descendants",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::aborts_idempotently_and_revokes_held_descendants",
+          "note": "held descendant proxies are JS-only; state/current/prepare errors asserted"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > allows competing contexts and invalidates loser views",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::allows_competing_contexts_and_invalidates_loser_views",
+          "note": ""
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > invalidates competing open overlays without changing their base revision",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::invalidates_competing_open_overlays_without_changing_their_base_revision",
+          "note": ""
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > adopts object edits as ordinary fast-layout immutable revisions",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::adopts_object_edits_as_ordinary_fast_layout_immutable_revisions",
+          "note": "V8 property descriptor/layout half is JS-only"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > supports adopt-then-publish ordering and retained publication reads",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::supports_adopt_then_publish_ordering_and_retained_publication_reads",
+          "note": ""
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > keeps replacement base/value structurally compatible and readable after adoption",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::keeps_replacement_base_value_structurally_compatible_and_readable_after_adoption",
+          "note": "also crates/pi-chord/tests/tracker.rs::replacement_is_a_base_and_takes_candidate_ownership"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > keeps aborted and stale materialized candidates readable",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::keeps_aborted_and_stale_materialized_candidates_readable",
+          "note": ""
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > lets a settled Change abort its prepared result without retaining its context",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::failed_persistence_can_abort_candidate_without_publishing_it",
+          "note": "covered; retention half in validates_retained_settled_change_retention_semantics"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > rejects foreign and aborted prepared values",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker.rs::foreign_stale_reused_and_aborted_candidates_are_rejected",
+          "note": "covered"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > reads deleted own properties as absent",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::reads_deleted_own_properties_as_absent",
+          "note": "inherited Object.prototype half is JS-only"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > detaches old handles for deeply equal object and array assignments before normalizing",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::deeply_equal_assignments_yield_no_operations_and_retain_committed_identity",
+          "note": "native half only (no ops, committed identity retained); old-handle detachment is proxy-only"
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > normalizes a deeply equal replacement without changing committed identity",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::normalizes_a_deeply_equal_replacement_without_changing_committed_identity",
+          "note": ""
+        },
+        {
+          "name": "delta tracker transactional overlay lifecycle > takes O(1) immutable ownership for replacement and its operation payload",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::takes_o1_immutable_ownership_for_replacement_and_its_operation_payload",
+          "note": "Arc identity of replacement root and shared container in Op::Replace payload"
+        },
+        {
+          "name": "delta tracker policy view > supports native reads, descriptors, keys, iteration, map, and JSON",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "Proxy trap surface over draft arrays/objects"
+        },
+        {
+          "name": "delta tracker policy view > keeps document keys distinct from object proxy target fields",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::keeps_document_keys_distinct_from_object_proxy_target_fields",
+          "note": "keys named like proxy fields are plain data natively"
+        },
+        {
+          "name": "delta tracker policy view > keeps native coercion side effects and string operation forms",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "valueOf coercion inside splice; text t/a op shapes covered by diff tests in tests/delta.rs"
+        },
+        {
+          "name": "delta tracker policy view > emits deletion and supports root arrays",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::emits_deletion_and_supports_root_arrays",
+          "note": ""
+        },
+        {
+          "name": "delta tracker policy view > preserves native object key order after delete and re-add",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::preserves_native_object_key_order_after_delete_and_re_add",
+          "note": "upstream assertions hold exactly (state, prepared and adopted key order [second, first]) through recorded d+s ops. Diff mode cannot carry it: upstream also requires a deeply-equal reordered container assignment to normalize to base order (normalizes_deeply_equal_container_assignments_before_direct_candidate_materialization), and natively a delete+re-add and a reordered assignment produce the same draft value, so only recorded edits can distinguish them."
+        },
+        {
+          "name": "delta tracker policy view > orders new integer-like object keys before strings for recipe-visible reads",
+          "class": "n/a",
+          "rust": null,
+          "note": "JS integer-key property ordering; IndexMap keeps insertion order"
+        },
+        {
+          "name": "delta tracker policy view > normalizes deeply equal container assignments before direct candidate materialization",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::normalizes_deeply_equal_container_assignments_before_direct_candidate_materialization",
+          "note": ""
+        },
+        {
+          "name": "delta tracker policy view > keeps native integer and string ordering across deletion and re-addition",
+          "class": "n/a",
+          "rust": null,
+          "note": "JS integer-key property ordering"
+        },
+        {
+          "name": "delta tracker policy view > orders integer-like keys on null-prototype objects",
+          "class": "n/a",
+          "rust": null,
+          "note": "null-prototype objects do not exist natively"
+        },
+        {
+          "name": "delta tracker policy view > forwards borrowed mutators to ordinary generic array receivers",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "Array.prototype method borrowing on proxies"
+        },
+        {
+          "name": "delta tracker policy view > matches native structural coercion ordering for splice, fill, and copyWithin",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "valueOf re-entrancy during draft mutators"
+        },
+        {
+          "name": "delta tracker policy view > does not report inherited methods as own array properties",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "proxy getOwnPropertyDescriptor"
+        },
+        {
+          "name": "delta tracker policy view > keeps repeated identical writes instead of reverting their pending override",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "pending-override bookkeeping of the draft; final-value no-op normalization covered by normalizes_restored_overrides_and_cancelled_structural_edits_to_no_operations"
+        },
+        {
+          "name": "delta tracker policy view > rejects array index gaps without mutation while allowing replacement and append",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::rejects_array_index_gaps_without_mutation_while_allowing_replacement_and_append",
+          "note": "explicit Set ops; failed batch leaves draft unchanged"
+        },
+        {
+          "name": "delta tracker policy view > supports optional deletion, explicit null length growth, shrinking, and default sort",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "undefined assignment, array length setter and delete-hole semantics are JS-only"
+        },
+        {
+          "name": "delta tracker policy view > enumerates wide objects without duplicate keys",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "proxy ownKeys enumeration"
+        },
+        {
+          "name": "delta tracker policy view > does not dirty read-only traversals",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::does_not_dirty_read_only_traversals",
+          "note": ""
+        },
+        {
+          "name": "delta tracker policy view > uses one proxy identity per accessed container",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "proxy identity"
+        },
+        {
+          "name": "delta tracker by-value placements > clones property, index, push, unshift, splice, fill, and copyWithin placements",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "aliasing of externally mutable JS objects; native values are immutable Arc containers"
+        },
+        {
+          "name": "delta tracker by-value placements > rejects non-strict JSON placements before changing the draft",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "undefined/function/symbol/bigint/NaN/Date/cycles/accessors are unrepresentable in JsonValue; strict parsing covered in tests/json.rs"
+        },
+        {
+          "name": "delta tracker by-value placements > expands repeated source aliases into independent placements",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::expands_repeated_source_aliases_into_independent_placements",
+          "note": "copy-on-write independence of shared Arc containers"
+        },
+        {
+          "name": "delta tracker by-value placements > deep-clones draft-sourced placements within and across revisions",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::deep_clones_draft_sourced_placements_within_and_across_revisions",
+          "note": ""
+        },
+        {
+          "name": "delta tracker by-value placements > distinguishes raw committed references from draft references",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::distinguishes_raw_committed_references_from_draft_references",
+          "note": "value-semantic outcome only"
+        },
+        {
+          "name": "delta tracker by-value placements > folds edits to introduced object and array subtrees into placement payloads",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::folds_edits_to_introduced_object_and_array_subtrees_into_placement_payloads",
+          "note": ""
+        },
+        {
+          "name": "delta tracker by-value placements > folds pathological operation counts without payload-cost estimation",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::folds_pathological_operation_counts_without_payload_cost_estimation",
+          "note": ""
+        },
+        {
+          "name": "delta tracker by-value placements > shares immutable operation placements with the materialized candidate",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::shares_immutable_operation_placements_with_the_materialized_candidate",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > emits one insert for an append to a long array",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::emits_one_insert_for_an_append_to_a_long_array",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > emits removals from the end backwards, then inserts, when kept elements keep their order",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::emits_removals_from_the_end_backwards_then_inserts_when_kept_elements_keep_their_order",
+          "note": "Exact upstream ops via the native draft mutator Change::splice (shift/splice/pop/push), which records a piece array (src/delta/tracker.rs Pieces) and normalizes at flush: base removals from the end backwards, then inserts at final indices. apply_ops still retains explicit batches verbatim."
+        },
+        {
+          "name": "delta tracker piece arrays > emits a permutation when kept elements change order",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::emits_a_permutation_when_kept_elements_change_order",
+          "note": "reverse and parity sort via the native Change::permute mutator (piece array -> removals, m, inserts); explicit Move batch still retained verbatim"
+        },
+        {
+          "name": "delta tracker piece arrays > keeps adoption independent from mutable detached permutation metadata",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::keeps_adoption_independent_from_mutable_detached_permutation_metadata",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > matches native splice with zero or one argument",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "Array.prototype.splice argument handling on a proxy"
+        },
+        {
+          "name": "delta tracker piece arrays > supports all structural mutators and native return values",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "mutator return values on draft proxies"
+        },
+        {
+          "name": "delta tracker piece arrays > tracks held handles after reindex and suppresses detached writes",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "held proxy handles"
+        },
+        {
+          "name": "delta tracker piece arrays > replays introduced, moved, then edited array descendants",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "held proxy handles through structural ops; explicit-batch replay covered in tests/delta.rs"
+        },
+        {
+          "name": "delta tracker piece arrays > combines movement and edits with permutation plus final paths",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::combines_movement_and_edits_with_permutation_plus_final_paths",
+          "note": "Change::permute([1,2,0]) then an in-place edit of the moved element at its final index; ops[0] == m [1,2,0] exactly. Explicit batch variant kept. Diff mode alone still cannot attribute a moved-then-edited element (edited containers get a new Arc), which is why the mutator exists."
+        },
+        {
+          "name": "delta tracker piece arrays > keeps comparator writes and structurally reentrant appends",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "JS comparator callbacks writing through the draft"
+        },
+        {
+          "name": "delta tracker piece arrays > normalizes duplicate entries created by structurally reentrant sort callbacks",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "JS comparator re-entrancy"
+        },
+        {
+          "name": "delta tracker piece arrays > folds dense child and direct-index edits into one full-array operation",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::folds_dense_child_and_direct_index_edits_into_one_full_array_operation",
+          "note": "upstream data (row.value += 1, values[i] = -i-1 for i<600) edited in place on the draft; identity-guided diff yields one p op each"
+        },
+        {
+          "name": "delta tracker piece arrays > folds only a deeply nested dense array region",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::folds_only_a_deeply_nested_dense_array_region",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > does not cache emission paths for nested reserved-key folds covered by an outer region",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::does_not_cache_emission_paths_for_nested_reserved_key_folds_covered_by_an_outer_region",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > suppresses nested structural and leaf operations covered by an outer dense region",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::suppresses_nested_structural_and_leaf_operations_covered_by_an_outer_dense_region",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > emits multiple disjoint dense regions and preserves operations outside their boundaries",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::emits_multiple_disjoint_dense_regions_and_preserves_operations_outside_their_boundaries",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > normalizes a 20,000-operation queue transaction to two operations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::normalizes_a_20000_operation_queue_transaction_to_two_operations",
+          "note": "10,000 shift/push pairs through Change::splice; pieces normalize to exactly 2 ops"
+        },
+        {
+          "name": "delta tracker piece arrays > handles adversarial fragmentation and resolves held handles without piece scans",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::handles_adversarial_fragmentation_by_final_value_replay",
+          "note": "final-value replay only; held-handle resolution is proxy-only"
+        },
+        {
+          "name": "delta tracker piece arrays > normalizes restored overrides and cancelled structural edits to no operations",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::normalizes_restored_overrides_and_cancelled_structural_edits_to_no_operations",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > handles null sparse overrides without confusing absence",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::handles_null_sparse_overrides_without_confusing_absence",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > supports self-overlapping fill and copyWithin by value",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "fill/copyWithin aliasing of draft proxies"
+        },
+        {
+          "name": "delta tracker piece arrays > inserts 100,000 items with unshift",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::inserts_100000_items_with_unshift_and_splice",
+          "note": ""
+        },
+        {
+          "name": "delta tracker piece arrays > inserts 100,000 items with splice",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::inserts_100000_items_with_unshift_and_splice",
+          "note": ""
+        },
+        {
+          "name": "delta tracker randomized transactions > matches policy, detached replay, and adopted state after multi-operation transactions",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::matches_policy_detached_replay_and_adopted_state_after_multi_operation_transactions",
+          "note": "same seeded generator; the model document is rendered and assigned as the draft, so 'policy vs draft' collapses to value/replay/adopt checks"
+        },
+        {
+          "name": "delta tracker object emission scaling > orders many reverse-depth object edits through the bounded fallback",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::orders_many_reverse_depth_object_edits_through_the_bounded_fallback",
+          "note": "513 ordered Set ops as upstream: tracker emission now uses diff_operations (no snapshot-size fallback, only the 4096-op overflow), matching upstream tracker. Chain built structurally (parser nesting cap is 128)"
+        },
+        {
+          "name": "delta tracker security and storage-style cloning > defines own properties without invoking inherited setters",
+          "class": "n/a",
+          "rust": null,
+          "note": "Object.prototype setter pollution; no prototype chain natively"
+        },
+        {
+          "name": "delta tracker security and storage-style cloning > handles reserved own keys without prototype pollution",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::handles_reserved_own_keys_without_prototype_pollution",
+          "note": ""
+        },
+        {
+          "name": "delta tracker security and storage-style cloning > supports a MemoryStorage-style recursive clone of Prepared.value",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::supports_a_memory_storage_style_recursive_clone_of_prepared_value",
+          "note": "serialize/parse round trip"
+        }
+      ]
+    },
+    {
+      "reference": "packages/chord/test/delta-tracker/retention.test.ts",
+      "cases": [
+        {
+          "name": "delta tracker retention across GC jobs > validates aborted-payload retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_aborted_payload_retention_semantics",
+          "note": "Weak observation of a bare draft payload is unavailable; asserts the draft is released (current() errs) and base untouched"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates unadopted-prepared retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_unadopted_prepared_retention_semantics",
+          "note": "Arc Weak on Prepared.value"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates draft-proxies retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "WeakRef on draft proxies"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates settled-lifecycle retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_settled_lifecycle_retention_semantics",
+          "note": ""
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates obsolete-revisions retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_obsolete_revisions_retention_semantics",
+          "note": ""
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-settled-prepared retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_retained_settled_prepared_retention_semantics",
+          "note": ""
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-settled-change retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_retained_settled_change_retention_semantics",
+          "note": ""
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-settled-proxy retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "held settled draft proxy"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-large-settled-proxy retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "held settled draft proxy"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates retained-large-placement-proxies retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "held placement proxies and JS GC"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates stale-unprepared-change retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_stale_unprepared_change_retention_semantics",
+          "note": "REAL GAP FIXED: a stale open Change kept its obsolete base/state Arc until abort; Change now releases them when next touched (src/delta/tracker.rs release_if_stale)"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates same-job-fast-cleanup retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "V8 heapUsed measurement"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates same-job-folded-ops-cleanup retention semantics",
+          "class": "embedded-only",
+          "rust": null,
+          "note": "V8 heapUsed measurement"
+        },
+        {
+          "name": "delta tracker retention across GC jobs > validates lifecycle-churn retention semantics",
+          "class": "native",
+          "rust": "crates/pi-chord/tests/tracker_upstream.rs::validates_lifecycle_churn_retention_semantics",
+          "note": ""
+        }
+      ]
+    }
+  ]
+}

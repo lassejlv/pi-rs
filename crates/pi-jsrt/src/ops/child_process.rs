@@ -9,8 +9,8 @@ use std::io::Read;
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
-use boa_engine::object::builtins::JsArray;
-use boa_engine::{Context, JsArgs, JsObject, JsResult, JsValue, js_string};
+use crate::js::JsArray;
+use crate::js::{Context, JsArgs, JsObject, JsResult, JsValue, js_string};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 
@@ -63,6 +63,11 @@ struct SpawnOpts {
     stdio: [Io; 3],
     detached: bool,
     argv0: Option<String>,
+    /// stdio entries past 2 that are socket pairs (`'ipc'` channels and `'pipe'`s): child fd numbers.
+    extra: Vec<i32>,
+    /// `uid`/`gid` options.
+    uid: Option<u32>,
+    gid: Option<u32>,
 }
 
 fn string_list(v: &JsValue, ctx: &mut Context) -> JsResult<Vec<String>> {
@@ -104,6 +109,20 @@ fn read_opts(args: &[JsValue], ctx: &mut Context) -> JsResult<SpawnOpts> {
     let detached = o.get(js_string!("detached"), ctx)?.to_boolean();
     let argv0 = o.get(js_string!("argv0"), ctx)?;
     let argv0 = if argv0.is_null_or_undefined() { None } else { Some(argv0.to_string(ctx)?.to_std_string_lossy()) };
+    let extra_v = o.get(js_string!("extra"), ctx)?;
+    let mut extra = Vec::new();
+    if let Some(e) = extra_v.as_object()
+        && let Ok(arr) = JsArray::from_object(e)
+    {
+        for i in 0..arr.length(ctx)? {
+            extra.push(arr.get(i, ctx)?.to_number(ctx)? as i32);
+        }
+    }
+    let num = |v: JsValue, ctx: &mut Context| -> JsResult<Option<u32>> {
+        if v.is_null_or_undefined() { Ok(None) } else { Ok(Some(v.to_number(ctx)? as u32)) }
+    };
+    let uid = num(o.get(js_string!("uid"), ctx)?, ctx)?;
+    let gid = num(o.get(js_string!("gid"), ctx)?, ctx)?;
     Ok(SpawnOpts {
         file,
         args: argv,
@@ -112,6 +131,9 @@ fn read_opts(args: &[JsValue], ctx: &mut Context) -> JsResult<SpawnOpts> {
         stdio: modes,
         detached,
         argv0,
+        extra,
+        uid,
+        gid,
     })
 }
 
@@ -131,6 +153,55 @@ fn apply_common(cmd: &mut std::process::Command, o: &SpawnOpts) {
     if let Some(a0) = &o.argv0 {
         cmd.arg0(a0);
     }
+    if let Some(uid) = o.uid {
+        cmd.uid(uid);
+    }
+    if let Some(gid) = o.gid {
+        cmd.gid(gid);
+    }
+}
+
+/// Create the socket pairs for extra stdio entries; the child ends are installed at their fd
+/// numbers right before exec. Returns the parent ends and the child ends (to close after the
+/// spawn).
+type ExtraStdio = (Vec<(i32, std::os::unix::net::UnixStream)>, Vec<std::os::unix::net::UnixStream>);
+
+fn extra_stdio(cmd: &mut std::process::Command, o: &SpawnOpts) -> std::io::Result<ExtraStdio> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::process::CommandExt;
+    if o.extra.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let mut parents = Vec::new();
+    let mut children = Vec::new();
+    for &fd in &o.extra {
+        let (parent, child) = std::os::unix::net::UnixStream::pair()?;
+        parents.push((fd, parent));
+        children.push((fd, child));
+    }
+    let map: Vec<(i32, i32)> = children.iter().map(|(target, s)| (s.as_raw_fd(), *target)).collect();
+    // SAFETY: the closure only calls async-signal-safe functions (fcntl, dup2, close). Sources
+    // are first moved above every target so installing one cannot clobber another.
+    unsafe {
+        cmd.pre_exec(move || {
+            let mut moved = Vec::with_capacity(map.len());
+            for (src, target) in &map {
+                let high = libc::fcntl(*src, libc::F_DUPFD_CLOEXEC, 256);
+                if high < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                moved.push((high, *target));
+            }
+            for (src, target) in &moved {
+                if libc::dup2(*src, *target) < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                libc::close(*src);
+            }
+            Ok(())
+        });
+    }
+    Ok((parents, children.into_iter().map(|(_, s)| s).collect()))
 }
 
 fn dispatch(ctx: &mut Context, id: u64, args: Vec<JsValue>) {
@@ -202,12 +273,18 @@ fn op_spawn(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValu
     let mut std_cmd = std::process::Command::new(&o.file);
     apply_common(&mut std_cmd, &o);
     std_cmd.stdin(stdio(o.stdio[0])).stdout(stdio(o.stdio[1])).stderr(stdio(o.stdio[2]));
+    let (extra_parents, extra_children) = match extra_stdio(&mut std_cmd, &o) {
+        Ok(v) => v,
+        Err(e) => return Err(super::throw_io(ctx, &e, "socketpair", None)),
+    };
     let mut cmd = tokio::process::Command::from(std_cmd);
     cmd.kill_on_drop(false);
     let spawned = {
         let _guard = st.tokio.enter();
         cmd.spawn()
     };
+    drop(cmd);
+    drop(extra_children);
     let mut child = match spawned {
         Ok(c) => c,
         Err(e) => {
@@ -276,7 +353,14 @@ fn op_spawn(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValu
             dispatch(ctx, id, vec![js_str("close"), code, sig]);
         });
     });
-    object(ctx, vec![("id", JsValue::from(id as f64)), ("pid", JsValue::from(pid))])
+    let mut extra = Vec::new();
+    for (fd, parent) in extra_parents {
+        let channel = super::ipc::start(ctx, parent).map_err(|e| super::throw_io(ctx, &e, "socketpair", None))?;
+        extra.push(JsValue::from(fd));
+        extra.push(JsValue::from(channel as f64));
+    }
+    let extra = super::array(ctx, extra);
+    object(ctx, vec![("id", JsValue::from(id as f64)), ("pid", JsValue::from(pid)), ("extra", extra)])
 }
 
 fn op_child_write(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {

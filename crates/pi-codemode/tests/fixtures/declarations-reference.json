@@ -1,0 +1,1749 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "hashes": {
+    "packages/codemode/src/declarations.ts": "72edc14c5eb7612cdb2ef4ed58377353adeafc58f6d724b309b0bb522aa7f595",
+    "packages/codemode/src/identifier.ts": "c920a297e79186edc61348906950b639e8d67602122f165fb98012fd32be2f11"
+  },
+  "rows": [
+    {
+      "schema": true,
+      "tool": {
+        "name": "\ud800tool.😀-0",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": true,
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": true,
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___0(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___0(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___0(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": false,
+      "tool": {
+        "name": "\ud800tool.😀-1",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": false,
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": false,
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "never"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "never"
+        },
+        {
+          "maxChars": 40,
+          "expected": "never"
+        },
+        {
+          "maxChars": 80,
+          "expected": "never"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "never"
+        }
+      ],
+      "signature": "_tool___1(args: never): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___1(args: never): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___1(args: never): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: never): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {},
+      "tool": {
+        "name": "\ud800tool.😀-2",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {},
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {},
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___2(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___2(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___2(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": null,
+      "tool": {
+        "name": "\ud800tool.😀-3",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": null,
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": null,
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___3(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___3(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___3(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": [],
+      "tool": {
+        "name": "\ud800tool.😀-4",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": [],
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": [],
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___4(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___4(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___4(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-5",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "string"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "string"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "string"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "string"
+        },
+        {
+          "maxChars": 40,
+          "expected": "string"
+        },
+        {
+          "maxChars": 80,
+          "expected": "string"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "string"
+        }
+      ],
+      "signature": "_tool___5(args: string): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___5(args: string): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___5(args: string): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: string): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "const": "\ud800"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-6",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "const": "\ud800"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "const": "\ud800"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 40,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 80,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 16000,
+          "expected": "\"\\ud800\""
+        }
+      ],
+      "signature": "_tool___6(args: \"\\ud800\"): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___6(args: \"\\ud800\"): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___6(args: \"\\ud800\"): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: \"\\ud800\"): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "enum": [
+          "\ud800",
+          "\udc01",
+          "😀",
+          "\ud800",
+          null,
+          2
+        ]
+      },
+      "tool": {
+        "name": "\ud800tool.😀-7",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "enum": [
+            "\ud800",
+            "\udc01",
+            "😀",
+            "\ud800",
+            null,
+            2
+          ]
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "enum": [
+              "\ud800",
+              "\udc01",
+              "😀",
+              "\ud800",
+              null,
+              2
+            ]
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "\"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "\"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2"
+        },
+        {
+          "maxChars": 80,
+          "expected": "\"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "\"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2"
+        }
+      ],
+      "signature": "_tool___7(args: \"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___7(args: \"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___7(args: \"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: \"\\ud800\" | \"\\udc01\" | \"😀\" | null | 2): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "\ud800": {
+            "type": "string",
+            "description": " \ud800\n\udc01  😀 "
+          },
+          "\udc01": {
+            "const": "\ud800"
+          },
+          "😀": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "\ud800",
+          "😀"
+        ],
+        "additionalProperties": false
+      },
+      "tool": {
+        "name": "\ud800tool.😀-8",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "\ud800": {
+              "type": "string",
+              "description": " \ud800\n\udc01  😀 "
+            },
+            "\udc01": {
+              "const": "\ud800"
+            },
+            "😀": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "\ud800",
+            "😀"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "\ud800": {
+                "type": "string",
+                "description": " \ud800\n\udc01  😀 "
+              },
+              "\udc01": {
+                "const": "\ud800"
+              },
+              "😀": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "\ud800",
+              "😀"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}"
+        }
+      ],
+      "signature": "_tool___8(args: {\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___8(args: {\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___8(args: {\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: {\n  // \ud800\n  // \udc01\n  // 😀\n  \"\\ud800\": string;\n  // @integer @minimum 2\n  \"😀\": number;\n  \"\\udc01\"?: \"\\ud800\";\n  \"\"?: Array<string>;\n}): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "$defs": {
+          "\ud800": {
+            "type": "object",
+            "properties": {
+              "\udc01": {
+                "const": "\ud800"
+              }
+            },
+            "required": [
+              "\udc01"
+            ]
+          }
+        },
+        "$ref": "#/$defs/\ud800"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-9",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "$defs": {
+            "\ud800": {
+              "type": "object",
+              "properties": {
+                "\udc01": {
+                  "const": "\ud800"
+                }
+              },
+              "required": [
+                "\udc01"
+              ]
+            }
+          },
+          "$ref": "#/$defs/\ud800"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "$defs": {
+              "\ud800": {
+                "type": "object",
+                "properties": {
+                  "\udc01": {
+                    "const": "\ud800"
+                  }
+                },
+                "required": [
+                  "\udc01"
+                ]
+              }
+            },
+            "$ref": "#/$defs/\ud800"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{ \"\\udc01\": \"\\ud800\"; }"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "{ \"\\udc01\": \"\\ud800\"; }"
+        },
+        {
+          "maxChars": 80,
+          "expected": "{ \"\\udc01\": \"\\ud800\"; }"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{ \"\\udc01\": \"\\ud800\"; }"
+        }
+      ],
+      "signature": "_tool___9(args: { \"\\udc01\": \"\\ud800\"; }): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___9(args: { \"\\udc01\": \"\\ud800\"; }): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___9(args: { \"\\udc01\": \"\\ud800\"; }): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: { \"\\udc01\": \"\\ud800\"; }): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "$defs": {
+          "a/b~c": {
+            "const": "\udc01"
+          }
+        },
+        "$ref": "#/$defs/a~1b~0c"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-10",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "$defs": {
+            "a/b~c": {
+              "const": "\udc01"
+            }
+          },
+          "$ref": "#/$defs/a~1b~0c"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "$defs": {
+              "a/b~c": {
+                "const": "\udc01"
+              }
+            },
+            "$ref": "#/$defs/a~1b~0c"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "\"\\udc01\""
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "\"\\udc01\""
+        },
+        {
+          "maxChars": 40,
+          "expected": "\"\\udc01\""
+        },
+        {
+          "maxChars": 80,
+          "expected": "\"\\udc01\""
+        },
+        {
+          "maxChars": 16000,
+          "expected": "\"\\udc01\""
+        }
+      ],
+      "signature": "_tool___10(args: \"\\udc01\"): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___10(args: \"\\udc01\"): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___10(args: \"\\udc01\"): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: \"\\udc01\"): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "$defs": {
+          "é": {
+            "const": "\ud800"
+          }
+        },
+        "$ref": "#/$defs/%C3%A9"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-11",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "$defs": {
+            "é": {
+              "const": "\ud800"
+            }
+          },
+          "$ref": "#/$defs/%C3%A9"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "$defs": {
+              "é": {
+                "const": "\ud800"
+              }
+            },
+            "$ref": "#/$defs/%C3%A9"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 40,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 80,
+          "expected": "\"\\ud800\""
+        },
+        {
+          "maxChars": 16000,
+          "expected": "\"\\ud800\""
+        }
+      ],
+      "signature": "_tool___11(args: \"\\ud800\"): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___11(args: \"\\ud800\"): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___11(args: \"\\ud800\"): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: \"\\ud800\"): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "string",
+            "description": " a\r\n\ud800 \udc01 ",
+            "pattern": "\ud800 \udc01",
+            "default": "\ud800"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 10,
+                "format": "\udc01"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minimum": 2,
+            "maximum": 20,
+            "format": "\ud800"
+          }
+        }
+      },
+      "tool": {
+        "name": "\ud800tool.😀-12",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "string",
+              "description": " a\r\n\ud800 \udc01 ",
+              "pattern": "\ud800 \udc01",
+              "default": "\ud800"
+            },
+            "y": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 10,
+                  "format": "\udc01"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "minimum": 2,
+              "maximum": 20,
+              "format": "\ud800"
+            }
+          }
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string",
+                "description": " a\r\n\ud800 \udc01 ",
+                "pattern": "\ud800 \udc01",
+                "default": "\ud800"
+              },
+              "y": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 10,
+                    "format": "\udc01"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "minimum": 2,
+                "maximum": 20,
+                "format": "\ud800"
+              }
+            }
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "{\n  // a\n  // \ud800\n  // \udc01\n  x?: string;\n  y?: number | null;\n}"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}"
+        }
+      ],
+      "signature": "_tool___12(args: {\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___12(args: {\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___12(args: {\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: {\n  // a\n  // \ud800\n  // \udc01\n  // @pattern \ud800\\u2028\udc01 @default \"\\ud800\"\n  x?: string;\n  // @integer @minimum 10 @maximum 20 @format \ud800 @format \udc01\n  y?: number | null;\n}): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "string",
+            "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+          },
+          "y": {
+            "type": "string",
+            "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+          },
+          "z": {
+            "type": "string",
+            "default": {
+              "\udc01": "\ud800"
+            }
+          }
+        }
+      },
+      "tool": {
+        "name": "\ud800tool.😀-13",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "string",
+              "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+            },
+            "y": {
+              "type": "string",
+              "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+            },
+            "z": {
+              "type": "string",
+              "default": {
+                "\udc01": "\ud800"
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string",
+                "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+              },
+              "y": {
+                "type": "string",
+                "pattern": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+              },
+              "z": {
+                "type": "string",
+                "default": {
+                  "\udc01": "\ud800"
+                }
+              }
+            }
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "{ x?: string; y?: string; z?: string; }"
+        },
+        {
+          "maxChars": 80,
+          "expected": "{ x?: string; y?: string; z?: string; }"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}"
+        }
+      ],
+      "signature": "_tool___13(args: {\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___13(args: {\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___13(args: {\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: {\n  // @pattern \ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\n  x?: string;\n  y?: string;\n  // @default {\"\\udc01\":\"\\ud800\"}\n  z?: string;\n}): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 10,
+            "exclusiveMaximum": false,
+            "deprecated": true
+          }
+        }
+      },
+      "tool": {
+        "name": "\ud800tool.😀-14",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 10,
+              "exclusiveMaximum": false,
+              "deprecated": true
+            }
+          }
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 10,
+                "exclusiveMaximum": false,
+                "deprecated": true
+              }
+            }
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "{ x?: number; }"
+        },
+        {
+          "maxChars": 80,
+          "expected": "{\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}"
+        }
+      ],
+      "signature": "_tool___14(args: {\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___14(args: {\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___14(args: {\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: {\n  // @exclusiveMinimum 0 @maximum 10 @deprecated\n  x?: number;\n}): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "const": "\ud800"
+              },
+              {
+                "const": "\udc01"
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "\ud800": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      },
+      "tool": {
+        "name": "\ud800tool.😀-15",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "allOf": [
+            {
+              "anyOf": [
+                {
+                  "const": "\ud800"
+                },
+                {
+                  "const": "\udc01"
+                }
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "\ud800": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "\ud800"
+                  },
+                  {
+                    "const": "\udc01"
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "\ud800": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "(\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "(\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "(\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }"
+        }
+      ],
+      "signature": "_tool___15(args: (\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___15(args: (\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___15(args: (\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: (\"\\ud800\" | \"\\udc01\") & { \"\\ud800\"?: boolean; }): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "const": "\ud800"
+          },
+          {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        ]
+      },
+      "tool": {
+        "name": "\ud800tool.😀-16",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "\ud800"
+            },
+            {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          ]
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "\ud800"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ]
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "[\"\\ud800\", string | null]"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "[\"\\ud800\", string | null]"
+        },
+        {
+          "maxChars": 80,
+          "expected": "[\"\\ud800\", string | null]"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "[\"\\ud800\", string | null]"
+        }
+      ],
+      "signature": "_tool___16(args: [\"\\ud800\", string | null]): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___16(args: [\"\\ud800\", string | null]): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___16(args: [\"\\ud800\", string | null]): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: [\"\\ud800\", string | null]): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": [
+          "string",
+          "object",
+          "array"
+        ],
+        "properties": {
+          "\ud800": {
+            "type": "string"
+          }
+        },
+        "items": {
+          "const": "\udc01"
+        }
+      },
+      "tool": {
+        "name": "\ud800tool.😀-17",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ],
+          "properties": {
+            "\ud800": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "const": "\udc01"
+          }
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": [
+              "string",
+              "object",
+              "array"
+            ],
+            "properties": {
+              "\ud800": {
+                "type": "string"
+              }
+            },
+            "items": {
+              "const": "\udc01"
+            }
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">"
+        }
+      ],
+      "signature": "_tool___17(args: string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___17(args: string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___17(args: string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: string | { \"\\ud800\"?: string; } | Array<\"\\udc01\">): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "$ref": "#"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-18",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "$ref": "#"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "$ref": "#"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___18(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___18(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___18(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "$defs": {
+          "x": {
+            "$ref": "#/$defs/x"
+          }
+        },
+        "$ref": "#/$defs/x"
+      },
+      "tool": {
+        "name": "\ud800tool.😀-19",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "$defs": {
+            "x": {
+              "$ref": "#/$defs/x"
+            }
+          },
+          "$ref": "#/$defs/x"
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "$defs": {
+              "x": {
+                "$ref": "#/$defs/x"
+              }
+            },
+            "$ref": "#/$defs/x"
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "unknown"
+        }
+      ],
+      "signature": "_tool___19(args: unknown): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___19(args: unknown): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___19(args: unknown): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: unknown): Promise<\"\\ud800\">;\n};"
+    },
+    {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "nested": {
+            "type": "object",
+            "description": "\ud800",
+            "properties": {
+              "\ud800": {
+                "type": "string",
+                "description": "\udc01"
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "tool": {
+        "name": "\ud800tool.😀-20",
+        "description": "﻿ \ud800 */\r\n \udc01\n",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "nested": {
+              "type": "object",
+              "description": "\ud800",
+              "properties": {
+                "\ud800": {
+                  "type": "string",
+                  "description": "\udc01"
+                }
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "outputSchema": {
+          "const": "\udc01"
+        }
+      },
+      "globals": [
+        {
+          "name": "\ud800global",
+          "description": "\udc01",
+          "signature": "(arg: '\ud800'): void"
+        },
+        {
+          "name": "\ud800ns.\udc01member",
+          "description": "\ud800\n\udc01",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "nested": {
+                "type": "object",
+                "description": "\ud800",
+                "properties": {
+                  "\ud800": {
+                    "type": "string",
+                    "description": "\udc01"
+                  }
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "outputSchema": {
+            "const": "\ud800"
+          }
+        }
+      ],
+      "types": [
+        {
+          "maxChars": null,
+          "expected": "{\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}"
+        },
+        {
+          "maxChars": 0,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 10,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 40,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 80,
+          "expected": "unknown"
+        },
+        {
+          "maxChars": 16000,
+          "expected": "{\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}"
+        }
+      ],
+      "signature": "_tool___20(args: {\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}): Promise<\"\\udc01\">;",
+      "sample": "\ud800 */\r\n \udc01\n\ncodemode tool declaration:\n```ts\ndeclare const tools: { _tool___20(args: {\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}): Promise<\"\\udc01\">; };\n```",
+      "declarations": "declare const tools: {\n  /**\n   * \ud800 *\\/\n   *  \udc01\n   */\n  _tool___20(args: {\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}): Promise<\"\\udc01\">;\n};\n\n/** \udc01 */\ndeclare function \ud800global(arg: '\ud800'): void;\n\ndeclare const \ud800ns: {\n  /**\n   * \ud800\n   * \udc01\n   */\n  \udc01member(args: {\n  // \ud800\n  nested?: {\n    // \udc01\n    \"\\ud800\"?: string;\n  };\n  [key: string]: unknown;\n}): Promise<\"\\ud800\">;\n};"
+    }
+  ]
+}

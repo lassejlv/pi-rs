@@ -1,0 +1,342 @@
+{
+  "reference": "5e63241d0294ed3fcfc4388c737a8ea27e09c74e",
+  "runner": "CARGO_INCREMENTAL=0 cargo run -p pi-durable-jsrt --example embedded_stock -- ../pi-mono --suite=<file>",
+  "files": {
+    "session-definitions": {
+      "test": "packages/durable/test/session-definitions.test.ts",
+      "sha256": "3f4432d0aee006cc42ad4490376b350ae04aa2ef277b356766a698545cdced4a",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 4,
+          "total": 4,
+          "failed": 0,
+          "nativeCalls": 37,
+          "failing": []
+        },
+        "0": {
+          "passed": 4,
+          "total": 4,
+          "failed": 0,
+          "nativeCalls": 37,
+          "failing": []
+        }
+      }
+    },
+    "session-tables": {
+      "test": "packages/durable/test/session-tables.test.ts",
+      "sha256": "cdaf4388c08ed849d8017fe9ed649d1071768a3b6feed323d936e5d290f3888f",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 12,
+          "total": 12,
+          "failed": 0,
+          "nativeCalls": 2048,
+          "failing": []
+        },
+        "0": {
+          "passed": 12,
+          "total": 12,
+          "failed": 0,
+          "nativeCalls": 2060,
+          "failing": []
+        }
+      }
+    },
+    "session-documents": {
+      "test": "packages/durable/test/session-documents.test.ts",
+      "sha256": "3961ee091c195571877fcbfc80cb85daa859f8b12d5dee17e58dbd7c62039b82",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 27,
+          "total": 27,
+          "failed": 0,
+          "nativeCalls": 4684,
+          "failing": []
+        },
+        "0": {
+          "passed": 27,
+          "total": 27,
+          "failed": 0,
+          "nativeCalls": 4716,
+          "failing": []
+        }
+      }
+    },
+    "session-forks": {
+      "test": "packages/durable/test/session-forks.test.ts",
+      "sha256": "21f40b78204ea8c61c6456856274df0c3c47d53695d69b2113105373dc7da1f9",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 14,
+          "total": 14,
+          "failed": 0,
+          "nativeCalls": 9929,
+          "failing": []
+        },
+        "0": {
+          "passed": 14,
+          "total": 14,
+          "failed": 0,
+          "nativeCalls": 9938,
+          "failing": []
+        }
+      }
+    },
+    "session-watches": {
+      "test": "packages/durable/test/session-watches.test.ts",
+      "sha256": "815d57d10b37125071755683e0a6765a315f31359a91af1dbfc7b446a7ab8a89",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 22,
+          "total": 22,
+          "failed": 0,
+          "nativeCalls": 17618,
+          "failing": []
+        },
+        "0": {
+          "passed": 22,
+          "total": 22,
+          "failed": 0,
+          "nativeCalls": 17527,
+          "failing": []
+        }
+      }
+    },
+    "session-checkpoints-migrations": {
+      "test": "packages/durable/test/session-checkpoints-migrations.test.ts",
+      "sha256": "9111c73cbb0f7d653d08dd099181d81a75cba6e3198bce34bf3da2733d3cf5e3",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 20,
+          "total": 20,
+          "failed": 0,
+          "nativeCalls": 8436,
+          "failing": []
+        },
+        "0": {
+          "passed": 20,
+          "total": 20,
+          "failed": 0,
+          "nativeCalls": 8453,
+          "failing": []
+        }
+      }
+    },
+    "session-adoption": {
+      "test": "packages/durable/test/session-adoption.test.ts",
+      "sha256": "125ee969ca0087154f0139254e9014b4371c306156227606887361a0d23f3822",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 5,
+          "total": 5,
+          "failed": 0,
+          "nativeCalls": 618,
+          "failing": []
+        },
+        "0": {
+          "passed": 5,
+          "total": 5,
+          "failed": 0,
+          "nativeCalls": 659,
+          "failing": []
+        }
+      },
+      "note": "run with `CARGO_INCREMENTAL=0 cargo run -p pi-durable-jsrt --features stock-test-probes --example embedded_stock -- ../pi-mono --suite=packages/durable/test/session-adoption.test.ts` (Transaction.prototype probes need pi-durable's stock-test-probes)"
+    },
+    "session-document-retention": {
+      "test": "packages/durable/test/session-document-retention.test.ts",
+      "sha256": "9de3798688478c556266edaf783c7d54e5d882bfc8b98b04899fb88e1c2c7705",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 21,
+          "total": 21,
+          "failed": 0,
+          "nativeCalls": 51250,
+          "failing": []
+        },
+        "0": {
+          "passed": 21,
+          "total": 21,
+          "failed": 0,
+          "nativeCalls": 51240,
+          "failing": []
+        }
+      },
+      "note": "21/21 both modes in 10/10 consecutive mode runs; the long-lived case (about 600 commits) takes 1.36-1.48 s of its 5 s deadline after cutting host round trips per commit from 22.7 to 15.0 (memory.call on the JS thread, one clock/retention read per bookkeeping step, upstream touch() reads)"
+    },
+    "memory-storage": {
+      "test": "packages/durable/test/memory-storage.test.ts",
+      "sha256": "da53b63a0c10550c8073d1c3ad84c5eab53850b360c91ed2959f9a69ecfb5aa5",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 27,
+          "total": 27,
+          "failed": 0,
+          "nativeCalls": 598,
+          "failing": []
+        },
+        "0": {
+          "passed": 27,
+          "total": 27,
+          "failed": 0,
+          "nativeCalls": 598,
+          "failing": []
+        }
+      }
+    },
+    "jsonl-storage": {
+      "test": "packages/durable/test/jsonl-storage.test.ts",
+      "sha256": "f0182f889b1d855e5ada96f0f50bf5d519d1afcf124c46e10f403cd9a839222c",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 93,
+          "total": 93,
+          "failed": 0,
+          "nativeCalls": 4906,
+          "failing": []
+        },
+        "0": {
+          "passed": 93,
+          "total": 93,
+          "failed": 0,
+          "nativeCalls": 4906,
+          "failing": []
+        }
+      }
+    },
+    "sqlite-storage": {
+      "test": "packages/durable/test/sqlite-storage.test.ts",
+      "sha256": "b67612615e11b335c04de9afc770d7a10ea7ac5812a190558e6e4d9172539372",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 65,
+          "total": 65,
+          "failed": 0,
+          "nativeCalls": 6499,
+          "failing": []
+        },
+        "0": {
+          "passed": 65,
+          "total": 65,
+          "failed": 0,
+          "nativeCalls": 6493,
+          "failing": []
+        }
+      }
+    },
+    "sqlite-facade": {
+      "test": "packages/durable/test/sqlite-facade.test.ts",
+      "sha256": "3ed27478d3188b58240ef597ccd5c0087d77b6ef98278be46a0dc9aeda815f87",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 6,
+          "total": 6,
+          "failed": 0,
+          "nativeCalls": 188,
+          "failing": []
+        },
+        "0": {
+          "passed": 6,
+          "total": 6,
+          "failed": 0,
+          "nativeCalls": 188,
+          "failing": []
+        }
+      }
+    },
+    "sqlite-migrations": {
+      "test": "packages/durable/test/sqlite-migrations.test.ts",
+      "sha256": "a47a1965228e57203fad67bcaabf938218fc3d9e3e3efd62db84118a484e022d",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 4,
+          "total": 4,
+          "failed": 0,
+          "nativeCalls": 36,
+          "failing": []
+        },
+        "0": {
+          "passed": 4,
+          "total": 4,
+          "failed": 0,
+          "nativeCalls": 36,
+          "failing": []
+        }
+      }
+    },
+    "sqlite-cloudflare": {
+      "test": "packages/durable/test/sqlite-cloudflare.test.ts",
+      "sha256": "ddb4a6e672ad10bcdbf47bd1d9989a438ce0744cf732f938406f4b64806bdbd9",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 30,
+          "total": 30,
+          "failed": 0,
+          "nativeCalls": 708,
+          "failing": []
+        },
+        "0": {
+          "passed": 30,
+          "total": 30,
+          "failed": 0,
+          "nativeCalls": 708,
+          "failing": []
+        }
+      }
+    },
+    "indexeddb-storage": {
+      "test": "packages/durable/test/indexeddb-storage.test.ts",
+      "sha256": "33d920a199658c222c1d7830c3398b333bf8af80fb77d80e9581b170cabafc94",
+      "success": true,
+      "modes": {
+        "default": {
+          "passed": 56,
+          "total": 56,
+          "failed": 0,
+          "nativeCalls": 7436,
+          "failing": []
+        },
+        "0": {
+          "passed": 56,
+          "total": 56,
+          "failed": 0,
+          "nativeCalls": 7436,
+          "failing": []
+        }
+      },
+      "note": "Tier 2. Native IndexedDbStorage (pi_durable::storage::indexeddb) over the caller's IndexedDB through JsIdbBackend (src/dispatch/indexeddb.rs, js/storage/indexeddb.js); operations are polled on the JS thread from each request's event handler, so transactions stay active. Test dependency: the runner aliases `fake-indexeddb` to crates/pi-durable-jsrt/tests/indexeddb/node_modules (upstream's pin 6.2.6, lockfile integrity identical to pi-mono's; `npm ci` there); the reference checkout is not written. durable-indexeddb's native fixtures were generated with fake-indexeddb 6.2.5; the 56 upstream cases pass against 6.2.6.",
+      "testDependencies": [
+        {
+          "specifier": "fake-indexeddb",
+          "entry": "crates/pi-durable-jsrt/tests/indexeddb/node_modules/fake-indexeddb/build/esm/index.js",
+          "pin": "tests/indexeddb/package-lock.json"
+        }
+      ]
+    }
+  },
+  "notApplicable": {
+    "storage-runtime-boundary": {
+      "test": "packages/durable/test/storage-runtime-boundary.test.ts",
+      "reason": "checks upstream source layout, not exports: it reads packages/durable/src with node:fs and imports no embedded module (4/4 pass, 0 native calls); excluded from pass counts",
+      "replacement": "crates/pi-durable-jsrt/tests/session_embedded.rs::portable_entry_modules_import_no_node_builtins"
+    }
+  },
+  "regressionTests": [
+    "session_embedded.rs::watch_delivery_keeps_the_commit_context",
+    "session_embedded.rs::commit_callbacks_resume_after_tx_doc_under_load"
+  ]
+}

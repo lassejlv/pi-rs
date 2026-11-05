@@ -388,6 +388,59 @@ async fn settles_the_active_response_before_session_replacement() {
 }
 
 #[tokio::test]
+async fn aborting_while_tools_run_ends_with_the_signal_reason_of_the_last_request() {
+    // TS: the loop still requests one more response with the aborted signal; auth resolution
+    // races that signal and rejects with its reason, so the turn ends with an error message
+    // "This operation was aborted" (not provider-retry's "Request aborted").
+    let (started_tx, started_rx) = tokio::sync::oneshot::channel::<()>();
+    let started_tx = Arc::new(Mutex::new(Some(started_tx)));
+    let setup: Setup = Arc::new(move |pi| {
+        let started_tx = started_tx.clone();
+        pi.register_tool(ToolDefinition::new(
+            "block",
+            "Block",
+            "Blocks until aborted",
+            json!({"type": "object", "properties": {}}),
+            move |_id, _params, signal, _update, _ctx| {
+                let started_tx = started_tx.clone();
+                async move {
+                    if let Some(tx) = started_tx.lock().take() {
+                        let _ = tx.send(());
+                    }
+                    if let Some(signal) = signal {
+                        signal.cancelled().await;
+                    }
+                    Ok(AgentToolResult::text("tool aborted", Some(json!({}))))
+                }
+            },
+        ))
+    });
+    let t = create_runtime_for_test(Some(setup), None, true, false).await;
+    t.faux.set_responses(vec![tool_use("block", json!({}))]);
+    let session = t.runtime.session();
+    let running = session.clone();
+    let prompt = tokio::spawn(async move { running.prompt("start blocking tool", None).await });
+    started_rx.await.unwrap();
+    session.abort().await.unwrap();
+    prompt.await.unwrap().unwrap();
+
+    let assistants: Vec<_> = session
+        .messages()
+        .into_iter()
+        .filter_map(|m| match m {
+            AgentMessage::Assistant(a) => Some(a),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(assistants.len(), 2);
+    let last = assistants.last().unwrap();
+    assert_eq!(last.stop_reason, pi_ai::types::StopReason::Error);
+    assert_eq!(last.error_message.as_deref(), Some("This operation was aborted"));
+    assert!(last.content.is_empty());
+    t.cleanup().await;
+}
+
+#[tokio::test]
 async fn preserves_an_existing_session_when_importing_a_file_with_the_same_name() {
     let t = create_runtime_for_test(None, None, true, false).await;
     let session_dir = t.runtime.session().session_manager().get_session_dir();

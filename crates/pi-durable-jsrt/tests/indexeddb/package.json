@@ -1,0 +1,9 @@
+{
+  "name": "pi-durable-jsrt-indexeddb-tests",
+  "private": true,
+  "type": "module",
+  "description": "Test-side dependency of upstream packages/durable/test/indexeddb-storage.test.ts for the embedded runner (examples/embedded_stock.rs aliases `fake-indexeddb` here); pinned to upstream's devDependency",
+  "devDependencies": {
+    "fake-indexeddb": "6.2.6"
+  }
+}

@@ -9,7 +9,7 @@ use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use regex::Regex;
 
 /// Expand `{a,b}` alternations (nested), like minimatch's brace expansion.
-fn brace_expand(pattern: &str) -> Vec<String> {
+pub(crate) fn brace_expand(pattern: &str) -> Vec<String> {
     let bytes = pattern.as_bytes();
     let mut depth = 0usize;
     let mut open = None;

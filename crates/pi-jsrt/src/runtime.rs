@@ -8,8 +8,8 @@ use std::sync::{Arc, mpsc};
 use std::thread::ThreadId;
 use std::time::Instant;
 
-use boa_engine::object::FunctionObjectBuilder;
-use boa_engine::{Context, JsResult, JsString, JsValue, NativeFunction};
+use crate::js::FunctionObjectBuilder;
+use crate::js::{Context, JsResult, JsString, JsValue, NativeFunction};
 use futures::channel::oneshot;
 use parking_lot::{Mutex, RwLock};
 use serde_json::Value;
@@ -76,18 +76,42 @@ pub struct RuntimeOptions {
     /// Virtual modules available to `import` / `require` by exact specifier.
     pub virtual_modules: HashMap<String, VirtualModule>,
     /// Specifier aliases (exact or `prefix/` matches), e.g. `"@sinclair/typebox" -> "typebox"`.
-    /// Targets may be other specifiers, virtual modules or absolute paths.
+    /// Targets may be other specifiers, virtual modules or absolute paths. A key that is an
+    /// absolute file path redirects every specifier resolving to that file (e.g. relative imports
+    /// of a source file replaced by a virtual module).
     pub aliases: HashMap<String, String>,
     /// Name of the JS thread.
     pub thread_name: String,
-    /// Native stack size of the JS thread in bytes.
+    /// Native stack size of the JS thread in bytes. JS may use three quarters of it; deeper
+    /// recursion throws `RangeError: Maximum call stack size exceeded`.
     pub thread_stack_size: usize,
-    /// Maximum JS call recursion depth.
-    pub recursion_limit: usize,
-    /// Maximum VM stack size (values).
-    pub stack_size_limit: usize,
-    /// Optional loop iteration limit (per loop) to stop runaway scripts.
+    /// Optional limit to stop runaway scripts: roughly the loop iterations one synchronous run
+    /// (a task, timer or callback with its promise jobs) may take before QuickJS interrupts it
+    /// with an error no `try` can catch. Counted in interrupt polls, about every 10,000
+    /// operations.
     pub loop_iteration_limit: Option<u64>,
+    /// `process.execArgv`.
+    pub exec_argv: Vec<String>,
+    /// Read the process's standard input for `process.stdin` (Node mode). Off by default: an
+    /// embedding application owns its stdin (pi's TUI, print and RPC modes read it), and
+    /// `process.stdin` then never delivers data, like a stdin nobody can read from.
+    pub stdin: bool,
+    /// Give ES modules outside `node_modules` jiti-style `__filename`, `__dirname` and `require`
+    /// bindings (default, how pi loads extensions). Node mode turns it off: Node's ES modules
+    /// have none of them.
+    pub esm_cjs_globals: bool,
+    /// How `child_process.fork()` (and `cluster`) start another runtime as a Node-like process:
+    /// the program and the arguments that precede the module path. `None` runs the current
+    /// executable with [`crate::node::NODE_MARKER`], which an embedding binary hands to
+    /// [`crate::node::main_if_requested`] first thing in `main`.
+    pub node_exec: Option<Vec<String>>,
+    /// Define a `gc()` global that forces a full collection (Node's `--expose-gc`).
+    pub expose_gc: bool,
+    /// Define the `__jsrtTimers` global that test runners use for fake timers: `freeze(nowMs)`
+    /// installs a fake clock that timers created afterwards wait on, `advance(ms)` /
+    /// `runNext(limitMs)` fire them, `next()`, `now()`, `count()`, `setNow(ms)`, `thaw()`, and
+    /// `realTimeout(callback, ms)` schedules on the real clock while frozen.
+    pub timer_control: bool,
 }
 
 impl Default for RuntimeOptions {
@@ -106,9 +130,13 @@ impl Default for RuntimeOptions {
             aliases: HashMap::new(),
             thread_name: "pi-jsrt".to_string(),
             thread_stack_size: 64 * 1024 * 1024,
-            recursion_limit: 4096,
-            stack_size_limit: 1024 * 1024,
             loop_iteration_limit: None,
+            exec_argv: Vec::new(),
+            esm_cjs_globals: true,
+            stdin: false,
+            node_exec: None,
+            expose_gc: false,
+            timer_control: false,
         }
     }
 }
@@ -133,6 +161,8 @@ pub(crate) struct Shared {
     pub(crate) on_uncaught: Option<UncaughtHandler>,
     pub(crate) virtual_modules: RwLock<HashMap<String, VirtualModule>>,
     pub(crate) aliases: RwLock<HashMap<String, String>>,
+    /// Source text served instead of a file's contents ([`JsRuntime::set_file_source`]).
+    pub(crate) file_sources: RwLock<HashMap<PathBuf, String>>,
     pub(crate) env: HashMap<String, String>,
     pub(crate) cwd: PathBuf,
 }
@@ -264,6 +294,14 @@ pub fn in_host_call() -> bool {
     CURRENT_CTX.with(|c| !c.get().is_null())
 }
 
+/// Run `f` as a synchronous host function body: while it runs, blocking calls into this runtime
+/// from this thread ([`JsHandle::call_blocking`], [`JsRuntime::with_context_blocking`],
+/// [`crate::ctx::with_current`]) run re-entrantly on `ctx`. `f` must not use `ctx` itself.
+pub(crate) fn enter_host_call<R>(ctx: &mut Context, f: impl FnOnce() -> R) -> R {
+    let _guard = CurrentCtxGuard::enter(ctx);
+    f()
+}
+
 struct CurrentCtxGuard(*mut Context);
 
 impl CurrentCtxGuard {
@@ -334,6 +372,7 @@ impl JsRuntime {
             on_uncaught: options.on_uncaught.clone(),
             virtual_modules: RwLock::new(options.virtual_modules.clone()),
             aliases: RwLock::new(options.aliases.clone()),
+            file_sources: RwLock::default(),
             options,
             ids: AtomicU64::new(1),
             refs: Mutex::new(HashMap::new()),
@@ -451,6 +490,13 @@ impl JsRuntime {
         self.inner.tx.send(Msg::Task(Box::new(f))).map_err(|_| Error::Terminated)
     }
 
+    /// Queue `f` to run on the JS thread (promise jobs run after it) without waiting for it. Unlike
+    /// [`JsRuntime::with_context`] it needs no async runtime, so threads that must not wait (or
+    /// tokio workers that may all be busy) can hand work to JS.
+    pub fn post_task(&self, f: impl FnOnce(&mut Context) + Send + 'static) -> Result<()> {
+        self.post(f)
+    }
+
     fn request<R: Send + 'static>(&self, f: impl FnOnce(&mut Context, Reply<R>) + Send + 'static) -> Result<oneshot::Receiver<Result<R>>> {
         let (tx, rx) = oneshot::channel();
         self.post(move |ctx| f(ctx, tx))?;
@@ -469,7 +515,7 @@ impl JsRuntime {
         around_blocking_wait(|| park_on(rx)).map_err(|_| Error::Terminated)?
     }
 
-    /// Run `f` on the JS thread with direct access to the Boa [`Context`].
+    /// Run `f` on the JS thread with direct access to the QuickJS [`Context`] (see [`crate::js`]).
     ///
     /// This is the escape hatch for building host objects; see [`crate::ctx`] for helpers.
     pub async fn with_context<R, F>(&self, f: F) -> Result<R>
@@ -568,6 +614,14 @@ impl JsRuntime {
     /// Register or replace a virtual module. Takes effect for modules not yet loaded.
     pub fn set_virtual_module(&self, specifier: impl Into<String>, module: VirtualModule) {
         self.inner.shared.virtual_modules.write().insert(specifier.into(), module);
+    }
+
+    /// Serve `source` as the contents of the file at `path` (absolute) when it is loaded, instead
+    /// of reading it from disk. The module keeps the file's identity: relative imports,
+    /// `import.meta.url` and the language chosen by its extension. Takes effect for files not yet
+    /// loaded (test runners use it for source transforms such as vitest's mock hoisting).
+    pub fn set_file_source(&self, path: impl Into<PathBuf>, source: impl Into<String>) {
+        self.inner.shared.file_sources.write().insert(path.into(), source.into());
     }
 
     /// Register or replace a specifier alias.
@@ -673,6 +727,35 @@ impl JsRuntime {
         self.with_context(|ctx| crate::ctx::handle_count(ctx)).await
     }
 
+    /// Wait until the event loop has no referenced work left: no referenced timers, pending
+    /// async operations or referenced handles (sockets, servers, child processes, workers,
+    /// message ports with listeners...). This is when Node would emit `beforeExit` and exit.
+    pub async fn wait_idle(&self) -> Result<()> {
+        let rx = self.request(|ctx, reply: Reply<oneshot::Receiver<()>>| {
+            let (tx, rx) = oneshot::channel();
+            state(ctx).add_idle_waiter(tx);
+            let _ = reply.send(Ok(rx));
+        });
+        let idle = Self::wait(rx).await?;
+        idle.await.map_err(|_| Error::Terminated)
+    }
+
+    /// Call `internal[name](arg)` (a function of the glue's private `internal` object) and await
+    /// the result as JSON.
+    pub(crate) async fn call_internal(&self, name: &'static str, arg: Value) -> Result<Value> {
+        Self::wait(self.request(move |ctx, reply| {
+            let internal = engine::internal(ctx);
+            let r = internal.get(JsString::from(name), ctx).and_then(|f| {
+                let f = f.as_callable().ok_or_else(|| engine::type_error(format!("internal.{name} is not a function")))?;
+                let arg = convert::from_json(&arg, ctx)?;
+                f.call(&JsValue::undefined(), &[arg], ctx)
+            });
+            reply_settled(ctx, r, reply, false);
+        }))
+        .await
+        .map(settled_json)
+    }
+
     /// Number of active timers (diagnostics).
     pub async fn timer_count(&self) -> Result<usize> {
         self.with_context(|ctx| engine::timer_count(ctx)).await
@@ -738,12 +821,12 @@ fn runtime_of(ctx: &Context) -> Option<JsRuntime> {
 fn convert_args(ctx: &mut Context, args: &[JsValue]) -> JsResult<Vec<Value>> {
     let mut out = Vec::with_capacity(args.len());
     for a in args {
-        out.push(convert::to_json(a, ctx).map_err(|e| error::to_boa(&e, ctx))?);
+        out.push(convert::to_json(a, ctx).map_err(|e| error::to_js(&e, ctx))?);
     }
     Ok(out)
 }
 
-fn make_sync_host_fn(ctx: &mut Context, name: &str, f: SyncHostFn) -> boa_engine::object::builtins::JsFunction {
+fn make_sync_host_fn(ctx: &mut Context, name: &str, f: SyncHostFn) -> crate::js::JsFunction {
     // SAFETY: captures only an Arc of a Send+Sync Rust closure (no GC values).
     let native = unsafe {
         NativeFunction::from_closure(move |_this, args, ctx| {
@@ -756,7 +839,7 @@ fn make_sync_host_fn(ctx: &mut Context, name: &str, f: SyncHostFn) -> boa_engine
                 };
                 match r {
                     Ok(v) => convert::from_json(&v, ctx),
-                    Err(e) => Err(error::to_boa(&e, ctx)),
+                    Err(e) => Err(error::to_js(&e, ctx)),
                 }
             });
             state(ctx).sweep_unadopted(&created);
@@ -769,7 +852,7 @@ fn make_sync_host_fn(ctx: &mut Context, name: &str, f: SyncHostFn) -> boa_engine
         .build()
 }
 
-fn make_async_host_fn(ctx: &mut Context, name: &str, f: AsyncHostFn) -> boa_engine::object::builtins::JsFunction {
+fn make_async_host_fn(ctx: &mut Context, name: &str, f: AsyncHostFn) -> crate::js::JsFunction {
     // SAFETY: captures only an Arc of a Send+Sync Rust closure (no GC values).
     let native = unsafe {
         NativeFunction::from_closure(move |_this, args, ctx| {
@@ -780,7 +863,7 @@ fn make_async_host_fn(ctx: &mut Context, name: &str, f: AsyncHostFn) -> boa_engi
                 Err(e) => {
                     state(ctx).sweep_unadopted(&created);
                     let v = e.into_opaque(ctx).unwrap_or_default();
-                    return Ok(boa_engine::object::builtins::JsPromise::reject(boa_engine::JsError::from_opaque(v), ctx)?.into());
+                    return Ok(crate::js::JsPromise::reject(crate::js::JsError::from_opaque(v), ctx)?.into());
                 }
             };
             let fut = f(rt, args);
@@ -790,7 +873,7 @@ fn make_async_host_fn(ctx: &mut Context, name: &str, f: AsyncHostFn) -> boa_engi
                     state(ctx).sweep_unadopted(&created);
                     match r {
                         Ok(v) => convert::from_json(&v, ctx),
-                        Err(e) => Err(error::to_boa(&e, ctx)),
+                        Err(e) => Err(error::to_js(&e, ctx)),
                     }
                 }) as engine::Finish
             }))
@@ -811,17 +894,17 @@ pub(crate) fn set_global_path(ctx: &mut Context, path: &str, value: JsValue) -> 
     };
     for p in parents {
         let key = JsString::from(*p);
-        let next = obj.get(key.clone(), ctx).map_err(|e| error::from_boa(e, ctx))?;
+        let next = obj.get(key.clone(), ctx).map_err(|e| error::from_js(e, ctx))?;
         obj = match next.as_object() {
             Some(o) => o,
             None => {
-                let o = boa_engine::JsObject::with_object_proto(ctx.intrinsics());
-                obj.set(key, o.clone(), true, ctx).map_err(|e| error::from_boa(e, ctx))?;
+                let o = crate::js::JsObject::with_object_proto(ctx.intrinsics());
+                obj.set(key, o.clone(), true, ctx).map_err(|e| error::from_js(e, ctx))?;
                 o
             }
         };
     }
-    obj.set(JsString::from(*last), value, true, ctx).map_err(|e| error::from_boa(e, ctx))?;
+    obj.set(JsString::from(*last), value, true, ctx).map_err(|e| error::from_js(e, ctx))?;
     Ok(())
 }
 
@@ -946,11 +1029,11 @@ impl JsHandle {
                 Some(p) => {
                     engine::run_microtasks(ctx);
                     match p.state() {
-                        boa_engine::builtins::promise::PromiseState::Fulfilled(v) => v,
-                        boa_engine::builtins::promise::PromiseState::Rejected(e) => {
+                        crate::js::PromiseState::Fulfilled(v) => v,
+                        crate::js::PromiseState::Rejected(e) => {
                             return Err(error::from_thrown(&e, ctx));
                         }
-                        boa_engine::builtins::promise::PromiseState::Pending => {
+                        crate::js::PromiseState::Pending => {
                             return Err(Error::host(
                                 "re-entrant call into the JS runtime returned a pending promise",
                             ));
@@ -1140,8 +1223,8 @@ impl JsHandle {
                 let obj = handle_value(ctx, id)?
                     .as_object()
                     .ok_or_else(|| Error::host("handle is not an object"))?;
-                let v = convert::from_json(&value, ctx).map_err(|e| error::from_boa(e, ctx))?;
-                obj.set(JsString::from(name.as_str()), v, true, ctx).map_err(|e| error::from_boa(e, ctx))?;
+                let v = convert::from_json(&value, ctx).map_err(|e| error::from_js(e, ctx))?;
+                obj.set(JsString::from(name.as_str()), v, true, ctx).map_err(|e| error::from_js(e, ctx))?;
                 Ok(())
             })();
             let _ = reply.send(r);
@@ -1177,7 +1260,7 @@ fn invoke_on_thread(ctx: &mut Context, id: u64, target: Target, args: Vec<Value>
     let value = handle_value(ctx, id)?;
     let mut js_args = Vec::with_capacity(args.len());
     for a in &args {
-        js_args.push(convert::from_json(a, ctx).map_err(|e| error::from_boa(e, ctx))?);
+        js_args.push(convert::from_json(a, ctx).map_err(|e| error::from_js(e, ctx))?);
     }
     let r = match target {
         Target::Call => match value.as_callable() {
@@ -1185,8 +1268,8 @@ fn invoke_on_thread(ctx: &mut Context, id: u64, target: Target, args: Vec<Value>
             None => return Err(Error::js("TypeError", "handle is not a function")),
         },
         Target::Method(name) => {
-            let obj = value.to_object(ctx).map_err(|e| error::from_boa(e, ctx))?;
-            let f = obj.get(JsString::from(name.as_str()), ctx).map_err(|e| error::from_boa(e, ctx))?;
+            let obj = value.to_object(ctx).map_err(|e| error::from_js(e, ctx))?;
+            let f = obj.get(JsString::from(name.as_str()), ctx).map_err(|e| error::from_js(e, ctx))?;
             match f.as_callable() {
                 Some(f) => f.call(&value, &js_args, ctx),
                 None => return Err(Error::js("TypeError", format!("{name} is not a function"))),
@@ -1197,9 +1280,9 @@ fn invoke_on_thread(ctx: &mut Context, id: u64, target: Target, args: Vec<Value>
             None => return Err(Error::js("TypeError", "handle is not a constructor")),
         },
         Target::Get(name) => {
-            let obj = value.to_object(ctx).map_err(|e| error::from_boa(e, ctx))?;
+            let obj = value.to_object(ctx).map_err(|e| error::from_js(e, ctx))?;
             obj.get(JsString::from(name.as_str()), ctx)
         }
     };
-    r.map_err(|e| error::from_boa(e, ctx))
+    r.map_err(|e| error::from_js(e, ctx))
 }

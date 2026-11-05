@@ -729,6 +729,8 @@ pub fn create_shell_tool_definition(
             )
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(config.prompt_snippet.clone());
     definition.prompt_guidelines = if expose_session_environment {
         config.prompt_guidelines.clone()

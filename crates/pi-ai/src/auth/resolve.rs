@@ -12,7 +12,7 @@ use super::types::{
 };
 use crate::types::ProviderEnv;
 pub use crate::utils::models_error::{ModelsError, ModelsErrorCode};
-use crate::utils::provider_retry::AbortError;
+use crate::utils::abort::SignalAbortError;
 
 #[derive(Debug, Clone, Default)]
 pub struct AuthResolutionOverrides {
@@ -28,7 +28,7 @@ const DEFAULT_OAUTH_REFRESH_TIMEOUT_MS: u64 = 15_000;
 
 fn aborted(signal: &CancellationToken) -> anyhow::Result<()> {
     if signal.is_cancelled() {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }
@@ -43,7 +43,7 @@ pub async fn race_with_signal<T>(
     // listener fires synchronously before the operation's resolution is delivered.
     tokio::select! {
         biased;
-        _ = signal.cancelled() => Err(AbortError.into()),
+        _ = signal.cancelled() => Err(SignalAbortError.into()),
         result = future => result,
     }
 }
@@ -146,7 +146,7 @@ pub async fn refresh_stored_oauth_credential(
         let signal = signal.clone();
         let lock_wait = lock_wait.clone();
         let started = started.clone();
-        tokio::spawn(async move {
+        crate::utils::wasm::spawn(async move {
             signal.cancelled().await;
             if !started.load(std::sync::atomic::Ordering::SeqCst) {
                 lock_wait.cancel();
@@ -159,7 +159,7 @@ pub async fn refresh_stored_oauth_credential(
     let store = credentials.clone();
     let store_id = provider_id.to_string();
     let lock_signal = lock_wait.clone();
-    let operation = tokio::spawn(async move {
+    let operation = crate::utils::wasm::spawn(async move {
         store
             .modify(
                 &store_id,
@@ -173,8 +173,8 @@ pub async fn refresh_stored_oauth_credential(
                         }
                         let timeout = CancellationToken::new();
                         let timer = timeout.clone();
-                        let handle = tokio::spawn(async move {
-                            tokio::time::sleep(Duration::from_millis(DEFAULT_OAUTH_REFRESH_TIMEOUT_MS)).await;
+                        let handle = crate::utils::wasm::spawn(async move {
+                            crate::utils::wasm::sleep(Duration::from_millis(DEFAULT_OAUTH_REFRESH_TIMEOUT_MS)).await;
                             timer.cancel();
                         });
                         let refreshed = oauth.refresh(current, timeout).await;

@@ -181,8 +181,8 @@ pub fn build(kind: &str, input: &Value) -> Option<Built> {
             ImageOptions { filename: opt_s(input, "filename").map(str::to_string), ..Default::default() },
             None,
         )),
-        "assistant_message" => component(AssistantMessageComponent::new(Some(from(input, "message")), None, None, None, None, None)),
-        "user_message" => component(UserMessageComponent::new(s(input, "text"), None, None, None)),
+        "assistant_message" => component(AssistantMessageComponent::new(Some(from(input, "message")), None, None, None, None, None, None, None)),
+        "user_message" => component(UserMessageComponent::new(s(input, "text"), None, None, None, None, None)),
         "tool_execution" => {
             let tool_name = s(input, "toolName");
             let definition = with_built_in_renderers(tool_name, None).map(ToolExecutionComponentToolDefinition::ToolRenderers);

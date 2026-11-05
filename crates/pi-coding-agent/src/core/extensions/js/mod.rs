@@ -17,8 +17,10 @@ mod api;
 mod builtin;
 mod component;
 mod context;
+mod messages;
 mod native;
 mod provider;
+mod sdk;
 mod tui_helpers;
 
 use std::collections::HashMap;
@@ -35,27 +37,29 @@ use crate::core::extensions::runner::ExtensionErrorWithStack;
 use crate::core::extensions::types::*;
 
 pub use component::{JsComponent, JsEditorComponent};
+use pi_embed::Embedded;
 
-const BRIDGE_JS: &str = include_str!("../../../../js/bridge.js");
+const BRIDGE_JS: Embedded = pi_embed::include_str!("../../../../js/bridge.js");
 /// The real `typebox` 1.3.27 (`scripts/vendor-typebox.mjs`): entry points and shared chunks.
-const TYPEBOX_MODULES: &[(&str, &str)] = &[
-    ("typebox", include_str!("../../../../js/vendor/typebox/index.js")),
-    ("typebox/value", include_str!("../../../../js/vendor/typebox/value.js")),
-    ("typebox/compile", include_str!("../../../../js/vendor/typebox/compile.js")),
-    ("pi-rs:typebox/chunk-1", include_str!("../../../../js/vendor/typebox/chunk-1.js")),
-    ("pi-rs:typebox/chunk-2", include_str!("../../../../js/vendor/typebox/chunk-2.js")),
+const TYPEBOX_MODULES: &[(&str, Embedded)] = &[
+    ("typebox", pi_embed::include_str!("../../../../js/vendor/typebox/index.js")),
+    ("typebox/value", pi_embed::include_str!("../../../../js/vendor/typebox/value.js")),
+    ("typebox/compile", pi_embed::include_str!("../../../../js/vendor/typebox/compile.js")),
+    ("pi-rs:typebox/chunk-1", pi_embed::include_str!("../../../../js/vendor/typebox/chunk-1.js")),
+    ("pi-rs:typebox/chunk-2", pi_embed::include_str!("../../../../js/vendor/typebox/chunk-2.js")),
 ];
 /// The real `marked` 18.0.11 (`scripts/vendor-marked.mjs`), re-exported by pi-tui as `Marked`.
-const MARKED_JS: &str = include_str!("../../../../js/vendor/marked.js");
-const PI_TUI_JS: &str = include_str!("../../../../js/pi-tui.js");
-const PI_AI_JS: &str = include_str!("../../../../js/pi-ai.js");
-const PI_AI_CORE_JS: &str = include_str!("../../../../js/pi-ai/core.js");
-const PI_AI_FAUX_JS: &str = include_str!("../../../../js/pi-ai/faux.js");
-const PI_AI_RUST_JS: &str = include_str!("../../../../js/pi-ai/rust.js");
-const PI_AI_MODELS_JS: &str = include_str!("../../../../js/pi-ai-models.js");
-const PI_AI_PROVIDERS_ALL_JS: &str = include_str!("../../../../js/pi-ai-providers-all.js");
-const PI_AGENT_CORE_JS: &str = include_str!("../../../../js/pi-agent-core.js");
-const PI_CODING_AGENT_JS: &str = include_str!("../../../../js/pi-coding-agent.js");
+const MARKED_JS: Embedded = pi_embed::include_str!("../../../../js/vendor/marked.js");
+const PI_TUI_JS: Embedded = pi_embed::include_str!("../../../../js/pi-tui.js");
+const PI_AI_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai.js");
+const PI_AI_CORE_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/core.js");
+const PI_AI_FAUX_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/faux.js");
+const PI_AI_RUST_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai/rust.js");
+const PI_AI_MODELS_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai-models.js");
+const PI_AI_PROVIDERS_ALL_JS: Embedded = pi_embed::include_str!("../../../../js/pi-ai-providers-all.js");
+const PI_AGENT_CORE_JS: Embedded = pi_embed::include_str!("../../../../js/pi-agent-core.js");
+const PI_CODING_AGENT_JS: Embedded = pi_embed::include_str!("../../../../js/pi-coding-agent.js");
+const PI_SDK_JS: Embedded = pi_embed::include_str!("../../../../js/pi-sdk.js");
 
 /// Specifier of the internal bridge module.
 const BRIDGE_SPECIFIER: &str = "pi-rs:bridge";
@@ -125,6 +129,48 @@ impl<T: Clone> Registry<T> {
     pub(crate) fn remove(&self, id: u64) -> Option<T> {
         self.items.lock().remove(&id)
     }
+
+    /// The most recently registered entry.
+    pub(crate) fn latest(&self) -> Option<T> {
+        let items = self.items.lock();
+        items.keys().max().and_then(|id| items.get(id).cloned())
+    }
+}
+
+/// The original JavaScript values behind Rust objects the bridge built from them (provider config
+/// functions, provider objects), keyed by the Rust object's address, so handing the Rust object
+/// back to JS (`ctx.modelRegistry.getRegisteredProviderConfig()`, `getProvider()`, ...) yields
+/// the very value the extension registered, as TS does. Entries hold a `Weak` of the Rust
+/// object, which keeps its address from being reused while the entry exists.
+#[derive(Default)]
+pub(crate) struct Origins {
+    items: Mutex<HashMap<usize, Origin>>,
+}
+
+struct Origin {
+    alive: Box<dyn Fn() -> bool + Send + Sync>,
+    handle: JsHandle,
+}
+
+impl Origins {
+    fn key<T: ?Sized>(object: &Arc<T>) -> usize {
+        Arc::as_ptr(object) as *const () as usize
+    }
+
+    /// Record that `object` was built from the JS value `handle`.
+    pub(crate) fn record<T: ?Sized + Send + Sync + 'static>(&self, object: &Arc<T>, handle: JsHandle) {
+        let weak = Arc::downgrade(object);
+        let mut items = self.items.lock();
+        items.retain(|_, origin| (origin.alive)());
+        items.insert(Self::key(object), Origin { alive: Box::new(move || weak.strong_count() > 0), handle });
+    }
+
+    /// The JS value `object` was built from (a handle marker), if this bridge built it.
+    pub(crate) fn get<T: ?Sized>(&self, object: &Arc<T>) -> Option<Value> {
+        let items = self.items.lock();
+        let origin = items.get(&Self::key(object))?;
+        (origin.alive)().then(|| origin.handle.to_value())
+    }
 }
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
@@ -149,13 +195,44 @@ pub(crate) struct Bridge {
     pub(crate) callbacks: Registry<RustCallback>,
     pub(crate) async_callbacks: Registry<AsyncRustCallback>,
     pub(crate) callback_ids: Mutex<HashMap<usize, u64>>,
-    /// Session managers handed to `newSession({ setup })` callbacks.
-    pub(crate) session_managers: Registry<Arc<crate::core::session_manager::SessionManager>>,
+    /// Session managers handed to JavaScript (`ctx.sessionManager`, `newSession({ setup })`,
+    /// `SessionManager.create()`, ...), see `context::session_manager_id`.
+    pub(crate) session_managers: Registry<context::SessionManagerRef>,
+    /// Ids of host-owned session managers by address (one JS object per session manager).
+    pub(crate) session_manager_ids: Mutex<HashMap<usize, u64>>,
     pub(crate) streams: Registry<Arc<tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<Value>>>>,
     pub(crate) components: component::ComponentRegistries,
     pub(crate) builtins: Registry<builtin::BuiltinTool>,
     /// Rust pi-ai objects behind JavaScript proxies (providers, API implementations, auth).
     pub(crate) natives: Registry<native::Native>,
+    /// Native ids of Rust providers handed to JS by address (one JS object per provider).
+    pub(crate) native_provider_ids: Mutex<HashMap<usize, u64>>,
+    /// The JavaScript values behind Rust objects built from them (see [`Origins`]).
+    pub(crate) origins: Origins,
+    /// Settings managers created from JavaScript (`SettingsManager.create()`, ...).
+    pub(crate) settings_managers: Registry<Arc<crate::core::settings_manager::SettingsManager>>,
+    /// Model runtimes handed to JavaScript (`ModelRuntime.create()`, `ctx.modelRegistry.runtime`).
+    pub(crate) model_runtimes: Registry<Arc<crate::core::model_runtime::ModelRuntime>>,
+    pub(crate) model_runtime_ids: Mutex<HashMap<usize, u64>>,
+    /// Model registries created from JavaScript (`new ModelRegistry(runtime)`).
+    pub(crate) model_registries: Registry<Arc<crate::core::model_registry::ModelRegistry>>,
+    /// Ids of host-owned settings managers by address (`session.settingsManager`).
+    pub(crate) settings_manager_ids: Mutex<HashMap<usize, u64>>,
+    /// Resource loaders created from JavaScript (`new DefaultResourceLoader()`).
+    pub(crate) resource_loaders: Registry<Arc<crate::core::resource_loader::DefaultResourceLoader>>,
+    /// Agent sessions created from JavaScript (`createAgentSession()`).
+    pub(crate) agent_sessions: Registry<Arc<crate::core::agent_session::AgentSession>>,
+    /// Rust tool-call hooks handed to JavaScript and hook calls in progress (`session.agent`).
+    pub(crate) tool_hooks: Registry<sdk::ToolHook>,
+    pub(crate) hook_contexts: Registry<sdk::HookContext>,
+    /// Loaded extensions handed to JavaScript (held weakly) and their ids by address.
+    pub(crate) extension_refs: Registry<std::sync::Weak<parking_lot::RwLock<Extension>>>,
+    pub(crate) extension_ids: Mutex<HashMap<usize, u64>>,
+    /// Extension runtimes handed to JavaScript (`createExtensionRuntime()`).
+    pub(crate) ext_runtimes: Registry<Arc<ExtensionRuntime>>,
+    pub(crate) ext_runtime_ids: Mutex<HashMap<usize, u64>>,
+    /// Package managers created from JavaScript (`new DefaultPackageManager()`).
+    pub(crate) package_managers: Registry<Arc<crate::core::package_manager::DefaultPackageManager>>,
     /// Unregisters the JavaScript session-resource cleanup (`registerSessionResourceCleanup`).
     session_cleanup: Mutex<Option<Box<dyn FnOnce() + Send + Sync>>>,
     /// Ordered executor for UI calls made from JS (see [`Bridge::ui_dispatch`]).
@@ -177,14 +254,14 @@ impl Bridge {
         self.contexts.insert(entry)
     }
 
-    pub(crate) fn release_ctx(&self, id: u64) {
-        if let Some(CtxEntry::Base(ctx)) = self.contexts.remove(id) {
-            let key = Arc::as_ptr(ctx.host()) as *const () as usize;
-            self.context_ids.lock().remove(&key);
-        }
+    /// The call that received context `id` ended. TS contexts stay usable until the runner goes
+    /// stale (extensions keep them for later UI updates), so JS keeps the ctx object working and
+    /// frees the Rust entry once the extension no longer references it (`detachContext`).
+    pub(crate) fn detach_ctx(&self, id: u64, kind: &str) {
         let glue = self.glue.clone();
+        let kind = kind.to_string();
         tokio_spawn(async move {
-            let _ = glue.call_method("releaseContext", vec![json!(id)]).await;
+            let _ = glue.call_method("detachContext", vec![json!(id), json!(kind)]).await;
         });
     }
 
@@ -364,25 +441,26 @@ impl JsExtensionHost {
     /// Start a new JS runtime with pi's virtual modules.
     pub async fn new(cwd: &str) -> anyhow::Result<JsExtensionHost> {
         let mut virtual_modules = HashMap::new();
-        virtual_modules.insert(BRIDGE_SPECIFIER.to_string(), VirtualModule::EsmJs(BRIDGE_JS.to_string()));
-        virtual_modules.insert("pi-rs:marked".to_string(), VirtualModule::EsmJs(MARKED_JS.to_string()));
+        virtual_modules.insert(BRIDGE_SPECIFIER.to_string(), VirtualModule::EsmJs(BRIDGE_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:marked".to_string(), VirtualModule::EsmJs(MARKED_JS.get().to_string()));
         for (specifier, source) in TYPEBOX_MODULES {
-            virtual_modules.insert(specifier.to_string(), VirtualModule::EsmJs(source.to_string()));
+            virtual_modules.insert(specifier.to_string(), VirtualModule::EsmJs(source.get().to_string()));
         }
-        virtual_modules.insert("@earendil-works/pi-tui".to_string(), VirtualModule::EsmJs(PI_TUI_JS.to_string()));
-        virtual_modules.insert("@earendil-works/pi-ai".to_string(), VirtualModule::EsmJs(PI_AI_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-core".to_string(), VirtualModule::EsmJs(PI_AI_CORE_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-faux".to_string(), VirtualModule::EsmJs(PI_AI_FAUX_JS.to_string()));
-        virtual_modules.insert("pi-rs:ai-rust".to_string(), VirtualModule::EsmJs(PI_AI_RUST_JS.to_string()));
-        virtual_modules.insert("@earendil-works/pi-ai/models".to_string(), VirtualModule::EsmJs(PI_AI_MODELS_JS.to_string()));
+        virtual_modules.insert("@earendil-works/pi-tui".to_string(), VirtualModule::EsmJs(PI_TUI_JS.get().to_string()));
+        virtual_modules.insert("@earendil-works/pi-ai".to_string(), VirtualModule::EsmJs(PI_AI_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-core".to_string(), VirtualModule::EsmJs(PI_AI_CORE_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-faux".to_string(), VirtualModule::EsmJs(PI_AI_FAUX_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:ai-rust".to_string(), VirtualModule::EsmJs(PI_AI_RUST_JS.get().to_string()));
+        virtual_modules.insert("pi-rs:sdk".to_string(), VirtualModule::EsmJs(PI_SDK_JS.get().to_string()));
+        virtual_modules.insert("@earendil-works/pi-ai/models".to_string(), VirtualModule::EsmJs(PI_AI_MODELS_JS.get().to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-ai/providers/all".to_string(), VirtualModule::EsmJs(PI_AI_PROVIDERS_ALL_JS.to_string()));
+            .insert("@earendil-works/pi-ai/providers/all".to_string(), VirtualModule::EsmJs(PI_AI_PROVIDERS_ALL_JS.get().to_string()));
         // Types only (OAuth declaration compatibility entry point).
         virtual_modules.insert("@earendil-works/pi-ai/oauth".to_string(), VirtualModule::EsmJs("export {};".to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-agent-core".to_string(), VirtualModule::EsmJs(PI_AGENT_CORE_JS.to_string()));
+            .insert("@earendil-works/pi-agent-core".to_string(), VirtualModule::EsmJs(PI_AGENT_CORE_JS.get().to_string()));
         virtual_modules
-            .insert("@earendil-works/pi-coding-agent".to_string(), VirtualModule::EsmJs(PI_CODING_AGENT_JS.to_string()));
+            .insert("@earendil-works/pi-coding-agent".to_string(), VirtualModule::EsmJs(PI_CODING_AGENT_JS.get().to_string()));
         let mut aliases = HashMap::new();
         for (from, to) in [
             ("@sinclair/typebox", "typebox"),
@@ -450,6 +528,9 @@ impl JsExtensionHost {
                 }
             })
             .await?;
+            // `@earendil-works/pi-durable[/…]` and `@earendil-works/chord[/…]`: the embedded packages
+            // over native pi-durable/pi-chord (crates/pi-durable-jsrt; js/EXPORTS.md).
+            pi_durable_jsrt::install(&rt2, pi_durable_jsrt::HostOptions::default()).await?;
             let glue = rt2.import(BRIDGE_SPECIFIER).await?;
             Ok::<JsHandle, pi_jsrt::Error>(glue)
         };
@@ -468,10 +549,27 @@ impl JsExtensionHost {
             async_callbacks: Registry::new(),
             callback_ids: Mutex::new(HashMap::new()),
             session_managers: Registry::new(),
+            session_manager_ids: Mutex::new(HashMap::new()),
             streams: Registry::new(),
             components: component::ComponentRegistries::default(),
             builtins: Registry::new(),
             natives: Registry::new(),
+            native_provider_ids: Mutex::new(HashMap::new()),
+            origins: Origins::default(),
+            settings_managers: Registry::new(),
+            model_runtimes: Registry::new(),
+            model_runtime_ids: Mutex::new(HashMap::new()),
+            model_registries: Registry::new(),
+            settings_manager_ids: Mutex::new(HashMap::new()),
+            resource_loaders: Registry::new(),
+            agent_sessions: Registry::new(),
+            tool_hooks: Registry::new(),
+            hook_contexts: Registry::new(),
+            extension_refs: Registry::new(),
+            extension_ids: Mutex::new(HashMap::new()),
+            ext_runtimes: Registry::new(),
+            ext_runtime_ids: Mutex::new(HashMap::new()),
+            package_managers: Registry::new(),
             session_cleanup: Mutex::new(None),
             ui_tx: Mutex::new(ui_tx),
         });
@@ -481,7 +579,22 @@ impl JsExtensionHost {
         let weak = Arc::downgrade(&bridge);
         let unregister = pi_ai::session_resources::register_session_resource_cleanup(Arc::new(move |session_id| {
             if let Some(bridge) = weak.upgrade() {
-                bridge.glue_call_blocking("cleanupJsSessionResources", vec![serde_json::json!(session_id)])?;
+                let args = vec![serde_json::json!(session_id)];
+                // pi-ai's cleanup registry is process-wide, so disposing a session runs this for
+                // every extension runtime. A session disposed from another runtime's host call runs
+                // it on that runtime's JS thread; blocking that thread on this runtime deadlocks
+                // when this runtime's JS thread is doing the same towards it (two hosts disposing
+                // at once), so from another runtime's JS thread the cleanup is queued here and
+                // runs in order with this runtime's other work. On this runtime's own JS thread,
+                // or off any JS thread, it runs before teardown continues, as in pi.
+                if !bridge.rt.is_js_thread() && pi_jsrt::ctx::with_current(|_| ()).is_some() {
+                    let glue = bridge.glue.clone();
+                    bridge.rt.tokio().spawn(async move {
+                        let _ = glue.call_method("cleanupJsSessionResources", args).await;
+                    });
+                } else {
+                    bridge.glue_call_blocking("cleanupJsSessionResources", args)?;
+                }
             }
             Ok(())
         }));
@@ -489,6 +602,8 @@ impl JsExtensionHost {
         // pi-ai's glue defines the stream class used by host-backed streams. The entry point itself
         // also re-exports TypeBox's `Type`, which loads only when an extension imports pi-ai or TypeBox.
         rt.import("pi-rs:ai-rust").await.map_err(js_error)?;
+        // `ctx.modelRegistry.runtime` hands out the SDK's ModelRuntime class.
+        rt.import("pi-rs:sdk").await.map_err(js_error)?;
         Ok(JsExtensionHost { bridge })
     }
 
@@ -503,8 +618,8 @@ impl JsExtensionHost {
         let rt = self.bridge.rt.clone();
         // jiti `moduleCache: false`: every import of an extension evaluates it again.
         rt.clear_module_cache().await.map_err(js_error)?;
-        // Imported as a top-level module rather than through `import()` from the glue module:
-        // Boa caches dynamic imports per referrer and would reject the re-evaluated module.
+        // Imported as a top-level module rather than through `import()` from the glue module, so
+        // the cleared cache gives the re-evaluated module a fresh name.
         let namespace = rt.import(path).await.map_err(js_error)?;
         let marker = self.bridge.glue_call("factoryFromModule", vec![namespace.to_value()]).await?;
         let Some(factory) = self.bridge.handle(&marker) else {

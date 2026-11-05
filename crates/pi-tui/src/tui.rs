@@ -1688,6 +1688,15 @@ impl Tui {
         }
     }
 
+    /// Whether a requested render has not run yet.
+    pub fn has_pending_render(&self) -> bool {
+        if let Some(target) = self.redirect_target() {
+            return target.has_pending_render();
+        }
+        let s = self.sched();
+        s.render_requested || s.immediate_scheduled
+    }
+
     /// Render immediately (synchronously), optionally forcing a full redraw.
     pub fn render_now(&self, force: bool) {
         if let Some(target) = self.redirect_target() {

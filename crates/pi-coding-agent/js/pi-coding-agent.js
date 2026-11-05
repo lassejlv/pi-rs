@@ -16,8 +16,44 @@ import {
 	u,
 	keybindingsProxy,
 	markRustBase,
+	rustOr,
+	ModelRegistry,
+	SessionManager,
 } from "pi-rs:bridge";
-import { CancellableLoader, Container, Editor, Loader, Spacer, Text, getKeybindings } from "@earendil-works/pi-tui";
+export { ModelRegistry, SessionManager };
+export {
+	AgentSession,
+	AgentSessionRuntime,
+	createAgentSession,
+	createAgentSessionFromServices,
+	createAgentSessionRuntime,
+	createAgentSessionServices,
+	createCodemodeExtension,
+	createMcpExtension,
+	createExtensionRuntime,
+	createToolSearchExtension,
+	DefaultPackageManager,
+	DefaultResourceLoader,
+	discoverAndLoadExtensions,
+	ProjectTrustStore,
+	resolveCliModel,
+	resolveModelScopeWithDiagnostics,
+	ModelRuntime,
+	RpcClient,
+	SettingsManager,
+	wrapRegisteredTool,
+	wrapRegisteredTools,
+} from "pi-rs:sdk";
+import {
+	CancellableLoader,
+	Container,
+	Editor,
+	Loader,
+	Spacer,
+	Text,
+	getKeybindings,
+	__markdownThemeRef as markdownThemeRef,
+} from "@earendil-works/pi-tui";
 
 const host = (fn, ...args) => u(call("ca", { fn, args }));
 const image = async (fn, ...args) => u(await callAsync("ca.image", { fn, args })) ?? null;
@@ -471,25 +507,10 @@ function unavailableFn(name) {
 	};
 }
 
-export const AgentSession = unavailableClass("AgentSession");
-export const AgentSessionRuntime = unavailableClass("AgentSessionRuntime");
 export const ExtensionRunner = unavailableClass("ExtensionRunner");
-export const ModelRegistry = unavailableClass("ModelRegistry");
-export const ModelRuntime = unavailableClass("ModelRuntime");
 export const CredentialSynchronizationError = class extends Error {};
-export const DefaultPackageManager = unavailableClass("DefaultPackageManager");
-export const DefaultResourceLoader = unavailableClass("DefaultResourceLoader");
-export const SessionManager = unavailableClass("SessionManager");
-export const SettingsManager = unavailableClass("SettingsManager");
-export const ProjectTrustStore = unavailableClass("ProjectTrustStore");
 export const InteractiveMode = unavailableClass("InteractiveMode");
-export const RpcClient = unavailableClass("RpcClient");
 export const ArminComponent = unavailableClass("ArminComponent");
-export const AssistantMessageComponent = unavailableClass("AssistantMessageComponent");
-export const BashExecutionComponent = unavailableClass("BashExecutionComponent");
-export const BranchSummaryMessageComponent = unavailableClass("BranchSummaryMessageComponent");
-export const CompactionSummaryMessageComponent = unavailableClass("CompactionSummaryMessageComponent");
-export const CustomMessageComponent = unavailableClass("CustomMessageComponent");
 export const ExtensionEditorComponent = unavailableClass("ExtensionEditorComponent");
 export const ExtensionInputComponent = unavailableClass("ExtensionInputComponent");
 export const ExtensionSelectorComponent = unavailableClass("ExtensionSelectorComponent");
@@ -500,25 +521,11 @@ export const OAuthSelectorComponent = unavailableClass("OAuthSelectorComponent")
 export const SessionSelectorComponent = unavailableClass("SessionSelectorComponent");
 export const SettingsSelectorComponent = unavailableClass("SettingsSelectorComponent");
 export const ShowImagesSelectorComponent = unavailableClass("ShowImagesSelectorComponent");
-export const SkillInvocationMessageComponent = unavailableClass("SkillInvocationMessageComponent");
 export const ThemeSelectorComponent = unavailableClass("ThemeSelectorComponent");
 export const ThinkingSelectorComponent = unavailableClass("ThinkingSelectorComponent");
-export const ToolExecutionComponent = unavailableClass("ToolExecutionComponent");
 export const TreeSelectorComponent = unavailableClass("TreeSelectorComponent");
-export const UserMessageComponent = unavailableClass("UserMessageComponent");
 export const UserMessageSelectorComponent = unavailableClass("UserMessageSelectorComponent");
 
-export const createAgentSession = unavailableFn("createAgentSession");
-export const createAgentSessionFromServices = unavailableFn("createAgentSessionFromServices");
-export const createAgentSessionRuntime = unavailableFn("createAgentSessionRuntime");
-export const createAgentSessionServices = unavailableFn("createAgentSessionServices");
-export const createExtensionRuntime = unavailableFn("createExtensionRuntime");
-export const discoverAndLoadExtensions = unavailableFn("discoverAndLoadExtensions");
-export const wrapRegisteredTool = unavailableFn("wrapRegisteredTool");
-export const wrapRegisteredTools = unavailableFn("wrapRegisteredTools");
-export const createCodemodeExtension = unavailableFn("createCodemodeExtension");
-export const createMcpExtension = unavailableFn("createMcpExtension");
-export const createToolSearchExtension = unavailableFn("createToolSearchExtension");
 // TS: core/event-bus.ts (EventEmitter semantics: handlers run in registration order, async errors are logged).
 export function createEventBus() {
 	let listeners = new Map();
@@ -556,8 +563,6 @@ export const parseArgs = (args) => {
 	return result;
 };
 export const readStoredCredential = (providerId, authPath) => host("readStoredCredential", providerId, authPath ?? null) ?? undefined;
-export const resolveCliModel = unavailableFn("resolveCliModel");
-export const resolveModelScopeWithDiagnostics = unavailableFn("resolveModelScopeWithDiagnostics");
 export const loadProjectContextFiles = (options) => host("loadProjectContextFiles", { cwd: options?.cwd ?? process.cwd(), agentDir: options?.agentDir ?? getAgentDir() });
 export const loadSkills = (options = {}) =>
 	host("loadSkills", {
@@ -632,3 +637,149 @@ export const parseSessionEntries = (content) => host("parseSessionEntries", Stri
 export const sessionEntryToContextMessages = (entry) => host("sessionEntryToContextMessages", entry);
 
 export { makeContext as __makeContext, keybindingsProxy as __keybindingsProxy, RustComponent as __RustComponent };
+
+// ---------------------------------------------------------------------------
+// Message components (pi's Rust interactive components)
+// ---------------------------------------------------------------------------
+
+const tuiArg = (tui) => (tui && typeof tui.__tuiId === "number" ? { $tui: tui.__tuiId } : null);
+const nul = (v) => (v === undefined ? null : v);
+
+function rustMessageComponent(kind, args) {
+	return call("rc.new", { kind, a: args.map(nul) });
+}
+
+/** A Rust component with methods (`rc` calls). */
+class RustMessageComponent extends RustComponent {
+	_call(m, ...a) {
+		return u(call("rc", { id: this.__rid, m, a: a.map(nul) }));
+	}
+	setOutputPad(padding) {
+		this._call("setOutputPad", padding);
+	}
+}
+
+export class AssistantMessageComponent extends RustMessageComponent {
+	constructor(message, hideThinkingBlock = false, markdownTheme, hiddenThinkingLabel = "Thinking...", outputPad = 1, markdownTransformers = []) {
+		super(
+			rustMessageComponent("assistantMessage", [
+				message,
+				hideThinkingBlock,
+				markdownThemeRef(markdownTheme),
+				hiddenThinkingLabel,
+				outputPad,
+				[...(markdownTransformers ?? [])],
+			]),
+		);
+	}
+	setHideThinkingBlock(hide) {
+		this._call("setHideThinkingBlock", !!hide);
+	}
+	setHiddenThinkingLabel(label) {
+		this._call("setHiddenThinkingLabel", String(label));
+	}
+	updateContent(message, isStreaming) {
+		this._call("updateContent", message, isStreaming);
+	}
+}
+
+export class UserMessageComponent extends RustMessageComponent {
+	constructor(text, markdownTheme, outputPad = 1, markdownTransformers = []) {
+		super(rustMessageComponent("userMessage", [String(text ?? ""), markdownThemeRef(markdownTheme), outputPad, [...(markdownTransformers ?? [])]]));
+	}
+}
+
+export class ToolExecutionComponent extends RustMessageComponent {
+	constructor(toolName, toolCallId, args, options = {}, toolDefinition, ui, cwd) {
+		const definition = toolDefinition
+			? {
+					renderShell: toolDefinition.renderShell,
+					renderCall: rustOr(toolDefinition.renderCall),
+					renderResult: rustOr(toolDefinition.renderResult),
+				}
+			: null;
+		super(rustMessageComponent("toolExecution", [toolName, toolCallId, args ?? {}, options ?? {}, definition, tuiArg(ui), cwd]));
+	}
+	updateArgs(args) {
+		this._call("updateArgs", args);
+	}
+	markExecutionStarted() {
+		this._call("markExecutionStarted");
+	}
+	setArgsComplete() {
+		this._call("setArgsComplete");
+	}
+	updateResult(result, isPartial = false) {
+		this._call("updateResult", result, isPartial);
+	}
+	setExpanded(expanded) {
+		this._call("setExpanded", !!expanded);
+	}
+	setShowImages(show) {
+		this._call("setShowImages", !!show);
+	}
+	setImageWidthCells(width) {
+		this._call("setImageWidthCells", width);
+	}
+}
+
+class ExpandableMessageComponent extends RustMessageComponent {
+	setExpanded(expanded) {
+		this._call("setExpanded", !!expanded);
+	}
+}
+
+export class CompactionSummaryMessageComponent extends ExpandableMessageComponent {
+	constructor(message, markdownTheme, outputPad = 1) {
+		super(rustMessageComponent("compactionSummary", [message, markdownThemeRef(markdownTheme), outputPad]));
+	}
+}
+
+export class BranchSummaryMessageComponent extends ExpandableMessageComponent {
+	constructor(message, markdownTheme, outputPad = 1) {
+		super(rustMessageComponent("branchSummary", [message, markdownThemeRef(markdownTheme), outputPad]));
+	}
+}
+
+export class SkillInvocationMessageComponent extends ExpandableMessageComponent {
+	constructor(skillBlock, markdownTheme, outputPad = 1) {
+		super(rustMessageComponent("skillInvocation", [skillBlock, markdownThemeRef(markdownTheme), outputPad]));
+	}
+}
+
+export class CustomMessageComponent extends ExpandableMessageComponent {
+	constructor(message, customRenderer, markdownTheme, outputPad = 1) {
+		super(rustMessageComponent("customMessage", [message, customRenderer ?? null, markdownThemeRef(markdownTheme), outputPad]));
+	}
+}
+
+export class BashExecutionComponent extends ExpandableMessageComponent {
+	constructor(command, ui, excludeFromContext = false, outputPad = 1) {
+		super(rustMessageComponent("bashExecution", [String(command), tuiArg(ui), !!excludeFromContext, outputPad]));
+	}
+	appendOutput(chunk) {
+		this._call("appendOutput", String(chunk));
+	}
+	setComplete(exitCode, cancelled, truncationResult, fullOutputPath) {
+		this._call("setComplete", exitCode, !!cancelled, truncationResult, fullOutputPath);
+	}
+	getOutput() {
+		return this._call("getOutput") ?? "";
+	}
+	getCommand() {
+		return this._call("getCommand") ?? "";
+	}
+}
+
+for (const cls of [
+	AssistantMessageComponent,
+	UserMessageComponent,
+	ToolExecutionComponent,
+	CompactionSummaryMessageComponent,
+	BranchSummaryMessageComponent,
+	SkillInvocationMessageComponent,
+	CustomMessageComponent,
+	BashExecutionComponent,
+]) {
+	markRustBase(cls);
+}

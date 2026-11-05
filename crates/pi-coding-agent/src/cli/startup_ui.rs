@@ -116,6 +116,12 @@ pub async fn create_startup_tui(settings_manager: Arc<SettingsManager>) -> anyho
 }
 
 pub fn start_startup_tui(ui: Arc<Tui>, settings_manager: Arc<SettingsManager>) {
+    drop(start_startup_tui_tracked(ui, settings_manager));
+}
+
+/// [`start_startup_tui`], returning the task that applies the terminal colors (it ends once the
+/// colors arrive or the query times out).
+pub fn start_startup_tui_tracked(ui: Arc<Tui>, settings_manager: Arc<SettingsManager>) -> tokio::task::JoinHandle<()> {
     ui.start();
     let theme_setting = settings_manager.get_theme_setting();
     query_startup_terminal_colors(
@@ -125,12 +131,12 @@ pub fn start_startup_tui(ui: Arc<Tui>, settings_manager: Arc<SettingsManager>) {
                 .unwrap_or_else(|| SYSTEM_THEME_NAME.to_string());
             set_theme(&name, None);
         }),
-    );
+    )
 }
 
 /// Query the terminal's colors without waiting for them. When they arrive, including after the timeout,
 /// record them for the system theme and "" (terminal default) tokens, run `on_colors`, and re-render.
-fn query_startup_terminal_colors(ui: Arc<Tui>, on_colors: Arc<dyn Fn() + Send + Sync>) {
+fn query_startup_terminal_colors(ui: Arc<Tui>, on_colors: Arc<dyn Fn() + Send + Sync>) -> tokio::task::JoinHandle<()> {
     let weak = Arc::downgrade(&ui);
     let apply = Arc::new(move |colors| {
         set_terminal_colors(colors);
@@ -142,7 +148,7 @@ fn query_startup_terminal_colors(ui: Arc<Tui>, on_colors: Arc<dyn Fn() + Send + 
     });
     crate::utils::uncaught::spawn(async move {
         let _ = request_terminal_colors(ui, apply).await;
-    });
+    })
 }
 
 async fn clear_startup_tui(ui: &Tui) {

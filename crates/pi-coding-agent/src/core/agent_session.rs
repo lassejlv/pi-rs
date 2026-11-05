@@ -2070,6 +2070,9 @@ impl AgentSession {
             .await;
         self.emit(AgentSessionEvent::AgentSettled { aborted });
         self.state.lock().is_emitting_agent_settled = false;
+        // The run's transient allocations (requests, stream parsing, tool output) are freed by
+        // now; return the pages while the session is idle.
+        crate::utils::memory::release_free_memory_in_background();
 
         let deferred: Vec<DeferredAction> =
             std::mem::take(&mut self.state.lock().deferred_settled_actions);
@@ -3076,6 +3079,7 @@ impl AgentSession {
             tools_removed: None,
             timestamp: now_ms(),
             timestamp_last: false,
+            ..Default::default()
         }))
     }
 
@@ -3166,6 +3170,7 @@ impl AgentSession {
                         timestamp: current.as_ref().map(|c| c.timestamp).unwrap_or_else(now_ms),
                         // `{ role, content, toolsAdded?, timestamp }`
                         timestamp_last: true,
+                        ..Default::default()
                     };
                     let mut result = vec![AgentMessage::System(head)];
                     result.extend(
@@ -3369,6 +3374,7 @@ impl AgentSession {
                 messages.push(AgentMessage::User(UserMessage {
                     content: UserContent::Blocks(content),
                     timestamp: now_ms(),
+                    ..Default::default()
                 }));
             }
         }
@@ -3838,6 +3844,7 @@ impl AgentSession {
         UserMessage {
             content: UserContent::Blocks(content),
             timestamp: now_ms(),
+            ..Default::default()
         }
     }
 
@@ -6426,6 +6433,9 @@ impl pi_agent::types::AgentTool for DescribedTool {
     }
     fn parameters(&self) -> &Value {
         self.inner.parameters()
+    }
+    fn parameters_typebox(&self) -> bool {
+        self.inner.parameters_typebox()
     }
     fn constrained_sampling(&self) -> Option<&pi_ai::types::ConstrainedSampling> {
         self.inner.constrained_sampling()

@@ -79,6 +79,9 @@ pub fn take_over_stdout() {
             }
             libc::dup2(2, 1);
             *state = Some(StdoutTakeoverState { raw_stdout_fd: raw });
+            // Exit-time terminal restoration writes to the real stdout like TS `restoreOnExit`
+            // (`fs.writeSync(process.stdout.fd)` bypasses the patched `process.stdout.write`).
+            pi_tui::terminal::set_exit_restore_fd(raw);
         }
     }
     #[cfg(not(unix))]
@@ -96,6 +99,7 @@ pub fn restore_stdout() {
     #[cfg(unix)]
     {
         // SAFETY: restore fd 1 from the duplicate taken in `take_over_stdout`.
+        pi_tui::terminal::set_exit_restore_fd(1);
         unsafe {
             libc::dup2(saved.raw_stdout_fd, 1);
             libc::close(saved.raw_stdout_fd);

@@ -1930,7 +1930,7 @@ async fn missing_source_handler_controls_installs() {
     let f = Fixture::new();
     f.settings.set_packages(&[pkg(json!("npm:missing"))]);
     let skip: MissingSourceHandler = Arc::new(|_| Box::pin(async { Ok(MissingSourceAction::Skip) }));
-    f.pm.resolve(Some(skip)).await.unwrap();
+    assert_eq!(f.pm.resolve(Some(skip)).await.unwrap().install_failures, Some(vec![]));
     assert!(f.runner.runs().is_empty());
     let error: MissingSourceHandler = Arc::new(|_| Box::pin(async { Ok(MissingSourceAction::Error) }));
     assert_eq!(f.pm.resolve(Some(error)).await.unwrap_err().to_string(), "Missing source: npm:missing");
@@ -2305,4 +2305,99 @@ async fn refreshes_cached_temporary_git_sources_when_resolving() {
         Some(&cached)
     ));
     assert_eq!(std::fs::read_to_string(&extension_file).unwrap(), "// fresh");
+}
+
+#[tokio::test]
+async fn package_install_failure_does_not_abort_resolution() {
+    let _guard = env_lock();
+    let f =
+        Fixture::with_settings(json!({"npmCommand": ["npm"], "packages": ["npm:broken-package"]}));
+    f.runner.on_run(|_| bail!("simulated install failure"));
+    write(&f.agent_path(&["prompts", "healthy.md"]), "healthy prompt");
+    let result =
+        f.pm.resolve(None)
+            .await
+            .expect("startup must survive an install failure");
+    assert_eq!(result.prompts.len(), 1);
+    assert!(result.extensions.is_empty());
+    let failure = PackageInstallFailure {
+        source: "npm:broken-package".to_string(),
+        scope: SourceScope::User,
+        message: "simulated install failure".to_string(),
+    };
+    assert_eq!(result.install_failures, Some(vec![failure.clone()]));
+    assert_eq!(
+        serde_json::to_value(&result).unwrap()["installFailures"],
+        json!([
+            {"source": "npm:broken-package", "scope": "user", "message": "simulated install failure"}
+        ])
+    );
+    // The setting survives and resolution retries on the next startup/reload.
+    assert_eq!(
+        f.pm.resolve(None).await.unwrap().install_failures,
+        Some(vec![failure])
+    );
+    assert_eq!(f.runner.runs().len(), 2);
+    // Explicit mutation commands must still fail.
+    assert!(f.pm.install("npm:broken-package", None).await.is_err());
+    assert!(f.pm.update(None).await.is_err());
+}
+
+#[tokio::test]
+async fn package_install_failure_reports_project_git_and_temporary_sources() {
+    let _guard = env_lock();
+    let f = Fixture::with_settings(json!({"npmCommand": ["npm"]}));
+    f.settings
+        .set_project_packages(&[pkg(json!("git:github.com/example/broken"))])
+        .unwrap();
+    f.runner.on_run(|_| bail!("simulated git failure"));
+    let result = f.pm.resolve(None).await.unwrap();
+    assert_eq!(
+        result.install_failures.unwrap(),
+        vec![PackageInstallFailure {
+            source: "git:github.com/example/broken".to_string(),
+            scope: SourceScope::Project,
+            message: "simulated git failure".to_string(),
+        }]
+    );
+    let result =
+        f.pm.resolve_extension_sources(
+            &s(&["npm:broken-package"]),
+            Some(&PackageManagerResolveExtensionSourcesOptions {
+                temporary: Some(true),
+                ..Default::default()
+            }),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        result.install_failures.unwrap()[0].scope,
+        SourceScope::Temporary
+    );
+}
+
+#[tokio::test]
+async fn package_install_failure_preserves_missing_source_callback_errors() {
+    let _guard = env_lock();
+    let f =
+        Fixture::with_settings(json!({"npmCommand": ["npm"], "packages": ["npm:broken-package"]}));
+    let handler: MissingSourceHandler =
+        Arc::new(|_| Box::pin(async { bail!("caller policy failed") }));
+    assert_eq!(
+        f.pm.resolve(Some(handler)).await.unwrap_err().to_string(),
+        "caller policy failed"
+    );
+    assert!(f.runner.runs().is_empty());
+    f.runner.on_run(|_| bail!("install failed"));
+    let handler: MissingSourceHandler =
+        Arc::new(|_| Box::pin(async { Ok(MissingSourceAction::Install) }));
+    assert_eq!(
+        f.pm.resolve(Some(handler))
+            .await
+            .unwrap()
+            .install_failures
+            .unwrap()[0]
+            .message,
+        "install failed"
+    );
 }

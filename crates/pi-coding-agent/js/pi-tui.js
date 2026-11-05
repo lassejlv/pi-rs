@@ -2879,4 +2879,4 @@ export class TuiAltScreen {
 
 export { Marked } from "pi-rs:marked";
 
-export { tuiProxy as __tuiProxy, componentRef as __componentRef, rustCallback as __rustCallback };
+export { tuiProxy as __tuiProxy, componentRef as __componentRef, rustCallback as __rustCallback, markdownThemeRef as __markdownThemeRef };

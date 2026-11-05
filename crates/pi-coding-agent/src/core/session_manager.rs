@@ -1742,7 +1742,7 @@ async fn list_sessions_from_dir(
         Ok(names) => names,
         Err(_) => return Ok(Vec::new()),
     };
-    names.sort_by(|a, b| b.cmp(a));
+    names.sort_by(|a, b| pi_tui::collation::locale_compare(b, a));
     let files: Vec<SessionFileCandidate> = names
         .iter()
         .map(|name| SessionFileCandidate {
@@ -3073,9 +3073,8 @@ impl SessionManager {
                     .partial_cmp(&a_time)
                     .unwrap_or(std::cmp::Ordering::Equal)
                     .then_with(|| {
-                        let a_name = Path::new(&a.path).file_name().map(|n| n.to_owned());
-                        let b_name = Path::new(&b.path).file_name().map(|n| n.to_owned());
-                        b_name.cmp(&a_name)
+                        let name = |p: &str| Path::new(p).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                        pi_tui::collation::locale_compare(&name(&b.path), &name(&a.path))
                     })
             });
 

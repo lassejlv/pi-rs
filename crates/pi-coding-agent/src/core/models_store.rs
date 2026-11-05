@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 use parking_lot::Mutex;
 use pi_ai::models_store::{ModelsStore, ModelsStoreEntry};
 use pi_ai::utils::abort::race_with_abort_signal;
-use pi_ai::utils::provider_retry::AbortError;
+use pi_ai::utils::abort::SignalAbortError;
 use serde_json::Value;
 use tokio_util::sync::CancellationToken;
 
@@ -28,7 +28,7 @@ pub type StoredModels = IndexMap<String, Value>;
 
 fn throw_if_aborted(signal: Option<&CancellationToken>) -> anyhow::Result<()> {
     if signal.is_some_and(CancellationToken::is_cancelled) {
-        return Err(AbortError.into());
+        return Err(SignalAbortError.into());
     }
     Ok(())
 }

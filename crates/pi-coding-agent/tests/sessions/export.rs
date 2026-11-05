@@ -108,7 +108,7 @@ fn trims_tui_spacing_lines_from_custom_tool_result_html() {
 
 // ---------------------------------------------------------------------------
 // export-html-cjk.test.ts (#10154). TS runs the exported viewer scripts in `node:vm`; here they
-// run in pi-jsrt (Boa) with the same `document`/`window` stubs.
+// run in pi-jsrt (QuickJS) with the same `document`/`window` stubs.
 // ---------------------------------------------------------------------------
 
 async fn load_markdown_parser(html: &str) -> pi_jsrt::JsRuntime {

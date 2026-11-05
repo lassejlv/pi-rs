@@ -57,7 +57,7 @@ async fn returns_only_settled_traces_complete_span_snapshots_and_detached_result
             .traces
             .is_empty()
     );
-    assert_eq!(f.store.get_trace("missing").await.unwrap(), None);
+    assert_eq!(f.store.get_trace(&"missing".into()).await.unwrap(), None);
     release.send(()).unwrap();
     active.await.unwrap();
     f.flush().await;
@@ -79,7 +79,7 @@ async fn returns_only_settled_traces_complete_span_snapshots_and_detached_result
         .iter()
         .find(|span| span.name == "child")
         .unwrap();
-    let id_pattern = regex_like(&root.id);
+    let id_pattern = regex_like(&root.id.to_string());
     assert!(id_pattern, "unexpected span id {}", root.id);
     assert_eq!(root.trace_id, root.id);
     assert_eq!(root.parent_id, None);
@@ -446,12 +446,13 @@ async fn accepts_external_string_identities_without_imposing_an_id_format() {
         .unwrap()
         .traces
         .remove(0);
-    assert!(trace.trace_id.starts_with("external-"));
+    assert!(trace.trace_id.to_string().starts_with("external-"));
     assert!(
         trace.spans[0]
             .parent_id
             .as_ref()
             .unwrap()
+            .to_string()
             .starts_with("external-")
     );
 }
@@ -543,10 +544,10 @@ async fn records_wall_clock_boundaries_and_relative_event_times() {
             inner_clock.set_performance_now(110.0);
             span.add_event("event", attributes! { "count" => 1 });
             inner_clock.set_performance_now(125.0);
-            format!(
+            pi_telemetry::TelemetryText::from(format!(
                 "{}:{}",
                 carrier["pi-memory-scope"], carrier["pi-memory-span"]
-            )
+            ))
         })
         .await;
     assert_eq!(

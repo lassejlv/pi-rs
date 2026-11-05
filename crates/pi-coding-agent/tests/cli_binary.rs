@@ -41,6 +41,37 @@ fn temp_root() -> (tempfile::TempDir, PathBuf, PathBuf) {
     (dir, agent_dir, project_dir)
 }
 
+#[test]
+fn explicit_codemode_tool_survives_no_extensions() {
+    let (_dir, agent_dir, project_dir) = temp_root();
+    let probe = project_dir.join("probe.js");
+    let result_path = project_dir.join("tools.json");
+    std::fs::write(&probe, format!(
+        "import {{ writeFileSync }} from 'node:fs';\nexport default function(pi) {{ pi.on('session_start', () => writeFileSync({}, JSON.stringify(pi.getActiveTools()))); }}",
+        serde_json::to_string(&result_path).unwrap()
+    )).unwrap();
+    let result = run_pi(
+        &[
+            "--tools",
+            "+codemode",
+            "-ne",
+            "-e",
+            probe.to_str().unwrap(),
+            "--mode",
+            "rpc",
+            "--no-session",
+        ],
+        &project_dir,
+        &agent_dir,
+        true,
+    );
+    assert_eq!(result.code, Some(0), "{}", result.stderr);
+    let tools: Vec<String> =
+        serde_json::from_str(&std::fs::read_to_string(result_path).unwrap()).unwrap();
+    assert!(tools.iter().any(|name| name == "codemode"), "{tools:?}");
+    assert!(tools.iter().any(|name| name == "read"), "{tools:?}");
+}
+
 // session-file-invalid.test.ts
 #[test]
 fn prints_a_friendly_error_and_preserves_non_session_file_content() {
@@ -65,14 +96,68 @@ fn prints_a_friendly_error_and_preserves_non_session_file_content() {
 // stdout-cleanliness.test.ts
 // With stdin at end of file nothing can answer the --resume picker. Node exits once stdin ends and
 // its event loop drains (exit code 0, nothing printed after the picker); the port must not hang.
+// Like Node, the session list load and the terminal color query (100 ms timeout) still finish
+// and are rendered first (the TUI writes to stderr while print mode owns stdout), and the exit
+// hook's terminal restore goes to the real stdout (`fs.writeSync(process.stdout.fd)`).
 #[test]
 fn resume_picker_exits_when_stdin_is_at_eof() {
     let (_dir, agent_dir, project_dir) = temp_root();
+    let encoded = format!(
+        "--{}--",
+        project_dir.to_string_lossy().trim_start_matches('/').replace(['/', ':'], "-")
+    );
+    let session_dir = agent_dir.join("sessions").join(encoded);
+    std::fs::create_dir_all(&session_dir).unwrap();
+    let header = serde_json::json!({
+        "type": "session", "version": 3, "id": "abc", "timestamp": "2026-01-01T00:00:00.000Z",
+        "cwd": project_dir.to_string_lossy(),
+    });
+    let message = serde_json::json!({
+        "type": "message", "id": "m1", "parentId": null, "timestamp": "2026-01-01T00:00:01.000Z",
+        "message": { "role": "user", "content": [{ "type": "text", "text": "hello from the resume picker" }],
+            "timestamp": 1767225601000i64 }
+    });
+    std::fs::write(session_dir.join("2026-01-01T00-00-00-000Z_abc.jsonl"), format!("{header}\n{message}\n")).unwrap();
+
     let start = std::time::Instant::now();
     let result = run_pi(&["--resume", "-p"], &project_dir, &agent_dir, true);
     assert_eq!(result.code, Some(0), "{}", result.stderr);
     assert!(!result.stdout.contains("No session selected"), "{}", result.stdout);
     assert!(start.elapsed() < std::time::Duration::from_secs(20));
+    // TS: `restoreOnExit("\x1b[?25h", "")` with the Kitty keyboard protocol pushed.
+    assert_eq!(result.stdout, "\x1b[?25h\x1b[?2004l\x1b[<u");
+    let last_frame = &result.stderr[result.stderr.rfind("\x1b[?2026h").expect("a rendered frame")..];
+    assert!(last_frame.contains("Resume Session"), "{last_frame:?}");
+    assert!(last_frame.contains("hello from the resume picker"), "{last_frame:?}");
+    assert!(!last_frame.contains("Loading"), "{last_frame:?}");
+}
+
+// Package commands report settings load errors like TS `reportSettingsErrors`: the warning, then
+// `chalk.dim(error.stack)`. The stack's first line (`${name}: ${message}`) is reproduced; the V8
+// frames that follow in TS (`    at JSON.parse (<anonymous>)`, `    at SettingsManager.loadFromStorage
+// (file:///.../settings-manager.js:L:C)`, ...) name the installation's files and are not.
+#[test]
+fn package_commands_report_settings_errors_with_the_error_stack_header() {
+    let (_dir, agent_dir, project_dir) = temp_root();
+    std::fs::write(agent_dir.join("settings.json"), "{ invalid json\n").unwrap();
+    let result = run_pi(&["list"], &project_dir, &agent_dir, true);
+    assert_eq!(result.code, Some(0), "{}", result.stderr);
+    assert_eq!(result.stdout, "No packages installed.\n");
+    let message = "Expected property name or '}' in JSON at position 2 (line 1 column 3)";
+    assert_eq!(
+        result.stderr,
+        format!("Warning (package command, global settings): {message}\nSyntaxError: {message}\n")
+    );
+
+    // Node fs error wording (`readFileSync` on a directory).
+    let (_dir, agent_dir, project_dir) = temp_root();
+    std::fs::create_dir_all(agent_dir.join("settings.json")).unwrap();
+    let result = run_pi(&["list"], &project_dir, &agent_dir, true);
+    let message = "EISDIR: illegal operation on a directory, read";
+    assert_eq!(
+        result.stderr,
+        format!("Warning (package command, global settings): {message}\nError: {message}\n")
+    );
 }
 
 fn stdout_project() -> (tempfile::TempDir, PathBuf, PathBuf) {
@@ -328,4 +413,36 @@ mod session_id {
         assert_eq!(result.code, Some(1), "{}", result.stderr);
         assert!(result.stderr.contains("Session already exists with id 'existing-id'"), "{}", result.stderr);
     }
+}
+
+// cli/setup.ts sets `process.title = "pi"`; libuv overwrites the command line in place (the
+// arguments disappear from `ps`) and sets the thread name.
+#[cfg(target_os = "linux")]
+#[test]
+fn sets_the_process_title_like_node() {
+    let (_dir, agent_dir, project_dir) = temp_root();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_pi"))
+        .args(["--mode", "rpc", "--no-session"])
+        .current_dir(&project_dir)
+        .env("PI_CODING_AGENT_DIR", &agent_dir)
+        .env("PI_OFFLINE", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    // The RPC loop answers once setup has run.
+    use std::io::{BufRead, Write};
+    let mut stdin = child.stdin.take().unwrap();
+    writeln!(stdin, "{{\"type\":\"get_state\",\"id\":\"1\"}}").unwrap();
+    let mut line = String::new();
+    std::io::BufReader::new(child.stdout.take().unwrap()).read_line(&mut line).unwrap();
+    let proc_dir = format!("/proc/{}", child.id());
+    let comm = std::fs::read_to_string(format!("{proc_dir}/comm")).unwrap();
+    let cmdline = std::fs::read(format!("{proc_dir}/cmdline")).unwrap();
+    drop(stdin);
+    let _ = child.wait();
+    assert_eq!(comm.trim_end(), "pi");
+    let shown: Vec<u8> = cmdline.into_iter().take_while(|b| *b != 0).collect();
+    assert_eq!(String::from_utf8(shown).unwrap(), "pi");
 }

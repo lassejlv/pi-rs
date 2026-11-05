@@ -78,7 +78,7 @@ async fn with_deps_resolves_its_own_node_modules() {
 /// `node_modules`) streams a reply through pi's model runtime. The example's base URL is pointed at
 /// a local mock of the Messages API.
 ///
-/// Regression test for the vendored boa_ast scope-analyzer fix (`vendor/boa_ast/PATCH.md`): the SDK's
+/// Regression test for a scope-analyzer bug of the previous engine (Boa): the SDK's
 /// `MessageStream` creates functions inside computed class method keys.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn custom_provider_anthropic_streams_with_the_sdk() {
@@ -112,6 +112,7 @@ async fn custom_provider_anthropic_streams_with_the_sdk() {
         messages: vec![pi_ai::types::Message::User(pi_ai::types::UserMessage {
             content: pi_ai::types::UserContent::Text("hi".into()),
             timestamp: 0,
+            ..Default::default()
         })],
         tools: None,
     };
@@ -249,6 +250,7 @@ async fn custom_provider_gitlab_duo_streams_through_both_backends() {
         messages: vec![pi_ai::types::Message::User(pi_ai::types::UserMessage {
             content: pi_ai::types::UserContent::Text("hi".into()),
             timestamp: 0,
+            ..Default::default()
         })],
         tools: None,
     };

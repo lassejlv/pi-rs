@@ -520,6 +520,8 @@ pub fn create_codemode_tool_definition(options: Option<&CodemodeToolOptions>) ->
             }
         },
     );
+    // TS builds the schema with TypeBox.
+    definition.parameters_typebox = true;
     definition.prompt_snippet = Some(CODEMODE_TOOL_SNIPPET.to_string());
     definition.prompt_guidelines = Some(CODEMODE_TOOL_GUIDELINES.iter().map(|g| g.to_string()).collect());
     // Scripts must not start other scripts.

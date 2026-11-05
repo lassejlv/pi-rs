@@ -457,6 +457,12 @@ export function describeTool(tool) {
 		promptSnippet: tool.promptSnippet,
 		promptGuidelines: tool.promptGuidelines,
 		parameters: tool.parameters,
+		// TypeBox marks its schemas with a non-enumerable `~kind` (lost in JSON); validation then
+		// runs `Value.Convert` on the arguments.
+		parametersTypebox:
+			tool.parameters !== null &&
+			typeof tool.parameters === "object" &&
+			Object.prototype.hasOwnProperty.call(tool.parameters, "~kind"),
 		constrainedSampling: tool.constrainedSampling,
 		renderShell: tool.renderShell,
 		prepareArguments: rustOr(tool.prepareArguments),
@@ -471,6 +477,7 @@ export function describeTool(tool) {
 		execute: rustOr(tool.execute),
 		renderCall: rustOr(tool.renderCall),
 		renderResult: rustOr(tool.renderResult),
+		object: ref(tool),
 	};
 }
 
@@ -622,6 +629,7 @@ export function createPi(api) {
 			},
 		},
 	};
+	Object.defineProperty(pi, "__piApiId", { value: api, enumerable: false });
 	return pi;
 }
 
@@ -630,7 +638,7 @@ function refs(map) {
 	return Object.fromEntries(Object.entries(map).map(([key, value]) => [key, value ? ref(value) : value]));
 }
 
-function describeProviderConfig(config) {
+export function describeProviderConfig(config) {
 	const out = { ...config };
 	if (config.images) out.images = refs(config.images);
 	if (config.classifiers) out.classifiers = refs(config.classifiers);
@@ -643,6 +651,7 @@ function describeProviderConfig(config) {
 			refreshToken: config.oauth.refreshToken,
 			getApiKey: config.oauth.getApiKey,
 			modifyModels: config.oauth.modifyModels,
+			object: ref(config.oauth),
 		};
 	}
 	return out;
@@ -673,7 +682,7 @@ export function describeAuth(auth) {
 }
 
 /** Describe a pi-ai `Provider` object for `pi.registerProvider(provider)`. */
-function describeNativeProvider(provider) {
+export function describeNativeProvider(provider) {
 	if (!provider || typeof provider !== "object") throw new Error("registerProvider() expects a provider object");
 	if (provider.__piNative !== undefined) return { native: provider.__piNative };
 	const has = (name) => typeof provider[name] === "function";
@@ -756,54 +765,413 @@ function makeUi(ctx) {
 	};
 }
 
-function makeSessionManager(ctx) {
-	const sm = (m, ...a) => u(call("sm", { ctx, m, a }));
-	return new Proxy(
-		{},
-		{
-			get(_target, prop) {
-				if (typeof prop !== "string" || prop === "then") return undefined;
-				return (...args) => sm(prop, ...args);
-			},
-		},
-	);
+const HOST_SESSION_MANAGER = Symbol("pi-rs.hostSessionManager");
+/** Session managers created from JavaScript release their Rust manager when collected. */
+const ownedSessionManagers =
+	typeof FinalizationRegistry === "function"
+		? new FinalizationRegistry((id) => {
+				try {
+					call("sm.static", { m: "release", id });
+				} catch {}
+			})
+		: undefined;
+
+function sessionInfos(list) {
+	return (list ?? []).map((info) => ({ ...info, created: new Date(info.created), modified: new Date(info.modified) }));
+}
+
+/**
+ * TS `SessionManager` over a Rust session manager (`{ sm: id }`): pi's live one
+ * (`ctx.sessionManager`, `newSession({ setup })`) or one created with the static factories.
+ */
+export class SessionManager {
+	#id;
+
+	constructor(cwd, sessionDir, sessionFile, persist, newSessionOptions, preloadedFileEntries) {
+		if (cwd && typeof cwd === "object" && HOST_SESSION_MANAGER in cwd) {
+			this.#id = cwd[HOST_SESSION_MANAGER];
+			if (cwd.owned) ownedSessionManagers?.register(this, this.#id);
+			return;
+		}
+		const { sm } = call("sm.static", {
+			m: "new",
+			a: [cwd ?? null, sessionDir ?? "", sessionFile ?? null, !!persist, newSessionOptions ?? null, preloadedFileEntries ?? null],
+		});
+		this.#id = sm;
+		ownedSessionManagers?.register(this, sm);
+	}
+
+	/** @internal The Rust session manager id (SDK options). */
+	get __piSessionManagerId() {
+		return this.#id;
+	}
+
+	static #owned(result) {
+		return new SessionManager({ [HOST_SESSION_MANAGER]: result.sm, owned: true });
+	}
+
+	#call(m, ...a) {
+		return call("sm", { sm: this.#id, m, a });
+	}
+
+	// Static factories (TS `SessionManager.create()` etc.).
+	static create(cwd, sessionDir, options) {
+		return SessionManager.#owned(call("sm.static", { m: "create", a: [cwd ?? null, sessionDir ?? null, options ?? null] }));
+	}
+	static open(path, sessionDir, cwdOverride) {
+		return SessionManager.#owned(call("sm.static", { m: "open", a: [path, sessionDir ?? null, cwdOverride ?? null] }));
+	}
+	static continueRecent(cwd, sessionDir) {
+		return SessionManager.#owned(call("sm.static", { m: "continueRecent", a: [cwd ?? null, sessionDir ?? null] }));
+	}
+	static inMemory(cwd, options, entries) {
+		return SessionManager.#owned(call("sm.static", { m: "inMemory", a: [cwd ?? null, options ?? null, entries ?? null] }));
+	}
+	static forkFrom(sourcePath, targetCwd, sessionDir, options) {
+		return SessionManager.#owned(
+			call("sm.static", { m: "forkFrom", a: [sourcePath, targetCwd, sessionDir ?? null, options ?? null] }),
+		);
+	}
+	static findById(cwd, id, sessionDir) {
+		return u(call("sm.static", { m: "findById", a: [cwd ?? null, id, sessionDir ?? null] }));
+	}
+	static async list(cwd, sessionDir, onProgress, signal) {
+		return sessionInfos(
+			await callAsync("sm.list", {
+				m: "list",
+				a: [cwd ?? null, sessionDir ?? null],
+				onProgress: onProgress ? progressCallback(onProgress) : null,
+				signal: tokenFor(signal),
+			}),
+		);
+	}
+	static async listAll(sessionDirOrOnProgress, onProgressOrSignal, maybeSignal) {
+		const sessionDir = typeof sessionDirOrOnProgress === "string" ? sessionDirOrOnProgress : undefined;
+		const onProgress = typeof sessionDirOrOnProgress === "function" ? sessionDirOrOnProgress : typeof onProgressOrSignal === "function" ? onProgressOrSignal : undefined;
+		const signal = typeof sessionDirOrOnProgress === "function" ? onProgressOrSignal : maybeSignal;
+		return sessionInfos(
+			await callAsync("sm.list", {
+				m: "listAll",
+				a: [sessionDir ?? null],
+				onProgress: onProgress ? progressCallback(onProgress) : null,
+				signal: tokenFor(signal),
+			}),
+		);
+	}
+
+	setSessionFile(sessionFile) {
+		this.#call("setSessionFile", sessionFile);
+	}
+	newSession(options) {
+		return u(this.#call("newSession", options ?? null));
+	}
+	isPersisted() {
+		return this.#call("isPersisted");
+	}
+	getCwd() {
+		return this.#call("getCwd");
+	}
+	getSessionDir() {
+		return this.#call("getSessionDir");
+	}
+	usesDefaultSessionDir() {
+		return this.#call("usesDefaultSessionDir");
+	}
+	getSessionId() {
+		return this.#call("getSessionId");
+	}
+	getSessionFile() {
+		return u(this.#call("getSessionFile"));
+	}
+	appendMessage(message) {
+		return this.#call("appendMessage", message);
+	}
+	appendThinkingLevelChange(thinkingLevel) {
+		return this.#call("appendThinkingLevelChange", thinkingLevel);
+	}
+	appendModelChange(provider, modelId) {
+		return this.#call("appendModelChange", provider, modelId);
+	}
+	appendUsage(kind, provider, model, usage, note) {
+		return this.#call("appendUsage", kind, provider, model, usage, note ?? null);
+	}
+	appendCompaction(summary, firstKeptEntryId, tokensBefore, details, fromHook, usage) {
+		return this.#call("appendCompaction", summary, firstKeptEntryId ?? null, tokensBefore, details ?? null, fromHook ?? null, usage ?? null);
+	}
+	appendCustomEntry(customType, data) {
+		return this.#call("appendCustomEntry", customType, data ?? null);
+	}
+	appendSessionInfo(name) {
+		return this.#call("appendSessionInfo", name);
+	}
+	getSessionName() {
+		return u(this.#call("getSessionName"));
+	}
+	appendCustomMessageEntry(customType, content, display, details) {
+		return this.#call("appendCustomMessageEntry", customType, content, !!display, details ?? null);
+	}
+	appendContextEdit(targetId, replacement) {
+		return this.#call("appendContextEdit", targetId, replacement === undefined ? "invalid" : replacement);
+	}
+	getLeafId() {
+		return this.#call("getLeafId");
+	}
+	getLeafEntry() {
+		return u(this.#call("getLeafEntry"));
+	}
+	getEntry(id) {
+		return u(this.#call("getEntry", id));
+	}
+	getChildren(parentId) {
+		return this.#call("getChildren", parentId) ?? [];
+	}
+	getLabel(id) {
+		return u(this.#call("getLabel", id));
+	}
+	appendLabelChange(targetId, label) {
+		return this.#call("appendLabelChange", targetId, label ?? null);
+	}
+	getBranch(fromId) {
+		return this.#call("getBranch", fromId ?? null) ?? [];
+	}
+	buildContextEntries() {
+		return this.#call("buildContextEntries") ?? [];
+	}
+	buildSessionProjection() {
+		return this.#call("buildSessionProjection");
+	}
+	buildSessionContext() {
+		return this.#call("buildSessionContext");
+	}
+	getHeader() {
+		return this.#call("getHeader");
+	}
+	getEntryCount() {
+		return this.#call("getEntryCount");
+	}
+	getEntries() {
+		return this.#call("getEntries") ?? [];
+	}
+	getTree() {
+		return this.#call("getTree") ?? [];
+	}
+	branch(branchFromId) {
+		this.#call("branch", branchFromId);
+	}
+	resetLeaf() {
+		this.#call("resetLeaf");
+	}
+	branchWithSummary(branchFromId, summary, details, fromHook, usage) {
+		return this.#call("branchWithSummary", branchFromId ?? null, summary, details ?? null, fromHook ?? null, usage ?? null);
+	}
+	createBranchedSession(leafId) {
+		return u(this.#call("createBranchedSession", leafId));
+	}
+}
+
+function progressCallback(onProgress) {
+	return (loaded, total, partial) => {
+		if (partial === undefined || partial === null) onProgress(loaded, total);
+		else onProgress(loaded, total, sessionInfos(partial));
+	};
+}
+
+/** Host session managers by id, so every context hands out the same object (as in TS). */
+const hostSessionManagers = new Map();
+
+function sessionManagerFor(id) {
+	let sm = hostSessionManagers.get(id);
+	if (!sm) {
+		sm = new SessionManager({ [HOST_SESSION_MANAGER]: id });
+		hostSessionManagers.set(id, sm);
+	}
+	return sm;
+}
+
+globalThis.__piSessionManagerFor = sessionManagerFor;
+
+const registryFinalizer =
+	typeof FinalizationRegistry === "function"
+		? new FinalizationRegistry((registry) => {
+				try {
+					call("mr", { registry, m: "release", a: [] });
+				} catch {}
+			})
+		: undefined;
+
+/**
+ * `ctx.modelRegistry`: TS's `ModelRegistry` facade over pi's live model runtime. `target` names
+ * the Rust registry (`{ ctx }`).
+ */
+export class ModelRegistry {
+	#target;
+
+	constructor(target) {
+		if (target && typeof target === "object" && typeof target.__piRuntimeId === "number") {
+			// `new ModelRegistry(runtime)`: a facade over a ModelRuntime from the SDK.
+			const registry = call("mr", { m: "new", a: [target.__piRuntimeId] });
+			this.#target = { registry };
+			registryFinalizer?.register(this, registry);
+		} else if (!target || typeof target !== "object" || !("ctx" in target || "registry" in target)) {
+			throw new TypeError("ModelRegistry expects a ModelRuntime");
+		} else {
+			this.#target = target;
+		}
+		// TS keeps the runtime in an own (private) field that extensions read.
+		Object.defineProperty(this, "runtime", {
+			get: () => globalThis.__piSdk.runtimeFor(this.#call("runtime")),
+			enumerable: true,
+		});
+		Object.defineProperty(this, "__piRegistryTarget", { value: this.#target, enumerable: false });
+	}
+
+	#call(m, ...a) {
+		return u(call("mr", { ...this.#target, m, a }));
+	}
+
+	async #callAsync(m, ...a) {
+		return u(await callAsync("mr.async", { ...this.#target, m, a }));
+	}
+
+	async refresh(options) {
+		const result = await this.#callAsync("refresh", {
+			allowNetwork: options?.allowNetwork,
+			providers: options?.providers,
+			force: options?.force,
+			signal: tokenFor(options?.signal),
+		});
+		return {
+			aborted: !!result?.aborted,
+			errors: new Map(Object.entries(result?.errors ?? {}).map(([provider, message]) => [provider, new Error(message)])),
+		};
+	}
+
+	getError() {
+		return this.#call("getError");
+	}
+
+	getAll() {
+		return this.#call("getAll") ?? [];
+	}
+
+	getAvailable() {
+		return this.#call("getAvailable") ?? [];
+	}
+
+	find(provider, modelId) {
+		return this.#call("find", provider, modelId);
+	}
+
+	findOfType(type, provider, modelId) {
+		return this.#call("findOfType", type, provider, modelId);
+	}
+
+	hasConfiguredAuth(model) {
+		return !!this.#call("hasConfiguredAuth", model);
+	}
+
+	getApiKeyAndHeaders(model) {
+		return this.#callAsync("getApiKeyAndHeaders", model);
+	}
+
+	getProviderAuthStatus(provider) {
+		return this.#call("getProviderAuthStatus", provider);
+	}
+
+	getProvider(provider) {
+		return globalThis.__piAiRust.providerFromHost(this.#call("getProvider", provider));
+	}
+
+	stream(model, context, options) {
+		return streamFromHost("mr.stream", { ...this.#target, m: "stream", a: [model, context, stripSignal(options)] });
+	}
+
+	streamSimple(model, context, options) {
+		return streamFromHost("mr.stream", { ...this.#target, m: "streamSimple", a: [model, context, stripSignal(options)] });
+	}
+
+	complete(model, context, options) {
+		return this.#callAsync("complete", model, context, stripSignal(options));
+	}
+
+	getModelsOfType(type, provider) {
+		return this.#call("getModelsOfType", type, provider ?? null) ?? [];
+	}
+
+	async getAvailableOfType(type, provider, options) {
+		return (await this.#callAsync("getAvailableOfType", type, provider ?? null, stripSignal(options))) ?? [];
+	}
+
+	getModelOfType(type, provider, modelId) {
+		return this.#call("getModelOfType", type, provider, modelId);
+	}
+
+	classify(model, context, options) {
+		return this.#callAsync("classify", model, context, stripSignal(options));
+	}
+
+	generateImages(model, context, options) {
+		return this.#callAsync("generateImages", model, context, stripSignal(options));
+	}
+
+	getProviderDisplayName(provider) {
+		return this.#call("getProviderDisplayName", provider);
+	}
+
+	getProviderAuth(provider) {
+		return this.#callAsync("getProviderAuth", provider);
+	}
+
+	getApiKeyForProvider(provider) {
+		return this.#callAsync("getApiKeyForProvider", provider);
+	}
+
+	isUsingOAuth(model) {
+		return !!this.#call("isUsingOAuth", model);
+	}
+
+	registerProvider(providerOrName, config) {
+		if (typeof providerOrName === "string") {
+			if (!config) throw new Error("Provider config is required when registering by name");
+			this.#call("registerProvider", { name: providerOrName, config: describeProviderConfig(config) });
+			return;
+		}
+		this.#call("registerProvider", { provider: describeNativeProvider(providerOrName) });
+	}
+
+	unregisterProvider(providerName) {
+		this.#call("unregisterProvider", providerName);
+	}
+
+	registerVirtualModel(definition) {
+		this.#call("registerVirtualModel", definition);
+	}
+
+	unregisterVirtualModel(providerName, id) {
+		this.#call("unregisterVirtualModel", providerName, id);
+	}
+
+	getRegisteredProviderConfig(providerName) {
+		return globalThis.__piAiRust.providerConfigFromHost(providerName, this.#call("getRegisteredProviderConfig", providerName));
+	}
+
+	getRegisteredNativeProvider(providerName) {
+		return globalThis.__piAiRust.providerFromHost(this.#call("getRegisteredNativeProvider", providerName));
+	}
+
+	getRegisteredProviderIds() {
+		return this.#call("getRegisteredProviderIds") ?? [];
+	}
 }
 
 function makeModelRegistry(ctx) {
-	const mr = (m, ...a) => u(call("mr", { ctx, m, a }));
-	const mrAsync = async (m, ...a) => u(await callAsync("mr.async", { ctx, m, a }));
-	const asyncMethods = new Set([
-		"refresh",
-		"getApiKeyAndHeaders",
-		"complete",
-		"getProviderAuth",
-		"getApiKeyForProvider",
-		"getAvailableOfType",
-		"classify",
-		"generateImages",
-	]);
-	return new Proxy(
-		{},
-		{
-			get(_target, prop) {
-				if (typeof prop !== "string" || prop === "then") return undefined;
-				if (prop === "stream" || prop === "streamSimple") {
-					return (model, context, options) => streamFromHost("mr.stream", { ctx, m: prop, a: [model, context, options ?? null] });
-				}
-				if (asyncMethods.has(prop)) return (...args) => mrAsync(prop, ...stripSignals(args));
-				return (...args) => mr(prop, ...args);
-			},
-		},
-	);
+	return new ModelRegistry({ ctx });
 }
 
-function stripSignals(args) {
-	return args.map((arg) =>
-		arg && typeof arg === "object" && !Array.isArray(arg) && arg.signal
-			? { ...arg, signal: tokenFor(arg.signal) }
-			: arg,
-	);
+function stripSignal(options) {
+	return options && typeof options === "object" && options.signal ? { ...options, signal: tokenFor(options.signal) } : (options ?? null);
 }
+
 
 /** An AssistantMessageEventStream fed by a Rust stream (`op` returns a stream id). */
 export function streamFromHost(op, payload) {
@@ -836,7 +1204,6 @@ export function makeContext(id, kind) {
 	const invoke = (m, ...a) => u(call("ctx.call", { ctx: id, m, a }));
 	const invokeAsync = async (m, ...a) => u(await callAsync("ctx.async", { ctx: id, m, a }));
 	let ui;
-	let sessionManager;
 	let modelRegistry;
 	const ctx = {
 		get __ctxId() {
@@ -861,9 +1228,7 @@ export function makeContext(id, kind) {
 		Object.defineProperties(ctx, {
 			sessionManager: {
 				get() {
-					get("assertActive");
-					sessionManager ??= makeSessionManager(id);
-					return sessionManager;
+					return sessionManagerFor(get("sessionManager"));
 				},
 				enumerable: true,
 			},
@@ -941,9 +1306,27 @@ export function makeContext(id, kind) {
 	return ctx;
 }
 
-export function releaseContext(id) {
-	for (const kind of ["base", "tool", "command", "replaced", "trust"]) contexts.delete(`${kind}:${id}`);
+const contextFinalizer =
+	typeof FinalizationRegistry === "function"
+		? new FinalizationRegistry((id) => {
+				try {
+					call("ctx.release", { ctx: id });
+				} catch {}
+			})
+		: undefined;
+
+/**
+ * The call that received ctx `id` ended. Like TS, the ctx object keeps working afterwards (until
+ * the runner goes stale); its Rust entry is freed once the extension no longer references it.
+ */
+export function detachContext(id, kind) {
+	const key = `${kind}:${id}`;
+	const ctx = contexts.get(key);
+	contexts.delete(key);
+	if (ctx && contextFinalizer) contextFinalizer.register(ctx, id);
+	else if (!ctx) call("ctx.release", { ctx: id });
 }
+
 
 // ---------------------------------------------------------------------------
 // Entry points used by Rust
@@ -1437,8 +1820,50 @@ export async function invokeBashExec(exec, command, cwd, onData, signal, timeout
 	return result ?? { exitCode: null };
 }
 
+/** A method of a JavaScript ResourceLoader object, for Rust (`JsResourceLoader`). */
+export function invokeLoaderMethod(loader, method, args) {
+	const fn = loader?.[method];
+	if (typeof fn !== "function") return null;
+	const result = fn.apply(loader, args ?? []);
+	if (method === "getExtensions") return globalThis.__piSdk.extensionsResultToHost(result);
+	if (method === "getAgentsFiles") return result ?? null;
+	return result ?? null;
+}
+
+export async function invokeLoaderReload(loader) {
+	if (typeof loader?.reload === "function") await loader.reload();
+	return null;
+}
+
+/** `resolveProjectTrust` reload option of a DefaultResourceLoader created from JavaScript. */
+export async function invokeResolveProjectTrust(resolve, extensionsResult) {
+	return !!(await resolve({ extensionsResult: globalThis.__piSdk.extensionsResultFromHost(extensionsResult) }));
+}
+
+/** A `session.agent.beforeToolCall` / `afterToolCall` hook set from JavaScript. */
+export async function invokeToolHook(hook, context, contextId, signal) {
+	Object.defineProperty(context, "$hookContext", { value: contextId, enumerable: false });
+	const result = await hook(context, signal ? signalFor(signal.id, signal.aborted) : undefined);
+	return { result: result ?? null, args: context.args ?? null };
+}
+
+/** `extensionsOverride` of a DefaultResourceLoader created from JavaScript. */
+export function invokeExtensionsOverride(override, base) {
+	const result = override(globalThis.__piSdk.extensionsResultFromHost(base));
+	return {
+		extensions: (result?.extensions ?? []).map((e) => ({ $index: e?.__piIndex ?? -1 })),
+		errors: result?.errors ?? base.errors,
+	};
+}
+
+/** `withLock` of a JavaScript `SettingsStorage`, for a Rust settings manager. */
+export function invokeWithLock(storage, scope, callbackId) {
+	storage.withLock(scope, (current) => u(call("cb", { id: callbackId, args: [current ?? null] })));
+	return null;
+}
+
 export async function invokeSetup(setup, id) {
-	await setup(makeSessionManager(id));
+	await setup(sessionManagerFor(id));
 }
 
 export async function invokeOAuthLogin(login, callbacks) {
@@ -1466,5 +1891,6 @@ export async function invokeWithSignal(fn, args, signal) {
 export async function invokeRoute(route, request, ctxId) {
 	const { $signal, ...rest } = request;
 	if ($signal) rest.signal = signalFor($signal.id, $signal.aborted);
+	if (ctxId === null || ctxId === undefined) return await route(rest);
 	return await route(rest, makeContext(ctxId, "base"));
 }

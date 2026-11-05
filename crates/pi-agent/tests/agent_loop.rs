@@ -1679,6 +1679,7 @@ async fn allows_custom_message_types_as_last_message() {
                             .into(),
                     ),
                     timestamp: c.timestamp(),
+                    ..Default::default()
                 })),
                 other => other.to_message(),
             })

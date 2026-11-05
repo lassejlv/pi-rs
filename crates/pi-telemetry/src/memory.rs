@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::sync::{Arc, Weak};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use web_time::{Instant, SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use indexmap::IndexMap;
@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
+use crate::TelemetryText;
 use crate::attributes::{SpanAttributes, TelemetryCarrier};
 use crate::context::{
     ContextRef, PropagationRef, SpanLink, SpanOptions, SpanOutcome, SpanRef, SpanStatus,
@@ -186,18 +187,33 @@ struct Parent {
     span: Option<usize>,
 }
 
-fn carrier_id(carrier: &TelemetryCarrier) -> String {
-    format!(
-        "{}:{}",
-        carrier
-            .get(SCOPE_KEY)
-            .map(String::as_str)
-            .unwrap_or("undefined"),
-        carrier
-            .get(SPAN_KEY)
-            .map(String::as_str)
-            .unwrap_or("undefined")
-    )
+fn carrier_get<'a>(carrier: &'a TelemetryCarrier, key: &str) -> Option<&'a TelemetryText> {
+    carrier.get_str(key)
+}
+
+/// `${scope}:${span}`, keeping the carrier's UTF-16 units.
+fn carrier_id(carrier: &TelemetryCarrier) -> TelemetryText {
+    let part = |key| {
+        carrier_get(carrier, key).map_or_else(
+            || "undefined".encode_utf16().collect(),
+            |text| text.units().to_vec(),
+        )
+    };
+    let mut units = part(SCOPE_KEY);
+    units.push(u16::from(b':'));
+    units.extend(part(SPAN_KEY));
+    pi_json::strict::JsonString::from_utf16(units).into()
+}
+
+/// `[startedMs, traceId]` as `JSON.stringify` wrote it, keeping the trace ID's UTF-16 units.
+fn parse_cursor(cursor: &str) -> anyhow::Result<(f64, TelemetryText)> {
+    let value = pi_json::strict::parse(cursor).map_err(anyhow::Error::msg)?;
+    match value.as_array().map(Vec::as_slice) {
+        Some([started, pi_json::strict::Value::String(trace_id)]) if started.is_number() => {
+            Ok((started.as_f64().unwrap_or(f64::NAN), trace_id.into()))
+        }
+        _ => anyhow::bail!("invalid trace cursor"),
+    }
 }
 
 /// Identity of a context created by any in-memory recorder; survives settlement.
@@ -266,12 +282,12 @@ impl InMemoryTelemetryContext {
         state.next_span_id += 1;
         let trace = parent
             .as_ref()
-            .and_then(|parent| parent.context.get(TRACE_KEY).cloned())
-            .unwrap_or_else(|| format!("{}:{id}", state.scope));
+            .and_then(|parent| carrier_get(&parent.context, TRACE_KEY).cloned())
+            .unwrap_or_else(|| format!("{}:{id}", state.scope).into());
         let mut context = TelemetryCarrier::new();
-        context.insert(SCOPE_KEY.to_string(), state.scope.clone());
-        context.insert(SPAN_KEY.to_string(), id.to_string());
-        context.insert(TRACE_KEY.to_string(), trace);
+        context.insert(SCOPE_KEY.into(), state.scope.clone().into());
+        context.insert(SPAN_KEY.into(), id.to_string().into());
+        context.insert(TRACE_KEY.into(), trace);
         state.spans.push(MutableSpan {
             started_ms: self.clock.now_ms(),
             clock: self.clock.performance_now_ms(),
@@ -357,7 +373,9 @@ impl InMemoryTelemetryContext {
             .filter(|span| span.settled)
             .map(|span| StoredSpan {
                 id: carrier_id(&span.context),
-                trace_id: span.context.get(TRACE_KEY).cloned().unwrap_or_default(),
+                trace_id: carrier_get(&span.context, TRACE_KEY)
+                    .cloned()
+                    .unwrap_or_else(|| "".into()),
                 parent_id: span.parent_context.as_ref().map(carrier_id),
                 name: span.name.clone(),
                 started_ms: span.started_ms,
@@ -376,7 +394,9 @@ impl InMemoryTelemetryContext {
                     .links
                     .iter()
                     .map(|link| StoredLink {
-                        trace_id: link.context.get(TRACE_KEY).cloned().unwrap_or_default(),
+                        trace_id: carrier_get(&link.context, TRACE_KEY)
+                            .cloned()
+                            .unwrap_or_else(|| "".into()),
                         span_id: carrier_id(&link.context),
                         attributes: Some(link.attributes.clone()),
                     })
@@ -441,23 +461,23 @@ impl InMemoryTelemetryContext {
     pub fn extract(&self, carrier: Option<&TelemetryCarrier>) -> ContextRef {
         let identity = carrier.and_then(|carrier| {
             Some((
-                carrier.get(SCOPE_KEY)?.clone(),
-                carrier.get(SPAN_KEY)?.clone(),
-                carrier.get(TRACE_KEY)?.clone(),
+                carrier_get(carrier, SCOPE_KEY)?.clone(),
+                carrier_get(carrier, SPAN_KEY)?.clone(),
+                carrier_get(carrier, TRACE_KEY)?.clone(),
             ))
         });
         let Some((scope, span, trace)) = identity else {
             return self.arc();
         };
-        let local_id = if scope == self.state.lock().scope {
-            span.parse::<u64>().ok()
+        let local_id = if scope.as_str() == Some(self.state.lock().scope.as_str()) {
+            span.as_str().and_then(|span| span.parse::<u64>().ok())
         } else {
             None
         };
         let mut context = TelemetryCarrier::new();
-        context.insert(SCOPE_KEY.to_string(), scope);
-        context.insert(SPAN_KEY.to_string(), span);
-        context.insert(TRACE_KEY.to_string(), trace);
+        context.insert(SCOPE_KEY.into(), scope);
+        context.insert(SPAN_KEY.into(), span);
+        context.insert(TRACE_KEY.into(), trace);
         Arc::new(InMemoryParent {
             root: self.arc(),
             context,
@@ -477,17 +497,17 @@ impl InMemoryTelemetryContext {
         self.measurement_recorder(MetricKind::Histogram, name, options)
     }
 
-    pub fn get_trace(&self, trace_id: &str) -> Option<StoredTrace> {
+    pub fn get_trace(&self, trace_id: &TelemetryText) -> Option<StoredTrace> {
         let spans: Vec<StoredSpan> = self
             .stored_spans()
             .into_iter()
-            .filter(|span| span.trace_id == trace_id)
+            .filter(|span| &span.trace_id == trace_id)
             .collect();
         if spans.is_empty() {
             None
         } else {
             Some(StoredTrace {
-                trace_id: trace_id.to_string(),
+                trace_id: trace_id.clone(),
                 spans,
             })
         }
@@ -496,10 +516,10 @@ impl InMemoryTelemetryContext {
     pub fn find_traces(&self, query: &TraceQuery) -> anyhow::Result<TraceQueryResult> {
         let limit = query.limit.unwrap_or(20);
         let after = match &query.cursor {
-            Some(cursor) => Some(serde_json::from_str::<(f64, String)>(cursor)?),
+            Some(cursor) => Some(parse_cursor(cursor)?),
             None => None,
         };
-        let mut grouped: IndexMap<String, Vec<StoredSpan>> = IndexMap::new();
+        let mut grouped: IndexMap<TelemetryText, Vec<StoredSpan>> = IndexMap::new();
         for span in self.stored_spans() {
             grouped.entry(span.trace_id.clone()).or_default().push(span);
         }
@@ -541,7 +561,7 @@ impl InMemoryTelemetryContext {
                 format!(
                     "[{},{}]",
                     number_to_json(last.spans[0].started_ms),
-                    serde_json::to_string(&last.trace_id).unwrap_or_default()
+                    pi_json::strict::stringify(&last.trace_id.clone().into())
                 )
             })
         } else {
@@ -643,7 +663,7 @@ impl TelemetryStore for InMemoryTelemetryContext {
         InMemoryTelemetryContext::find_traces(self, &query)
     }
 
-    async fn get_trace(&self, trace_id: &str) -> anyhow::Result<Option<StoredTrace>> {
+    async fn get_trace(&self, trace_id: &TelemetryText) -> anyhow::Result<Option<StoredTrace>> {
         Ok(InMemoryTelemetryContext::get_trace(self, trace_id))
     }
 
@@ -717,6 +737,16 @@ struct InMemorySpan {
 }
 
 impl TelemetryContext for InMemorySpan {
+    fn update_attributes(&self, attributes: SpanAttributes) {
+        self.set_attributes(attributes);
+    }
+    fn record_event(&self, name: &str, attributes: SpanAttributes) {
+        TelemetrySpan::add_event(self, name, attributes);
+    }
+    fn record_link(&self, link: SpanLink) {
+        TelemetrySpan::add_link(self, link);
+    }
+
     fn metrics(&self) -> Option<MetricsRef> {
         Some(self.root.metrics_ref())
     }

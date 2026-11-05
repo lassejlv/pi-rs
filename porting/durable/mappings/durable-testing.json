@@ -1,0 +1,323 @@
+{
+  "files": [
+    {
+      "reference": "packages/durable/src/testing/index.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/mod.rs"
+      ],
+      "exports": [
+        {
+          "name": "createExpectAssertions",
+          "rust": "pi_durable::testing::create_expect_assertions",
+          "note": "Returns the native ConformanceAssertions; no JS expect to adapt."
+        },
+        {
+          "name": "ExpectLike",
+          "rust": null,
+          "note": "JS-only: describes a Vitest/Jest expect function."
+        },
+        {
+          "name": "createEnvConformance",
+          "rust": "pi_durable::testing::create_env_conformance",
+          "note": "Takes the provider and EnvConformanceOptions."
+        },
+        {
+          "name": "registerEnvConformance",
+          "rust": "pi_durable::testing::run_env_conformance",
+          "note": "Native analogue: runs all cases and reports every failure instead of registering describe/it."
+        },
+        {
+          "name": "registerStorageConformance",
+          "rust": "pi_durable::testing::run_storage_conformance",
+          "note": "Native analogue; takes a StorageBackend because recorded error wording differs per backend."
+        },
+        {
+          "name": "StorageConformanceRunner",
+          "rust": null,
+          "note": "JS-only: the describe/it/expect interface of a JS test runner."
+        },
+        {
+          "name": "STORAGE_MEMORY_SCALES",
+          "rust": "pi_durable::testing::STORAGE_MEMORY_SCALES",
+          "note": ""
+        },
+        {
+          "name": "STORAGE_READ_BENCHMARKS",
+          "rust": "pi_durable::testing::storage_read_benchmarks",
+          "note": "Function: closures cannot live in a const."
+        },
+        {
+          "name": "STORAGE_WRITE_BENCHMARKS",
+          "rust": "pi_durable::testing::storage_write_benchmarks",
+          "note": "Function: closures cannot live in a const."
+        },
+        {
+          "name": "StorageBenchmarkDataset",
+          "rust": "pi_durable::testing::StorageBenchmarkDataset",
+          "note": "replay_document_ids is a (tail, id) list instead of a record."
+        },
+        {
+          "name": "StorageBenchmarkScale",
+          "rust": "pi_durable::testing::StorageBenchmarkScale",
+          "note": ""
+        },
+        {
+          "name": "StorageReadBenchmark",
+          "rust": "pi_durable::testing::StorageReadBenchmark",
+          "note": ""
+        },
+        {
+          "name": "StorageWriteBenchmark",
+          "rust": "pi_durable::testing::StorageWriteBenchmark",
+          "note": ""
+        },
+        {
+          "name": "seedStorageBenchmark",
+          "rust": "pi_durable::testing::seed_storage_benchmark",
+          "note": ""
+        },
+        {
+          "name": "seedStorageWriteBenchmark",
+          "rust": "pi_durable::testing::seed_storage_write_benchmark",
+          "note": ""
+        },
+        {
+          "name": "storageBenchmarkPrimaryRecordCount",
+          "rust": "pi_durable::testing::storage_benchmark_primary_record_count",
+          "note": ""
+        },
+        {
+          "name": "TIMING_SCALE",
+          "rust": "pi_durable::testing::TIMING_SCALE",
+          "note": ""
+        },
+        {
+          "name": "createStorageConformance",
+          "rust": "pi_durable::testing::create_storage_conformance_for",
+          "note": "create_storage_conformance() is the memory-backend shorthand. Cases replay pinned reference traces."
+        },
+        {
+          "name": "EnvConformanceAssertions",
+          "rust": "pi_durable::testing::EnvConformanceAssertions",
+          "note": "Alias of ConformanceAssertions."
+        },
+        {
+          "name": "EnvConformanceCase",
+          "rust": "pi_durable::testing::EnvConformanceCase",
+          "note": "timeout is a Duration."
+        },
+        {
+          "name": "EnvConformanceOptions",
+          "rust": "pi_durable::testing::EnvConformanceOptions",
+          "note": "assertions and withEnv are separate arguments; shell, symlinks, list_files."
+        },
+        {
+          "name": "EnvConformanceProvider",
+          "rust": "pi_durable::testing::EnvConformanceProvider",
+          "note": ""
+        },
+        {
+          "name": "StorageConformanceAssertions",
+          "rust": "pi_durable::testing::ConformanceAssertions",
+          "note": "Generic comparison methods returning Result instead of an interface of throwing callbacks."
+        },
+        {
+          "name": "StorageConformanceCase",
+          "rust": "pi_durable::testing::StorageConformanceCase",
+          "note": "run(storage) and run_with(provider)."
+        },
+        {
+          "name": "StorageConformanceOptions",
+          "rust": null,
+          "note": "Replaced by passing the provider and backend as arguments; assertions need no injection natively."
+        },
+        {
+          "name": "StorageConformanceProvider",
+          "rust": "pi_durable::testing::StorageConformanceProvider",
+          "note": ""
+        }
+      ],
+      "note": "Rust additions: native_env_provider, verify_storage_benchmarks, replay_case, storage_request."
+    },
+    {
+      "reference": "packages/durable/src/testing/assertions.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/assertions.rs"
+      ],
+      "exports": [
+        {
+          "name": "createExpectAssertions",
+          "rust": "pi_durable::testing::assertions::create_expect_assertions",
+          "note": "ok, strict_equal, deep_equal, partial_deep_equal (JSON subset), greater_than, rejects."
+        },
+        {
+          "name": "ExpectLike",
+          "rust": null,
+          "note": "JS-only."
+        }
+      ],
+      "note": "Covered by testing_helpers::assertions_report_failures_and_rejections."
+    },
+    {
+      "reference": "packages/durable/src/testing/runner.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/runner.rs"
+      ],
+      "exports": [
+        {
+          "name": "registerEnvConformance",
+          "rust": "pi_durable::testing::runner::run_env_conformance",
+          "note": "Per-case timeout applied by the runner (10s default, 30s for watch cases)."
+        },
+        {
+          "name": "registerStorageConformance",
+          "rust": "pi_durable::testing::runner::run_storage_conformance",
+          "note": ""
+        },
+        {
+          "name": "StorageConformanceRunner",
+          "rust": null,
+          "note": "JS-only."
+        }
+      ],
+      "note": "Registration with a JS runner has no native equivalent; the Rust runners execute and aggregate."
+    },
+    {
+      "reference": "packages/durable/src/testing/types.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/types.rs"
+      ],
+      "exports": [
+        {
+          "name": "StorageConformanceAssertions",
+          "rust": "pi_durable::testing::types::StorageConformanceAssertions",
+          "note": "Re-export of ConformanceAssertions."
+        },
+        {
+          "name": "EnvConformanceAssertions",
+          "rust": "pi_durable::testing::types::EnvConformanceAssertions",
+          "note": ""
+        },
+        {
+          "name": "StorageConformanceProvider",
+          "rust": "pi_durable::testing::types::StorageConformanceProvider",
+          "note": ""
+        },
+        {
+          "name": "StorageConformanceOptions",
+          "rust": null,
+          "note": "Folded into function arguments."
+        },
+        {
+          "name": "StorageConformanceCase",
+          "rust": "pi_durable::testing::StorageConformanceCase",
+          "note": ""
+        },
+        {
+          "name": "EnvConformanceProvider",
+          "rust": "pi_durable::testing::types::EnvConformanceProvider",
+          "note": "Receives Arc<dyn ExecutionEnv>."
+        },
+        {
+          "name": "EnvConformanceOptions",
+          "rust": "pi_durable::testing::types::EnvConformanceOptions",
+          "note": "shell, symlinks, list_files."
+        },
+        {
+          "name": "EnvConformanceCase",
+          "rust": "pi_durable::testing::types::EnvConformanceCase",
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "reference": "packages/durable/src/testing/env-conformance.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/env_conformance.rs",
+        "crates/pi-durable/tests/testing_helpers.rs",
+        "crates/pi-durable/src/env/list_files.rs",
+        "crates/pi-durable/src/env/filesystem.rs"
+      ],
+      "exports": [
+        {
+          "name": "createEnvConformance",
+          "rust": "pi_durable::testing::env_conformance::create_env_conformance",
+          "note": "All 29 upstream cases ported (24 base plus 5 listFiles); all pass against the native env with list_files enabled."
+        }
+      ],
+      "note": "The listFiles option is EnvConformanceOptions::list_files (default false, as upstream). Native FileSystem::list_files ports the reference daemon listing (ignore crate walk): ordering, hidden/.git/gitignore/exclude rules, entry/byte/time bounds, invalid/not_found/not_directory/aborted errors. Added native_env_provider."
+    },
+    {
+      "reference": "packages/durable/src/testing/storage-benchmark.ts",
+      "status": "verified",
+      "rust": [
+        "crates/pi-durable/src/testing/storage_benchmark.rs",
+        "crates/pi-durable/tests/testing_helpers.rs"
+      ],
+      "exports": [
+        {
+          "name": "StorageBenchmarkScale",
+          "rust": "pi_durable::testing::StorageBenchmarkScale",
+          "note": ""
+        },
+        {
+          "name": "STORAGE_MEMORY_SCALES",
+          "rust": "pi_durable::testing::STORAGE_MEMORY_SCALES",
+          "note": ""
+        },
+        {
+          "name": "TIMING_SCALE",
+          "rust": "pi_durable::testing::TIMING_SCALE",
+          "note": ""
+        },
+        {
+          "name": "storageBenchmarkPrimaryRecordCount",
+          "rust": "pi_durable::testing::storage_benchmark_primary_record_count",
+          "note": ""
+        },
+        {
+          "name": "StorageBenchmarkDataset",
+          "rust": "pi_durable::testing::StorageBenchmarkDataset",
+          "note": ""
+        },
+        {
+          "name": "seedStorageBenchmark",
+          "rust": "pi_durable::testing::seed_storage_benchmark",
+          "note": "Writes built from the wire JSON shapes, decoded into StorageWrite."
+        },
+        {
+          "name": "StorageReadBenchmark",
+          "rust": "pi_durable::testing::StorageReadBenchmark",
+          "note": ""
+        },
+        {
+          "name": "STORAGE_READ_BENCHMARKS",
+          "rust": "pi_durable::testing::storage_read_benchmarks",
+          "note": "12 benchmarks."
+        },
+        {
+          "name": "StorageWriteBenchmark",
+          "rust": "pi_durable::testing::StorageWriteBenchmark",
+          "note": ""
+        },
+        {
+          "name": "seedStorageWriteBenchmark",
+          "rust": "pi_durable::testing::seed_storage_write_benchmark",
+          "note": ""
+        },
+        {
+          "name": "STORAGE_WRITE_BENCHMARKS",
+          "rust": "pi_durable::testing::storage_write_benchmarks",
+          "note": "3 benchmarks."
+        }
+      ],
+      "note": "Verified on memory, JSONL and SQLite at a small scale; every benchmark returns its expected value."
+    }
+  ]
+}

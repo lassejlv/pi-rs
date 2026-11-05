@@ -418,11 +418,11 @@ impl Inner {
                         call_renderer(&args, &t, &context)
                     }));
                     match rendered {
-                        Ok(component) => {
+                        Ok(component) if crate::core::extensions::types::render_failure(&component).is_none() => {
                             self.st.lock().call_renderer_component = Some(component.clone());
                             add(create_result_region(self.weak_self.clone(), component));
                         }
-                        Err(_) => {
+                        _ => {
                             self.st.lock().call_renderer_component = None;
                             add(create_result_region(self.weak_self.clone(), self.create_call_fallback()));
                         }
@@ -464,12 +464,12 @@ impl Inner {
                             result_renderer(&tool_result, options, &t, &context)
                         }));
                         match rendered {
-                            Ok(component) => {
+                            Ok(component) if crate::core::extensions::types::render_failure(&component).is_none() => {
                                 self.st.lock().result_renderer_component = Some(component.clone());
                                 add(create_result_region(self.weak_self.clone(), component));
                                 has_content = true;
                             }
-                            Err(_) => {
+                            _ => {
                                 self.st.lock().result_renderer_component = None;
                                 if let Some(component) = self.create_result_fallback() {
                                     add(create_result_region(self.weak_self.clone(), component));

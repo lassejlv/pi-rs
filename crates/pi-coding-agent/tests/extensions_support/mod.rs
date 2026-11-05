@@ -349,7 +349,9 @@ pub async fn wait_until(cond: impl Fn() -> bool) {
 /// is `reply`. Returns the base URL and the received requests (request line, headers and body).
 pub async fn mock_anthropic_server(reply: &str) -> (String, Arc<Mutex<Vec<String>>>) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
     let base_url = format!("http://{}", listener.local_addr().unwrap());
     let requests: Arc<Mutex<Vec<String>>> = Arc::default();
     let seen = requests.clone();
@@ -366,12 +368,17 @@ pub async fn mock_anthropic_server(reply: &str) -> (String, Arc<Mutex<Vec<String
         .iter()
         .map(|data| {
             let kind: Value = serde_json::from_str(data).unwrap();
-            format!("event: {}\ndata: {data}\n\n", kind["type"].as_str().unwrap())
+            format!(
+                "event: {}\ndata: {data}\n\n",
+                kind["type"].as_str().unwrap()
+            )
         })
         .collect();
     tokio::spawn(async move {
         loop {
-            let Ok((mut socket, _)) = listener.accept().await else { return };
+            let Ok((mut socket, _)) = listener.accept().await else {
+                return;
+            };
             let seen = seen.clone();
             let body = body.clone();
             tokio::spawn(async move {
@@ -379,7 +386,9 @@ pub async fn mock_anthropic_server(reply: &str) -> (String, Arc<Mutex<Vec<String
                 let mut chunk = [0u8; 8192];
                 // Read headers, then the body by Content-Length.
                 loop {
-                    let Ok(n) = socket.read(&mut chunk).await else { return };
+                    let Ok(n) = socket.read(&mut chunk).await else {
+                        return;
+                    };
                     if n == 0 {
                         return;
                     }
@@ -388,7 +397,11 @@ pub async fn mock_anthropic_server(reply: &str) -> (String, Arc<Mutex<Vec<String
                     if let Some(end) = text.find("\r\n\r\n") {
                         let length = text[..end]
                             .lines()
-                            .find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0)))
+                            .find_map(|l| {
+                                l.to_ascii_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(|v| v.trim().parse::<usize>().unwrap_or(0))
+                            })
                             .unwrap_or(0);
                         if buf.len() >= end + 4 + length {
                             seen.lock().push(text);

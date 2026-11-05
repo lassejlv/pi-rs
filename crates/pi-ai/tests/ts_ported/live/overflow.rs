@@ -99,6 +99,7 @@ fn leak(value: String) -> &'static str {
     Box::leak(value.into_boxed_str())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn local(label: &str, gate: Gate, provider: &'static str, id: &str, base_url: &str, name: &str, reasoning: bool, window: u64, max: u64) -> Target {
     target(label, gate, provider, "local")
         .custom(json!({"id": id, "api": "openai-completions", "provider": provider, "baseUrl": base_url, "reasoning": reasoning,

@@ -345,7 +345,7 @@ async fn list(
         anyhow::bail!("cursor can only be used when a server is specified");
     }
     let mut sorted = servers();
-    sorted.sort_by_key(|server| server.name());
+    sorted.sort_by(|a, b| super::locale_compare(&a.name(), &b.name()));
     let results = futures::future::join_all(sorted.iter().map(|server| {
         let options = request_options(&signal, server.timeout_ms());
         all(server.clone(), options)

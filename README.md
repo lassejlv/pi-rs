@@ -25,6 +25,13 @@ cargo install --path crates/pi-coding-agent   # installs `pi` into ~/.cargo/bin
 Only the `pi` binary is built from `crates/pi-coding-agent`. Everything else is a library crate.
 HTTP goes through `reqwest` with rustls, so there is no OpenSSL dependency.
 
+The release profile (root `Cargo.toml`) links with fat LTO and one codegen unit, strips symbols,
+and optimizes for size except for the hot crates (TUI renderer, JavaScript engine and runtime,
+regex, JSON, crypto, compression), which keep `opt-level = 3`. The link step takes several minutes
+and up to about 4 GB of memory. For a quicker build, or one whose panic backtraces show function
+names, override it, e.g. `cargo build --release --config 'profile.release.lto="thin"' --config
+profile.release.strip=false`.
+
 ## Workspace
 
 | Crate | Ports | Contents |
@@ -36,13 +43,35 @@ HTTP goes through `reqwest` with rustls, so there is no OpenSSL dependency.
 | `crates/pi-codemode` | `packages/codemode` | Sandboxed JavaScript execution for code mode |
 | `crates/pi-telemetry` | `packages/telemetry` | Telemetry contracts |
 | `crates/pi-json` | (new) | `JSON.parse` with V8's error messages and `JSON.stringify` with JavaScript formatting, shared by the crates above |
-| `crates/pi-jsrt` | (new) | Embedded JavaScript runtime for extensions: Boa engine, oxc TypeScript stripping, ES module loader, Node API shims (`fs`, `path`, `child_process`, `events`, streams, `fetch`, ...) |
+| `crates/pi-jsrt` | (new) | Embedded JavaScript runtime for extensions: QuickJS engine (rquickjs), oxc TypeScript stripping, ES module loader, Node API shims (`fs`, `path`, `child_process`, `events`, streams, `fetch`, ...) |
 | `crates/pi-coding-agent` | `packages/coding-agent` | The `pi` binary and library: sessions, tools, settings, resources, packages, interactive/print/JSON/RPC modes, built-in extensions |
+| `crates/pi-chord` | `packages/chord` (subset) | JSON revisions, invocation context, cancellation, watches and SQLite contracts used by durable storage |
+| `crates/pi-durable` | `packages/durable` | Durable sessions, transactions, documents, tasks, scheduler, Harness and storage (memory, JSONL, SQLite, IndexedDB, Cloudflare) |
+| `crates/pi-durable-jsrt` | (new) | Serves `@earendil-works/pi-durable` and `@earendil-works/chord` to pi extensions as embedded pi-jsrt modules |
 
 Modules mirror the TypeScript file layout (`core/agent-session.ts` is
 `pi_coding_agent::core::agent_session`). [`PORTING.md`](PORTING.md) describes the conventions and
 [`crates/pi-coding-agent/ARCHITECTURE.md`](crates/pi-coding-agent/ARCHITECTURE.md) the design of
 the main crate.
+
+## Durable
+
+`pi-chord` and `pi-durable` are a native Rust port of the TypeScript `@earendil-works/chord` and
+`@earendil-works/pi-durable` packages: sessions, transactions, documents, the task scheduler and a
+public `Harness`/`Conversation` API, backed by memory, JSONL, SQLite, IndexedDB and Cloudflare
+Durable Object storage. `pi-durable-jsrt` serves both packages to pi extensions as embedded
+pi-jsrt modules, so existing extensions that import `@earendil-works/pi-durable` or
+`@earendil-works/chord` run unchanged.
+
+Try it with `/durable` from [`durable-demo.ts`](crates/pi-coding-agent/examples/extensions/durable-demo.ts),
+or run an offline conversation directly:
+
+```sh
+cargo run -p pi-durable --example conversation -- "Hello"
+```
+
+Current scope, test counts and open items are in
+[`porting/durable/STATUS.md`](porting/durable/STATUS.md).
 
 ## Parity with TypeScript pi
 
@@ -59,22 +88,66 @@ byte-compatible JSON output:
 - **Providers**: requests carry the same bodies and headers as the official SDKs the TypeScript
   version uses (OpenAI, Anthropic, Google GenAI, AWS SDK user agents and retry behavior, ...).
 
-Known differences and the status of every area are tracked in
-[`PORTING-STATUS.md`](PORTING-STATUS.md). The main ones:
+The status of every area is tracked in [`PORTING-STATUS.md`](PORTING-STATUS.md); the differences
+that remain are listed below.
 
-- No Bun-specific plumbing, `rpc-entry.ts`, or Node module-resolution experiments (use
-  `pi --mode rpc`).
-- Rust strings cannot hold unpaired UTF-16 surrogates; where JavaScript would keep one (for
-  example `JSON.parse("\"\\uD800\"")`), the port substitutes U+FFFD.
-- Extension code runs on Boa rather than V8, so engine-level details (stack trace text,
-  performance characteristics, a few rarely used language features) differ.
+## Known differences
+
+Behavior that still differs from TypeScript pi, and why:
+
+- **JavaScript engine.** Extensions run on QuickJS (QuickJS-ng through rquickjs, `pi-jsrt`)
+  instead of V8, and code mode scripts on QuickJS as in TypeScript pi: stack trace text, engine
+  error messages and performance differ, `Intl` is a small shim, and a few language features
+  (decorators) are missing. Node API coverage of `pi-jsrt` is tracked in `PORTING-STATUS.md`. A reload of the
+  extensions starts a new runtime, so `globalThis` does not carry values across `/reload` as
+  Node's single global object does.
+- **Strings.** Rust strings cannot hold unpaired UTF-16 surrogates; where JavaScript would keep one
+  (`JSON.parse("\"\\uD800\"")`, `sanitizeSurrogates`), the port has U+FFFD.
+- **`JSON.parse` limits.** Numbers beyond the `f64` range (`1e400`, `Infinity` in JavaScript) and
+  nesting deeper than 128 levels are rejected (serde_json); a JSON value cannot hold `Infinity`.
+- **Distribution.** No Bun-specific plumbing or `rpc-entry.ts` (use `pi --mode rpc`), no
+  npm/pnpm/yarn self-update (the binary updates by download). Without an `npm` executable, npm
+  packages are installed by a built-in client that cannot run lifecycle scripts or resolve
+  git/file/workspace dependency specs.
+- **Native code.** Images are processed with the `image` crate instead of Photon (WASM), so encoded
+  bytes and the resize candidate picked can differ. Word segmentation uses ICU4X dictionaries,
+  which split about 5% of Chinese/Japanese test sentences differently from V8's ICU4C. Codex
+  request bodies are zstd-compressed at the fastest level (pure-Rust `ruzstd`), so bytes differ
+  while the content is the same. `localeCompare` is ICU's root collation, which is what Node uses
+  for English locales; a full-ICU Node under a tailored locale (`de`, `sv`, ...) would sort by that
+  locale.
+- **Windows.** The Windows terminal backend (VT input, console modes) is not ported, and the AWS
+  user agent omits `os.release()` there; neither could be built and tested in the Linux environment
+  the port was developed in.
+- **YAML frontmatter.** The `yaml` package is ported in full for parsing, but keys whose value is a
+  collection, date or buffer are stringified approximately (the package runs its YAML
+  stringifier), and nesting deeper than 800 levels reports `Maximum call stack size exceeded` at a
+  different depth than V8's stack limit.
+- **Emoji width.** RGI emoji ZWJ sequences are recognized structurally; a ZWJ sequence of RGI
+  emoji that is not itself in the RGI list counts as one wide emoji.
+- **Error stacks.** After a settings warning, package commands print the error's
+  `Name: message` line but not the V8 stack frames that follow in TypeScript (they name the
+  installation's JavaScript files and line numbers).
+- **Timing-only output.** When stdin ends at the `--resume` picker, TypeScript may draw an
+  intermediate "Loading ..." frame if its asynchronous session load is slower than the first
+  render; the final screen and the terminal restore are identical.
+- **Deliberately not reproduced.** The HTML export inserts its templates literally: TypeScript's
+  `String.replace` expands `$&`/`$$` in the inserted code, which breaks a highlight.js regex and
+  drops the `$` of the cost display. `theme()` initializes the system theme on first use instead
+  of throwing "Theme not initialized". An invalid `file://` URL in a path argument is kept
+  literally instead of failing in `fileURLToPath`.
+- **Extension API details.** `ctx.getSystemPromptOptions()` returns a copy, so mutating it outside
+  `before_agent_start` does not change later turns as mutating TypeScript's live object would.
+- **Unverified.** The Bedrock error text when a stream is aborted mid-response (HTTP/2 close) has
+  not been compared with the AWS SDK.
 
 ## Extensions
 
 pi extensions are TypeScript or JavaScript modules, and the port loads them unchanged:
 
-- `.ts`/`.js`/`.mjs` extensions run inside `pi-jsrt`, an embedded [Boa](https://boajs.dev) engine
-  on a dedicated thread. TypeScript is stripped with [oxc](https://oxc.rs) when loaded.
+- `.ts`/`.js`/`.mjs` extensions run inside `pi-jsrt`, an embedded
+  [QuickJS](https://github.com/quickjs-ng/quickjs) engine (through
+  [rquickjs](https://github.com/DelSkayn/rquickjs)) on a dedicated thread. TypeScript is stripped with [oxc](https://oxc.rs) when loaded.
 - Imports of `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`,
   `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`, `typebox` (the real library, vendored)
   and `node:*` built-ins resolve to modules provided by the runtime, backed by the Rust
