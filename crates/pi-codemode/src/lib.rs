@@ -5,8 +5,8 @@
 //! do. Port of `@earendil-works/pi-codemode`.
 //!
 //! Scripts use `tools`, `ALL_TOOLS`, `text`, `image`, `exit`, `store`, and `load`, and may start
-//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is QuickJS (QuickJS-ng through
-//! rquickjs, the engine behind `pi-jsrt`), run directly on a dedicated thread per execution with
+//! with a `// @options:` line (see [`parse_codemode_source`]). The VM is djs, embedded through
+//! `djs-core` and `djs-prelude`, run directly on a dedicated thread per execution with
 //! nothing but ECMAScript built-ins, `performance.now()`, and the codemode prelude.
 //!
 //! ```no_run

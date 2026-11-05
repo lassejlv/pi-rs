@@ -244,12 +244,14 @@ async fn reports_the_fingerprint_before_any_call_and_the_calls_issued_after_each
     assert_eq!(calls, vec![json!([1, "tool", "echo", 1]), json!([2, "tool", "echo", 2]), json!([3, "tool", "echo", 3])]);
     let fingerprint = recorded.fingerprint.lock().clone().unwrap();
     let parts: Vec<&str> = fingerprint.split(", ").collect();
-    assert_eq!(parts.len(), 6, "{fingerprint}");
-    assert!(parts[0].starts_with("quickjs-ng "), "{fingerprint}");
+    assert_eq!(parts.len(), 8, "{fingerprint}");
+    assert!(parts[0].starts_with("djs "), "{fingerprint}");
     assert!(parts[1].starts_with("prelude ") && parts[1].len() == "prelude ".len() + 8, "{fingerprint}");
     assert!(parts[2].starts_with("deterministic "), "{fingerprint}");
     assert!(parts[3].starts_with("stack "), "{fingerprint}");
     assert_eq!(parts[4], "heap 67108864");
+    assert_eq!(parts[6], "fuel per poll 10000");
+    assert_eq!(parts[7], "invocation fuel 100000000");
     match backend {
         Backend::Remote => assert_eq!(parts[5], format!("budget {BUDGET}")),
         Backend::Thread => assert_eq!(parts[5], "budget none"),
