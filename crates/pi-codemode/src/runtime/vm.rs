@@ -338,6 +338,13 @@ impl Vm {
     }
     fn set_clock(&mut self) {
         let now = self.clock.unwrap_or_else(wall_time);
+        // djs returns this value from `Date.now()` unchanged. ECMAScript time values are
+        // integer milliseconds: round a deterministic virtual clock, truncate wall time.
+        let now = if self.clock.is_some() {
+            now.round()
+        } else {
+            now.trunc()
+        };
         self.engine.set_now(now);
         let at =
             jiff::Timestamp::from_millisecond(now as i64).unwrap_or(jiff::Timestamp::UNIX_EPOCH);
